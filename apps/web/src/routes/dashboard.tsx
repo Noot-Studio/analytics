@@ -1,8 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import {
+  SidebarInset,
+  SidebarProvider,
+} from "@sbox-analytics/ui/components/sidebar";
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 
+import { AppSidebar } from "@/components/dashboard/app-sidebar";
+import { SiteHeader } from "@/components/dashboard/site-header";
 import { authClient } from "@/lib/auth-client";
-import { orpc } from "@/utils/orpc";
 
 export const Route = createFileRoute("/dashboard")({
   beforeLoad: async () => {
@@ -15,19 +19,28 @@ export const Route = createFileRoute("/dashboard")({
     }
     return { session };
   },
-  component: RouteComponent,
+  component: DashboardLayout,
 });
 
-function RouteComponent() {
-  const { session } = Route.useRouteContext();
-
-  const privateData = useQuery(orpc.privateData.queryOptions());
-
+function DashboardLayout() {
   return (
-    <div>
-      <h1>Dashboard</h1>
-      <p>Welcome {session.data?.user.name}</p>
-      <p>API: {privateData.data?.message}</p>
-    </div>
+    <SidebarProvider
+      style={
+        {
+          "--header-height": "calc(var(--spacing) * 12)",
+          "--sidebar-width": "calc(var(--spacing) * 72)",
+        } as React.CSSProperties
+      }
+    >
+      <AppSidebar variant="inset" />
+      <SidebarInset>
+        <SiteHeader />
+        <div className="flex flex-1 flex-col">
+          <div className="@container/main flex flex-1 flex-col gap-2">
+            <Outlet />
+          </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
