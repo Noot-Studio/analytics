@@ -18,6 +18,7 @@ src/
   main.tsx        # Vite entry
   router.tsx      # TanStack Router config
   routes/         # File-based routes
+  features/       # Feature-based components
   components/     # App-specific composite components only
   lib/            # Client helpers (oRPC client, query client, etc.)
 ```
