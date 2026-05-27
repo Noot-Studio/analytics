@@ -29,6 +29,16 @@ Hono + oRPC API Backend (Better Auth, Prisma, Polar) → Postgres + ClickHouse
 
 ---
 
+## Environment Variables
+
+Whenever you add, rename, or remove an environment variable, you **must** update `.env.example` at the repo root in the same change. Every app/package `.env.example` is a symlink to this single file, and each app's env schema (`packages/env/src/server.ts`, `packages/env/src/web.ts`) validates against it — drift here breaks local setup and CI for everyone.
+
+- Add the variable under the matching section (or create a new section), with a short comment explaining what it is and how to obtain a value.
+- Use a clearly-fake placeholder (`replace-me`, `replace-me-with-32-plus-random-chars`, etc.) — never commit real secrets.
+- Update the corresponding zod schema in `packages/env` so the variable is actually validated.
+
+---
+
 # Ultracite Code Standards
 
 This project uses **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.
