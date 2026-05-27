@@ -25,19 +25,19 @@ import { OrgSwitcher } from "@/components/dashboard/org-switcher";
 
 const data = {
   documents: [
-    { name: "Data Library", url: "/dashboard", icon: IconDatabase },
-    { name: "Reports", url: "/dashboard", icon: IconReport },
-    { name: "Word Assistant", url: "/dashboard", icon: IconFileWord },
+    { icon: IconDatabase, name: "Data Library", url: "/dashboard" },
+    { icon: IconReport, name: "Reports", url: "/dashboard" },
+    { icon: IconFileWord, name: "Word Assistant", url: "/dashboard" },
   ],
   navMain: [
-    { title: "Dashboard", url: "/dashboard", icon: IconDashboard },
-    { title: "Analytics", url: "/dashboard", icon: IconChartBar },
-    { title: "Team", url: "/dashboard", icon: IconUsers },
+    { icon: IconDashboard, title: "Dashboard", url: "/dashboard" },
+    { icon: IconChartBar, title: "Analytics", url: "/dashboard" },
+    { icon: IconUsers, title: "Team", url: "/dashboard" },
   ],
   navSecondary: [
-    { title: "Settings", url: "/dashboard/settings", icon: IconSettings },
-    { title: "Get Help", url: "/dashboard", icon: IconHelp },
-    { title: "Search", url: "/dashboard", icon: IconSearch },
+    { icon: IconSettings, title: "Settings", url: "/dashboard/settings" },
+    { icon: IconHelp, title: "Get Help", url: "/dashboard" },
+    { icon: IconSearch, title: "Search", url: "/dashboard" },
   ],
 };
 

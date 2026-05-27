@@ -44,26 +44,28 @@ export function OrgSwitcher() {
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-            >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <IconBuilding className="size-4" />
-              </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">
-                  {activeOrg?.name ?? "Select Organization"}
+          <DropdownMenuTrigger
+            render={
+              <SidebarMenuButton
+                size="lg"
+                className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              />
+            }
+          >
+            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+              <IconBuilding className="size-4" />
+            </div>
+            <div className="grid flex-1 text-left text-sm leading-tight">
+              <span className="truncate font-semibold">
+                {activeOrg?.name ?? "Select Organization"}
+              </span>
+              {activeOrg?.slug && (
+                <span className="truncate text-xs text-muted-foreground">
+                  {activeOrg.slug}
                 </span>
-                {activeOrg?.slug && (
-                  <span className="truncate text-xs text-muted-foreground">
-                    {activeOrg.slug}
-                  </span>
-                )}
-              </div>
-              <IconChevronDown className="ml-auto" />
-            </SidebarMenuButton>
+              )}
+            </div>
+            <IconChevronDown className="ml-auto" />
           </DropdownMenuTrigger>
           <DropdownMenuContent
             className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
@@ -86,11 +88,9 @@ export function OrgSwitcher() {
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link to="/dashboard/organization">
-                <IconSettings className="mr-2 size-4" />
-                Organization Settings
-              </Link>
+            <DropdownMenuItem render={<Link to="/dashboard/organization" />}>
+              <IconSettings className="mr-2 size-4" />
+              Organization Settings
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
