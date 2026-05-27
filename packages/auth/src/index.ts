@@ -2,6 +2,7 @@ import { createPrismaClient } from "@sbox-analytics/db";
 import { env } from "@sbox-analytics/env/server";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { organization } from "better-auth/plugins";
 
 import { steam } from "./steam";
 
@@ -27,7 +28,7 @@ export function createAuth() {
       enabled: true,
     },
 
-    plugins: [steam({ apiKey: env.STEAM_API_KEY })],
+    plugins: [steam({ apiKey: env.STEAM_API_KEY }), organization()],
 
     secret: env.BETTER_AUTH_SECRET,
 
