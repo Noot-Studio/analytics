@@ -1,0 +1,24 @@
+{
+  "name": "@sbox-analytics/auth",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@sbox-analytics/db": "workspace:*",
+    "@sbox-analytics/env": "workspace:*",
+    "better-auth": "catalog:",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@sbox-analytics/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}
