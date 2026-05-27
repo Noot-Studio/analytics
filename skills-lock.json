@@ -12,11 +12,77 @@
       "skillPath": "better-auth/best-practices/SKILL.md",
       "computedHash": "a4c830509e85557b59339d8d93a4e243e9e59c686e7678854d39230e12c2a6dc"
     },
+    "caveman": {
+      "source": "juliusbrussee/caveman",
+      "sourceType": "github",
+      "skillPath": "skills/caveman/SKILL.md",
+      "computedHash": "dfbf85749fd474feeb0bbe60c779795ecd5dbec0083299b56e68916bc3ddd8c9"
+    },
+    "chdb-datastore": {
+      "source": "clickhouse/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/chdb-datastore/SKILL.md",
+      "computedHash": "8a652156aa260f4d01a14a15ec703c4b9c7b3bafb5824fa12e65089e096b17ba"
+    },
+    "chdb-sql": {
+      "source": "clickhouse/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/chdb-sql/SKILL.md",
+      "computedHash": "6eece2c3948e1c6178dff37d4e83be21c261111386a63b4de4adae494f3f65d1"
+    },
+    "clickhouse-architecture-advisor": {
+      "source": "clickhouse/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/clickhouse-architecture-advisor/SKILL.md",
+      "computedHash": "5cecc53a1aa47ff41f84b7f984c1242d70af09b8bbce4f52d423dd5a06f5ae0b"
+    },
+    "clickhouse-best-practices": {
+      "source": "clickhouse/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/clickhouse-best-practices/SKILL.md",
+      "computedHash": "4523a31bd5911ec70b68533d7d15bc445bca2e77b1bd6f649d5a36d52bdcc099"
+    },
+    "clickhouse-js-node-coding": {
+      "source": "clickhouse/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/clickhouse-js-node-coding/SKILL.md",
+      "computedHash": "8e87bf6ce52d48d605897edf17e6cca377cd9f6c55c1624e210be0ae0a80e103"
+    },
+    "clickhouse-js-node-troubleshooting": {
+      "source": "clickhouse/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/clickhouse-js-node-troubleshooting/SKILL.md",
+      "computedHash": "18dcebb208d257ccf5cfaabaee0b115583193362f77b554945cf686592417bcb"
+    },
+    "clickhousectl-cloud-deploy": {
+      "source": "clickhouse/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/clickhousectl-cloud-deploy/SKILL.md",
+      "computedHash": "94ce3179d4370b76383c9d376f1185b7e8ea25a78693130835b2a5899ed83945"
+    },
+    "clickhousectl-local-dev": {
+      "source": "clickhouse/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/clickhousectl-local-dev/SKILL.md",
+      "computedHash": "a6f5a83166eabe0888ecf04dacac4ed5c422a08b3f2cc2c0e143cc9c7d29321b"
+    },
     "hono": {
       "source": "yusukebe/hono-skill",
       "sourceType": "github",
       "skillPath": "skills/hono/SKILL.md",
       "computedHash": "220e5e1b12bbaeec49ec362b6e2262d77632d0536e9758bba9acbbc323fef990"
+    },
+    "impeccable": {
+      "source": "pbakaus/impeccable",
+      "sourceType": "github",
+      "skillPath": "skill/SKILL.md",
+      "computedHash": "34e59a34b9705187e87039faa5d9585aebe0056ef657f761b905afef276a3362"
+    },
+    "iris-development": {
+      "source": "redis/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/iris-development/SKILL.md",
+      "computedHash": "677663bc77ea89c1ba7de7ced05a2d0f16bbe7b5e75efa47a10a40091eeb039d"
     },
     "prisma-cli": {
       "source": "prisma/skills",
@@ -35,6 +101,54 @@
       "sourceType": "github",
       "skillPath": "prisma-database-setup/SKILL.md",
       "computedHash": "46d2dc2f9c968722376bbb6a1a1389c82bd7cceb5973ac1486c54890514b8959"
+    },
+    "redis-clustering": {
+      "source": "redis/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/redis-clustering/SKILL.md",
+      "computedHash": "089487d9a5eecc17c00880bf6a06dc1bf9f6cdb44b86235788667fcd74ea3e9f"
+    },
+    "redis-connections": {
+      "source": "redis/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/redis-connections/SKILL.md",
+      "computedHash": "3755d60acb0c484a44c4bef547340cc889e7f803f5dcedcd3bf767878b12c428"
+    },
+    "redis-core": {
+      "source": "redis/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/redis-core/SKILL.md",
+      "computedHash": "5b342de2555699d1785335711883711ff6ef7e213a1ea57d6bf693184a5c8683"
+    },
+    "redis-observability": {
+      "source": "redis/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/redis-observability/SKILL.md",
+      "computedHash": "29a9044c3e72ab9ea7145efe917584e3c2f3739b64d8a68e7c77fc6f4a70b1cb"
+    },
+    "redis-query-engine": {
+      "source": "redis/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/redis-query-engine/SKILL.md",
+      "computedHash": "9ed8dab7ce9aa5ec42dd563c7a0c2f50792fbf7c819ff221c4839b68a36215a8"
+    },
+    "redis-security": {
+      "source": "redis/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/redis-security/SKILL.md",
+      "computedHash": "8ed04a12265b088c75a6d415db576e051b920bd2f8dd37357636b0144b3118a6"
+    },
+    "redis-semantic-cache": {
+      "source": "redis/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/redis-semantic-cache/SKILL.md",
+      "computedHash": "2096d785b796e7bf7ad8902f9798133aa7f40c21435c5e6d5beeb05c3de29145"
+    },
+    "redis-vector-search": {
+      "source": "redis/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/redis-vector-search/SKILL.md",
+      "computedHash": "2646c61374641845a5fa81b76319d60a4556a229e79eed54fc6f0faf376cddce"
     },
     "review-logging-patterns": {
       "source": "evlog.dev",
