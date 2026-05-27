@@ -19,11 +19,12 @@ When working on this codebase, refer to the following documents for context:
 ## High-Level Architecture
 
 ```
-s&box Game (C# SDK) → Ingest API (Go) → Kafka/Redpanda → ClickHouse (Analytics DB)
-                                                        ↘ Postgres (Users/Orgs/Projects)
-                                Dashboard (React + TanStack Router + shadcn/ui + Recharts)
-                                ↕
-                                Hono + oRPC API Backend (Better Auth, Drizzle, Polar)
+s&box Game (C# SDK) → Ingest API (Hono/Bun) → Redpanda → ClickHouse (Kafka engine → MergeTree)
+                              ↳ Postgres (API key lookup, cached in Redis)
+
+Dashboard (React + TanStack Router + shadcn/ui + Recharts)
+   ↕
+Hono + oRPC API Backend (Better Auth, Prisma, Polar) → Postgres + ClickHouse
 ```
 
 ---

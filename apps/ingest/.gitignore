@@ -1,3 +1,2 @@
 /dist/
-/ingest
-*.test
+/node_modules/
