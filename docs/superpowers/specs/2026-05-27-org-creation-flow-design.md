@@ -14,7 +14,7 @@ Two surfaces for creating organizations, sharing a common form component:
 
 ## Surfaces
 
-### 1. Onboarding Page — `/routes/onboarding.tsx`
+### 1. Onboarding Page — `routes/onboarding.tsx` + `features/org/components/organisms/OnboardingView.tsx`
 
 A full-page route shown to authenticated users who have no organizations.
 
@@ -23,7 +23,9 @@ A full-page route shown to authenticated users who have no organizations.
 - `dashboard.tsx` `beforeLoad` already validates session. Extend it: if the user has a session but zero organizations, redirect to `/onboarding`.
 - The `/onboarding` route itself redirects to `/dashboard` if the user already has at least one org (handles direct navigation and back-button cases).
 
-**Page content:**
+**`routes/onboarding.tsx`:** thin route shell — imports `OnboardingView` and renders it.
+
+**`features/org/components/organisms/OnboardingView.tsx`:** the actual page UI.
 
 - Centered card layout with app branding
 - Heading: "Create your organization"
@@ -32,7 +34,7 @@ A full-page route shown to authenticated users who have no organizations.
 
 ---
 
-### 2. Create Organization Drawer — `/components/dashboard/create-org-drawer.tsx`
+### 2. Create Organization Drawer — `features/org/components/organisms/CreateOrgDrawer.tsx`
 
 A right-side drawer (bottom on mobile) triggered from the org-switcher dropdown.
 
@@ -60,9 +62,9 @@ interface CreateOrgDrawerProps {
 
 ---
 
-### 3. Shared Form Component — `/components/dashboard/org-form.tsx`
+### 3. Shared Form Component — `features/org/components/molecules/OrgForm.tsx`
 
-Reused by both the onboarding page and the drawer.
+Reused by both `OnboardingView` and `CreateOrgDrawer`.
 
 **Props:**
 
@@ -108,13 +110,14 @@ if (orgs.data?.length === 0) {
 
 ## File Summary
 
-| File                                         | Action                                         |
-| -------------------------------------------- | ---------------------------------------------- |
-| `routes/onboarding.tsx`                      | Create — full-page onboarding route            |
-| `routes/dashboard.tsx`                       | Edit — extend `beforeLoad` guard               |
-| `components/dashboard/org-form.tsx`          | Create — shared name/slug form                 |
-| `components/dashboard/create-org-drawer.tsx` | Create — drawer wrapper                        |
-| `components/dashboard/org-switcher.tsx`      | Edit — trigger drawer instead of inline create |
+| File                                                    | Action                                         |
+| ------------------------------------------------------- | ---------------------------------------------- |
+| `routes/onboarding.tsx`                                 | Create — thin route shell                      |
+| `routes/dashboard.tsx`                                  | Edit — extend `beforeLoad` guard               |
+| `features/org/components/molecules/OrgForm.tsx`         | Create — shared name/slug form                 |
+| `features/org/components/organisms/OnboardingView.tsx`  | Create — full onboarding page UI               |
+| `features/org/components/organisms/CreateOrgDrawer.tsx` | Create — drawer wrapper                        |
+| `components/dashboard/org-switcher.tsx`                 | Edit — trigger drawer instead of inline create |
 
 ---
 
