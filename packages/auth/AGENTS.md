@@ -6,12 +6,14 @@ Single source of the Better Auth instance. `apps/server` mounts its handler; `pa
 
 ```
 src/index.ts   # createAuth() + exported `auth` singleton
+src/steam.ts   # Steam Sign-In plugin (OpenID 2.0)
 ```
 
 ## Configuration highlights
 
 - **Adapter**: Prisma (`@sbox-analytics/db`), provider `postgresql`.
-- **Email/password**: enabled. OAuth providers (Discord, Steam in the product brief) are added via the `plugins` array.
+- **Email/password**: enabled. Steam Sign-In is wired via the `steam()` plugin (OpenID 2.0 — `/sign-in/steam` + `/callback/steam`); other OAuth providers (e.g. Discord) go in the `plugins` array.
+- **Steam**: requires `STEAM_API_KEY` (Steam Web API) in env. Synthesizes user email as `<steamid>@steam.local` (Steam never returns an email).
 - **Cookies**: `httpOnly`, `sameSite: "none"`, `secure: true` — works across the dashboard subdomain and the API.
 - **`trustedOrigins`**: pulled from `env.CORS_ORIGIN`. Add new dashboard origins here, not in `apps/server`.
 
