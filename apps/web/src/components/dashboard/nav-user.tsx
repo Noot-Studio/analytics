@@ -23,7 +23,7 @@ import {
   IconLogout,
   IconSettings,
 } from "@tabler/icons-react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 
 import { authClient } from "@/lib/auth-client";
 
@@ -93,7 +93,9 @@ export function NavUser() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem render={<Link to="/dashboard/settings" />}>
+              <DropdownMenuItem
+                onClick={() => navigate({ to: "/dashboard/settings" })}
+              >
                 <IconSettings />
                 User Settings
               </DropdownMenuItem>
