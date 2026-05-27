@@ -1,0 +1,614 @@
+[
+  {
+    "id": 1,
+    "header": "Cover page",
+    "type": "Cover page",
+    "status": "In Process",
+    "target": "18",
+    "limit": "5",
+    "reviewer": "Eddie Lake"
+  },
+  {
+    "id": 2,
+    "header": "Table of contents",
+    "type": "Table of contents",
+    "status": "Done",
+    "target": "29",
+    "limit": "24",
+    "reviewer": "Eddie Lake"
+  },
+  {
+    "id": 3,
+    "header": "Executive summary",
+    "type": "Narrative",
+    "status": "Done",
+    "target": "10",
+    "limit": "13",
+    "reviewer": "Eddie Lake"
+  },
+  {
+    "id": 4,
+    "header": "Market analysis",
+    "type": "Research",
+    "status": "In Process",
+    "target": "45",
+    "limit": "30",
+    "reviewer": "Olivia Martin"
+  },
+  {
+    "id": 5,
+    "header": "Competitive landscape",
+    "type": "Research",
+    "status": "Done",
+    "target": "38",
+    "limit": "42",
+    "reviewer": "Olivia Martin"
+  },
+  {
+    "id": 6,
+    "header": "Product overview",
+    "type": "Narrative",
+    "status": "Done",
+    "target": "22",
+    "limit": "18",
+    "reviewer": "Eddie Lake"
+  },
+  {
+    "id": 7,
+    "header": "Technical architecture",
+    "type": "Technical content",
+    "status": "In Process",
+    "target": "55",
+    "limit": "60",
+    "reviewer": "Sophia Chen"
+  },
+  {
+    "id": 8,
+    "header": "API documentation",
+    "type": "Technical content",
+    "status": "Done",
+    "target": "80",
+    "limit": "75",
+    "reviewer": "Sophia Chen"
+  },
+  {
+    "id": 9,
+    "header": "Security overview",
+    "type": "Technical content",
+    "status": "In Process",
+    "target": "34",
+    "limit": "40",
+    "reviewer": "Marcus Reed"
+  },
+  {
+    "id": 10,
+    "header": "Legal disclaimer",
+    "type": "Legal",
+    "status": "Done",
+    "target": "12",
+    "limit": "15",
+    "reviewer": "Marcus Reed"
+  },
+  {
+    "id": 11,
+    "header": "Terms and conditions",
+    "type": "Legal",
+    "status": "Done",
+    "target": "60",
+    "limit": "65",
+    "reviewer": "Marcus Reed"
+  },
+  {
+    "id": 12,
+    "header": "Privacy policy",
+    "type": "Legal",
+    "status": "In Process",
+    "target": "40",
+    "limit": "45",
+    "reviewer": "Priya Nair"
+  },
+  {
+    "id": 13,
+    "header": "Financial projections",
+    "type": "Financial",
+    "status": "Done",
+    "target": "25",
+    "limit": "30",
+    "reviewer": "Priya Nair"
+  },
+  {
+    "id": 14,
+    "header": "Revenue model",
+    "type": "Financial",
+    "status": "In Process",
+    "target": "20",
+    "limit": "22",
+    "reviewer": "Priya Nair"
+  },
+  {
+    "id": 15,
+    "header": "Budget breakdown",
+    "type": "Financial",
+    "status": "Done",
+    "target": "15",
+    "limit": "18",
+    "reviewer": "Eddie Lake"
+  },
+  {
+    "id": 16,
+    "header": "Investment thesis",
+    "type": "Financial",
+    "status": "In Process",
+    "target": "30",
+    "limit": "35",
+    "reviewer": "Eddie Lake"
+  },
+  {
+    "id": 17,
+    "header": "Product roadmap",
+    "type": "Planning",
+    "status": "Done",
+    "target": "50",
+    "limit": "55",
+    "reviewer": "Sophia Chen"
+  },
+  {
+    "id": 18,
+    "header": "Sprint planning",
+    "type": "Planning",
+    "status": "In Process",
+    "target": "20",
+    "limit": "25",
+    "reviewer": "Sophia Chen"
+  },
+  {
+    "id": 19,
+    "header": "Milestone tracker",
+    "type": "Planning",
+    "status": "Done",
+    "target": "35",
+    "limit": "40",
+    "reviewer": "Olivia Martin"
+  },
+  {
+    "id": 20,
+    "header": "Risk assessment",
+    "type": "Planning",
+    "status": "In Process",
+    "target": "28",
+    "limit": "30",
+    "reviewer": "Olivia Martin"
+  },
+  {
+    "id": 21,
+    "header": "User personas",
+    "type": "Research",
+    "status": "Done",
+    "target": "18",
+    "limit": "20",
+    "reviewer": "Marcus Reed"
+  },
+  {
+    "id": 22,
+    "header": "Survey results",
+    "type": "Research",
+    "status": "In Process",
+    "target": "42",
+    "limit": "50",
+    "reviewer": "Marcus Reed"
+  },
+  {
+    "id": 23,
+    "header": "Usability testing",
+    "type": "Research",
+    "status": "Done",
+    "target": "33",
+    "limit": "35",
+    "reviewer": "Priya Nair"
+  },
+  {
+    "id": 24,
+    "header": "A/B test report",
+    "type": "Research",
+    "status": "In Process",
+    "target": "26",
+    "limit": "28",
+    "reviewer": "Priya Nair"
+  },
+  {
+    "id": 25,
+    "header": "Stakeholder summary",
+    "type": "Narrative",
+    "status": "Done",
+    "target": "16",
+    "limit": "20",
+    "reviewer": "Eddie Lake"
+  },
+  {
+    "id": 26,
+    "header": "Project brief",
+    "type": "Narrative",
+    "status": "Done",
+    "target": "12",
+    "limit": "14",
+    "reviewer": "Eddie Lake"
+  },
+  {
+    "id": 27,
+    "header": "Vision statement",
+    "type": "Narrative",
+    "status": "In Process",
+    "target": "8",
+    "limit": "10",
+    "reviewer": "Sophia Chen"
+  },
+  {
+    "id": 28,
+    "header": "Mission statement",
+    "type": "Narrative",
+    "status": "Done",
+    "target": "6",
+    "limit": "8",
+    "reviewer": "Sophia Chen"
+  },
+  {
+    "id": 29,
+    "header": "Organizational chart",
+    "type": "Visual",
+    "status": "Done",
+    "target": "5",
+    "limit": "6",
+    "reviewer": "Olivia Martin"
+  },
+  {
+    "id": 30,
+    "header": "Architecture diagram",
+    "type": "Visual",
+    "status": "In Process",
+    "target": "7",
+    "limit": "8",
+    "reviewer": "Olivia Martin"
+  },
+  {
+    "id": 31,
+    "header": "Flow chart",
+    "type": "Visual",
+    "status": "Done",
+    "target": "9",
+    "limit": "10",
+    "reviewer": "Marcus Reed"
+  },
+  {
+    "id": 32,
+    "header": "Data model diagram",
+    "type": "Visual",
+    "status": "In Process",
+    "target": "11",
+    "limit": "12",
+    "reviewer": "Marcus Reed"
+  },
+  {
+    "id": 33,
+    "header": "UI mockups",
+    "type": "Visual",
+    "status": "Done",
+    "target": "14",
+    "limit": "15",
+    "reviewer": "Priya Nair"
+  },
+  {
+    "id": 34,
+    "header": "Brand guidelines",
+    "type": "Visual",
+    "status": "Done",
+    "target": "20",
+    "limit": "22",
+    "reviewer": "Priya Nair"
+  },
+  {
+    "id": 35,
+    "header": "Color palette",
+    "type": "Visual",
+    "status": "In Process",
+    "target": "5",
+    "limit": "6",
+    "reviewer": "Eddie Lake"
+  },
+  {
+    "id": 36,
+    "header": "Typography guide",
+    "type": "Visual",
+    "status": "Done",
+    "target": "8",
+    "limit": "9",
+    "reviewer": "Eddie Lake"
+  },
+  {
+    "id": 37,
+    "header": "Deployment guide",
+    "type": "Technical content",
+    "status": "In Process",
+    "target": "45",
+    "limit": "50",
+    "reviewer": "Sophia Chen"
+  },
+  {
+    "id": 38,
+    "header": "Infrastructure spec",
+    "type": "Technical content",
+    "status": "Done",
+    "target": "60",
+    "limit": "65",
+    "reviewer": "Sophia Chen"
+  },
+  {
+    "id": 39,
+    "header": "Database schema",
+    "type": "Technical content",
+    "status": "Done",
+    "target": "35",
+    "limit": "40",
+    "reviewer": "Olivia Martin"
+  },
+  {
+    "id": 40,
+    "header": "Integration guide",
+    "type": "Technical content",
+    "status": "In Process",
+    "target": "50",
+    "limit": "55",
+    "reviewer": "Olivia Martin"
+  },
+  {
+    "id": 41,
+    "header": "Compliance checklist",
+    "type": "Legal",
+    "status": "Done",
+    "target": "25",
+    "limit": "30",
+    "reviewer": "Marcus Reed"
+  },
+  {
+    "id": 42,
+    "header": "GDPR addendum",
+    "type": "Legal",
+    "status": "In Process",
+    "target": "18",
+    "limit": "20",
+    "reviewer": "Marcus Reed"
+  },
+  {
+    "id": 43,
+    "header": "Contract template",
+    "type": "Legal",
+    "status": "Done",
+    "target": "30",
+    "limit": "35",
+    "reviewer": "Priya Nair"
+  },
+  {
+    "id": 44,
+    "header": "SLA document",
+    "type": "Legal",
+    "status": "Done",
+    "target": "22",
+    "limit": "25",
+    "reviewer": "Priya Nair"
+  },
+  {
+    "id": 45,
+    "header": "Quarterly earnings",
+    "type": "Financial",
+    "status": "In Process",
+    "target": "40",
+    "limit": "45",
+    "reviewer": "Eddie Lake"
+  },
+  {
+    "id": 46,
+    "header": "Cash flow statement",
+    "type": "Financial",
+    "status": "Done",
+    "target": "28",
+    "limit": "30",
+    "reviewer": "Eddie Lake"
+  },
+  {
+    "id": 47,
+    "header": "Balance sheet",
+    "type": "Financial",
+    "status": "Done",
+    "target": "20",
+    "limit": "22",
+    "reviewer": "Sophia Chen"
+  },
+  {
+    "id": 48,
+    "header": "P&L report",
+    "type": "Financial",
+    "status": "In Process",
+    "target": "35",
+    "limit": "38",
+    "reviewer": "Sophia Chen"
+  },
+  {
+    "id": 49,
+    "header": "Forecast model",
+    "type": "Financial",
+    "status": "Done",
+    "target": "50",
+    "limit": "55",
+    "reviewer": "Olivia Martin"
+  },
+  {
+    "id": 50,
+    "header": "Tax summary",
+    "type": "Financial",
+    "status": "In Process",
+    "target": "18",
+    "limit": "20",
+    "reviewer": "Olivia Martin"
+  },
+  {
+    "id": 51,
+    "header": "Go-to-market plan",
+    "type": "Planning",
+    "status": "Done",
+    "target": "45",
+    "limit": "50",
+    "reviewer": "Marcus Reed"
+  },
+  {
+    "id": 52,
+    "header": "Launch checklist",
+    "type": "Planning",
+    "status": "In Process",
+    "target": "30",
+    "limit": "35",
+    "reviewer": "Marcus Reed"
+  },
+  {
+    "id": 53,
+    "header": "Resource allocation",
+    "type": "Planning",
+    "status": "Done",
+    "target": "25",
+    "limit": "28",
+    "reviewer": "Priya Nair"
+  },
+  {
+    "id": 54,
+    "header": "Capacity planning",
+    "type": "Planning",
+    "status": "Done",
+    "target": "20",
+    "limit": "22",
+    "reviewer": "Priya Nair"
+  },
+  {
+    "id": 55,
+    "header": "OKR framework",
+    "type": "Planning",
+    "status": "In Process",
+    "target": "15",
+    "limit": "18",
+    "reviewer": "Eddie Lake"
+  },
+  {
+    "id": 56,
+    "header": "KPI dashboard",
+    "type": "Planning",
+    "status": "Done",
+    "target": "12",
+    "limit": "14",
+    "reviewer": "Eddie Lake"
+  },
+  {
+    "id": 57,
+    "header": "Interview synthesis",
+    "type": "Research",
+    "status": "In Process",
+    "target": "38",
+    "limit": "40",
+    "reviewer": "Sophia Chen"
+  },
+  {
+    "id": 58,
+    "header": "Benchmarking report",
+    "type": "Research",
+    "status": "Done",
+    "target": "32",
+    "limit": "35",
+    "reviewer": "Sophia Chen"
+  },
+  {
+    "id": 59,
+    "header": "NPS analysis",
+    "type": "Research",
+    "status": "Done",
+    "target": "22",
+    "limit": "25",
+    "reviewer": "Olivia Martin"
+  },
+  {
+    "id": 60,
+    "header": "Cohort analysis",
+    "type": "Research",
+    "status": "In Process",
+    "target": "44",
+    "limit": "48",
+    "reviewer": "Olivia Martin"
+  },
+  {
+    "id": 61,
+    "header": "Retention metrics",
+    "type": "Research",
+    "status": "Done",
+    "target": "36",
+    "limit": "40",
+    "reviewer": "Marcus Reed"
+  },
+  {
+    "id": 62,
+    "header": "Onboarding flow",
+    "type": "Narrative",
+    "status": "In Process",
+    "target": "18",
+    "limit": "20",
+    "reviewer": "Marcus Reed"
+  },
+  {
+    "id": 63,
+    "header": "Case study",
+    "type": "Narrative",
+    "status": "Done",
+    "target": "24",
+    "limit": "26",
+    "reviewer": "Priya Nair"
+  },
+  {
+    "id": 64,
+    "header": "Press release",
+    "type": "Narrative",
+    "status": "Done",
+    "target": "10",
+    "limit": "12",
+    "reviewer": "Priya Nair"
+  },
+  {
+    "id": 65,
+    "header": "Newsletter draft",
+    "type": "Narrative",
+    "status": "In Process",
+    "target": "14",
+    "limit": "16",
+    "reviewer": "Eddie Lake"
+  },
+  {
+    "id": 66,
+    "header": "Infographic content",
+    "type": "Visual",
+    "status": "Done",
+    "target": "8",
+    "limit": "9",
+    "reviewer": "Eddie Lake"
+  },
+  {
+    "id": 67,
+    "header": "Video storyboard",
+    "type": "Visual",
+    "status": "In Process",
+    "target": "12",
+    "limit": "14",
+    "reviewer": "Sophia Chen"
+  },
+  {
+    "id": 68,
+    "header": "Presentation deck",
+    "type": "Visual",
+    "status": "Done",
+    "target": "40",
+    "limit": "45",
+    "reviewer": "Sophia Chen"
+  }
+]
