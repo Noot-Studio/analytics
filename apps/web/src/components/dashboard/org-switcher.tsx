@@ -19,12 +19,13 @@ import {
   IconPlus,
   IconSettings,
 } from "@tabler/icons-react";
-import { Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 
 import { authClient } from "@/lib/auth-client";
 
 export function OrgSwitcher() {
   const { isMobile } = useSidebar();
+  const navigate = useNavigate();
   const { data: organizations, isPending: isLoadingOrgs } =
     authClient.useListOrganizations();
   const { data: activeOrg, isPending: isLoadingActive } =
@@ -88,7 +89,9 @@ export function OrgSwitcher() {
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
-            <DropdownMenuItem render={<Link to="/dashboard/organization" />}>
+            <DropdownMenuItem
+              onClick={() => navigate({ to: "/dashboard/organization" })}
+            >
               <IconSettings className="mr-2 size-4" />
               Organization Settings
             </DropdownMenuItem>
