@@ -1,3 +1,33 @@
+# s&box Analytics — Agent Context
+
+This project is building **s&box Game Analytics**, a real-time analytics platform purpose-built for s&box game developers. It provides player behavior insights, session tracking, and performance monitoring without the bloat of general-purpose analytics tools.
+
+> **Positioning**: "Analytics built for s&box developers — not marketers."
+
+## Product Briefs
+
+When working on this codebase, refer to the following documents for context:
+
+- **Product Vision** (`docs/agents/vision.md`) — What this product is, who it's for, and how it differs from general analytics.
+- **Product Features** (`docs/agents/features.md`) — Capabilities of the platform, analytics features, and the Event Ingestion API contract.
+- **Development Reference** (`docs/agents/development.md`) — Architecture diagram, tech stack, key trade-offs, and risks.
+- **Marketing & Positioning** (`docs/agents/marketing.md`) — Channels, launch sequence, and messaging.
+- **Pricing & Economics** (`docs/agents/pricing.md`) — Tiered pricing, infrastructure costs, and revenue targets.
+- **Success Metrics** (`docs/agents/metrics.md`) — Product and business health indicators.
+- **Project Scope** (`docs/agents/scope.md`) — What's in scope and what's explicitly out of scope.
+
+## High-Level Architecture
+
+```
+s&box Game (C# SDK) → Ingest API (Go) → Kafka/Redpanda → ClickHouse (Analytics DB)
+                                                        ↘ Postgres (Users/Orgs/Projects)
+                                Dashboard (React + TanStack Router + shadcn/ui + Recharts)
+                                ↕
+                                Hono + oRPC API Backend (Better Auth, Drizzle, Polar)
+```
+
+---
+
 # Ultracite Code Standards
 
 This project uses **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.
