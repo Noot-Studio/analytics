@@ -21,12 +21,15 @@ import {
   IconSettings,
 } from "@tabler/icons-react";
 import { useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 
+import { CreateOrgDrawer } from "@/features/org/components/organisms/create-org-drawer";
 import { authClient } from "@/lib/auth-client";
 
-export function OrgSwitcher() {
+export const OrgSwitcher = () => {
   const { isMobile } = useSidebar();
   const navigate = useNavigate();
+  const [createOpen, setCreateOpen] = useState(false);
   const { data: organizations, isPending: isLoadingOrgs } =
     authClient.useListOrganizations();
   const { data: activeOrg, isPending: isLoadingActive } =
@@ -43,77 +46,73 @@ export function OrgSwitcher() {
   }
 
   return (
-    <SidebarMenu>
-      <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <SidebarMenuButton
-                size="lg"
-                className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-              />
-            }
-          >
-            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-              <IconBuilding className="size-4" />
-            </div>
-            <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-semibold">
-                {activeOrg?.name ?? "Select Organization"}
-              </span>
-              {activeOrg?.slug && (
-                <span className="truncate text-xs text-muted-foreground">
-                  {activeOrg.slug}
+    <>
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <SidebarMenuButton
+                  size="lg"
+                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                />
+              }
+            >
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                <IconBuilding className="size-4" />
+              </div>
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-semibold">
+                  {activeOrg?.name ?? "Select Organization"}
                 </span>
-              )}
-            </div>
-            <IconChevronDown className="ml-auto" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-            align="start"
-            side={isMobile ? "bottom" : "right"}
-            sideOffset={4}
-          >
-            <DropdownMenuGroup>
-              <DropdownMenuLabel>Organizations</DropdownMenuLabel>
-              {organizations?.map((org) => (
+                {activeOrg?.slug && (
+                  <span className="truncate text-xs text-muted-foreground">
+                    {activeOrg.slug}
+                  </span>
+                )}
+              </div>
+              <IconChevronDown className="ml-auto" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+              align="start"
+              side={isMobile ? "bottom" : "right"}
+              sideOffset={4}
+            >
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>Organizations</DropdownMenuLabel>
+                {organizations?.map((org) => (
+                  <DropdownMenuItem
+                    key={org.id}
+                    onClick={() => {
+                      authClient.organization.setActive({
+                        organizationId: org.id,
+                      });
+                    }}
+                  >
+                    <IconBuilding className="mr-2 size-4" />
+                    <span className="truncate">{org.name}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
                 <DropdownMenuItem
-                  key={org.id}
-                  onClick={() => {
-                    authClient.organization.setActive({
-                      organizationId: org.id,
-                    });
-                  }}
+                  onClick={() => navigate({ to: "/dashboard/organization" })}
                 >
-                  <IconBuilding className="mr-2 size-4" />
-                  <span className="truncate">{org.name}</span>
+                  <IconSettings className="mr-2 size-4" />
+                  Organization Settings
                 </DropdownMenuItem>
-              ))}
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem
-                onClick={() => navigate({ to: "/dashboard/organization" })}
-              >
-                <IconSettings className="mr-2 size-4" />
-                Organization Settings
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  authClient.organization.create({
-                    name: "New Organization",
-                    slug: `org-${Date.now()}`,
-                  });
-                }}
-              >
-                <IconPlus className="mr-2 size-4" />
-                Create Organization
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarMenuItem>
-    </SidebarMenu>
+                <DropdownMenuItem onClick={() => setCreateOpen(true)}>
+                  <IconPlus className="mr-2 size-4" />
+                  Create Organization
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </SidebarMenuItem>
+      </SidebarMenu>
+      <CreateOrgDrawer open={createOpen} onOpenChange={setCreateOpen} />
+    </>
   );
-}
+};
