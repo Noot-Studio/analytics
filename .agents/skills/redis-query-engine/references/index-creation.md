@@ -15,6 +15,7 @@ FT.CREATE idx:products ON HASH PREFIX 1 product:
 ```
 
 **Java** (Jedis):
+
 ```java
 import redis.clients.jedis.search.*;
 
@@ -48,6 +49,7 @@ FT.CREATE idx:products ON HASH PREFIX 1 product:
 ```
 
 **Java** (Jedis):
+
 ```java
 // Bad: No prefix means all hashes get indexed
 IndexDefinition def = new IndexDefinition(IndexDefinition.Type.HASH);
@@ -55,6 +57,7 @@ IndexDefinition def = new IndexDefinition(IndexDefinition.Type.HASH);
 ```
 
 **Tips:**
+
 - Start with the minimum required fields
 - Add fields as query patterns emerge
 - Use `FT.INFO` to monitor index size

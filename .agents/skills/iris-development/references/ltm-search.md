@@ -1,4 +1,3 @@
-
 ## Search Long-Term Memory Semantically with Filters
 
 `search_long_term_memory(...)` (Python) / `searchLongTermMemory(...)` (TypeScript) runs a vector search over LTM records and applies structured filters in the same call. Combining both is the supported path — do not pull a wide vector result and filter on the client.
@@ -42,14 +41,14 @@ import { AgentMemory } from "@redis-iris/agent-memory";
 
 async function recall(
   agentMemory: AgentMemory,
-  args: { ownerId: string; query: string; namespace?: string; k?: number },
+  args: { ownerId: string; query: string; namespace?: string; k?: number }
 ) {
   const res = await agentMemory.searchLongTermMemory({
-    text:                args.query,
+    text: args.query,
     similarityThreshold: 0.7,
-    filterOp:            "all",                  // AND across filter keys
+    filterOp: "all", // AND across filter keys
     filter: {
-      ownerId:    { eq: args.ownerId },
+      ownerId: { eq: args.ownerId },
       ...(args.namespace ? { namespace: { eq: args.namespace } } : {}),
       memoryType: { in: ["semantic", "episodic"] },
     },
@@ -73,11 +72,11 @@ for m in hits:
 
 **Filter operators (per field):**
 
-| Field | Operators |
-|---|---|
-| `session_id`, `owner_id`, `namespace` | `eq`, `ne`, `in`, `all` |
-| `topics`, `memory_type` | `eq`, `ne`, `in`, `all` (tag filter) |
-| `created_at` | `gt`, `lt`, `gte`, `lte`, `eq` (tz-aware `datetime` / `Date`) |
+| Field                                 | Operators                                                     |
+| ------------------------------------- | ------------------------------------------------------------- |
+| `session_id`, `owner_id`, `namespace` | `eq`, `ne`, `in`, `all`                                       |
+| `topics`, `memory_type`               | `eq`, `ne`, `in`, `all` (tag filter)                          |
+| `created_at`                          | `gt`, `lt`, `gte`, `lte`, `eq` (tz-aware `datetime` / `Date`) |
 
 `filter_op` / `filterOp` controls how the **top-level filter fields** combine: `"all"` (default, AND) or `"any"` (OR). Inside one field, `eq` / `ne` / `in` / `all` are mutually exclusive — set exactly one.
 
@@ -104,7 +103,7 @@ def iter_results(agent_memory, *, query: str, owner_id: str):
 ```typescript
 async function* iterResults(
   agentMemory: AgentMemory,
-  args: { query: string; ownerId: string },
+  args: { query: string; ownerId: string }
 ) {
   let pageToken: string | undefined;
   while (true) {

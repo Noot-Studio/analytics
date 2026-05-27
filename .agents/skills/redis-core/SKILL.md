@@ -20,18 +20,18 @@ Foundational guidance for modeling data in Redis. Covers data-type selection and
 
 ## 1. Choose the right data structure
 
-Pick the type that matches the *access pattern*, not just the shape of the data.
+Pick the type that matches the _access pattern_, not just the shape of the data.
 
-| Use case | Recommended type | Why |
-|---|---|---|
-| Simple values, counters | String | Atomic `INCR`/`DECR`, `SET`/`GET` |
-| Object with independently updated fields | Hash | Per-field reads/writes, no whole-object rewrite |
-| Queue, recent-N items | List | O(1) push/pop at ends |
-| Unique items, membership checks | Set | O(1) `SADD`/`SISMEMBER`/`SCARD` |
-| Rankings, score-based ranges | Sorted Set | Score-ordered; `ZADD`/`ZRANGE`/`ZRANK` |
-| Nested / hierarchical data | JSON | Path-level updates, nested arrays, RQE indexing |
-| Event log, fan-out messaging | Stream | Persistent, consumer groups |
-| Vector similarity | Vector Set | Native vector storage with HNSW |
+| Use case                                 | Recommended type | Why                                             |
+| ---------------------------------------- | ---------------- | ----------------------------------------------- |
+| Simple values, counters                  | String           | Atomic `INCR`/`DECR`, `SET`/`GET`               |
+| Object with independently updated fields | Hash             | Per-field reads/writes, no whole-object rewrite |
+| Queue, recent-N items                    | List             | O(1) push/pop at ends                           |
+| Unique items, membership checks          | Set              | O(1) `SADD`/`SISMEMBER`/`SCARD`                 |
+| Rankings, score-based ranges             | Sorted Set       | Score-ordered; `ZADD`/`ZRANGE`/`ZRANK`          |
+| Nested / hierarchical data               | JSON             | Path-level updates, nested arrays, RQE indexing |
+| Event log, fan-out messaging             | Stream           | Persistent, consumer groups                     |
+| Vector similarity                        | Vector Set       | Native vector storage with HNSW                 |
 
 **Common anti-pattern:** stuffing a flat object into a serialized string. Updating one field means fetch + parse + mutate + rewrite. Use a Hash instead.
 

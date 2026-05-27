@@ -1,13 +1,12 @@
-
 ## Retrieve Session Memory and Individual Events
 
 The SDK exposes three read paths against session memory; pick the narrowest one for the job.
 
-| Python | TypeScript | Returns | Use when |
-|---|---|---|---|
-| `get_session_memory(session_id=...)` | `getSessionMemory(sessionId)` | All events for the session in order, plus `owner_id` | Rebuilding the prompt context for a conversation |
-| `get_session_event(session_id=..., event_id=...)` | `getSessionEvent(sessionId, eventId)` | One event | You already have the `eventId` (e.g. from `addSessionEvent` response) |
-| `list_sessions(limit=..., page_token=...)` | `listSessions({limit, pageToken})` | Page of session IDs + `total` | Admin/debug listing of sessions in a store |
+| Python                                            | TypeScript                            | Returns                                              | Use when                                                              |
+| ------------------------------------------------- | ------------------------------------- | ---------------------------------------------------- | --------------------------------------------------------------------- |
+| `get_session_memory(session_id=...)`              | `getSessionMemory(sessionId)`         | All events for the session in order, plus `owner_id` | Rebuilding the prompt context for a conversation                      |
+| `get_session_event(session_id=..., event_id=...)` | `getSessionEvent(sessionId, eventId)` | One event                                            | You already have the `eventId` (e.g. from `addSessionEvent` response) |
+| `list_sessions(limit=..., page_token=...)`        | `listSessions({limit, pageToken})`    | Page of session IDs + `total`                        | Admin/debug listing of sessions in a store                            |
 
 The session's `owner_id` is set from the **first** event's `actor_id` and is immutable for the lifetime of the session.
 
@@ -81,10 +80,12 @@ for sid in iter_session_ids(agent_memory):
 Use `get_session_event` / `getSessionEvent` instead — it is an O(1) lookup.
 
 **Pagination limits:**
+
 - `list_sessions.limit` defaults to 100, max 1000.
 - `next_page_token` / `nextPageToken` is opaque — pass it back verbatim, don't try to decode it.
 
 **Deletion:**
+
 - `delete_session_memory(session_id=...)` / `deleteSessionMemory(sessionId)` removes the entire session and all its events.
 - `delete_session_event(session_id=..., event_id=...)` / `deleteSessionEvent(sessionId, eventId)` removes one event.
 - Already-promoted long-term memories are **not** affected — delete those separately via `bulk_delete_long_term_memories` / `bulkDeleteLongTermMemories`.

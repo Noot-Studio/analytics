@@ -10,10 +10,10 @@ To receive them as numbers (use with caution — precision loss possible):
 
 ```js
 const resultSet = await client.query({
-  query: 'SELECT toUInt64(9007199254740993)',
-  format: 'JSONEachRow',
+  query: "SELECT toUInt64(9007199254740993)",
+  format: "JSONEachRow",
   clickhouse_settings: { output_format_json_quote_64bit_integers: 0 },
-})
+});
 ```
 
 > **Tip (`>= 1.15.0`):** BigInt values are now supported in query parameters, so you can safely pass large integers as bind params without string workarounds.
@@ -30,18 +30,18 @@ const resultSet = await client.query({
     SELECT toString(my_decimal) AS my_decimal
     FROM my_table
   `,
-  format: 'JSONEachRow',
-})
+  format: "JSONEachRow",
+});
 ```
 
 When inserting, always use the string representation to avoid precision loss:
 
 ```js
 await client.insert({
-  table: 'my_table',
-  values: [{ dec64: '123456789123456.789' }],
-  format: 'JSONEachRow',
-})
+  table: "my_table",
+  values: [{ dec64: "123456789123456.789" }],
+  format: "JSONEachRow",
+});
 ```
 
 ## Format Selection Quick Reference
@@ -66,8 +66,8 @@ await client.insert({
 - `DateTime` / `DateTime64` columns accept strings **or** JS `Date` objects. To use `Date` objects, set:
 
 ```js
-import { createClient } from '@clickhouse/client'
+import { createClient } from "@clickhouse/client";
 const client = createClient({
-  clickhouse_settings: { date_time_input_format: 'best_effort' },
-})
+  clickhouse_settings: { date_time_input_format: "best_effort" },
+});
 ```

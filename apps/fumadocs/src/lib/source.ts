@@ -5,17 +5,21 @@ import { lucideIconsPlugin } from "fumadocs-core/source/lucide-icons";
 import { docsRoute } from "./shared";
 
 export const source = loader({
-  source: docs.toFumadocsSource(),
   baseUrl: docsRoute,
   plugins: [lucideIconsPlugin()],
+  source: docs.toFumadocsSource(),
 });
 
 export function markdownPathToSlugs(segs: string[]) {
-  if (segs.length === 0) return [];
+  if (segs.length === 0) {
+    return [];
+  }
 
   const out = [...segs];
-  out[out.length - 1] = out[out.length - 1].replace(/\.md$/, "");
-  if (out.length === 1 && out[0] === "index") out.pop();
+  out[out.length - 1] = out.at(-1).replace(/\.md$/, "");
+  if (out.length === 1 && out[0] === "index") {
+    out.pop();
+  }
   return out;
 }
 

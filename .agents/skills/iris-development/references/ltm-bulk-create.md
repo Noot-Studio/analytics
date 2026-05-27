@@ -1,4 +1,3 @@
-
 ## Create Long-Term Memories in Bulk with Idempotent IDs
 
 `bulk_create_long_term_memories` (Python) / `bulkCreateLongTermMemories` (TypeScript) accepts up to **100 records per call**. The client supplies the `id` for each record so a retry never creates a duplicate. The response splits into `created` (IDs that landed) and `errors` (per-ID failures).
@@ -46,21 +45,24 @@ import { AgentMemory } from "@redis-iris/agent-memory";
 async function upsertFacts(
   agentMemory: AgentMemory,
   facts: Array<{
-    id: string; text: string;
+    id: string;
+    text: string;
     memoryType?: "semantic" | "episodic" | "message";
-    sessionId?: string; ownerId?: string; namespace?: string;
+    sessionId?: string;
+    ownerId?: string;
+    namespace?: string;
     topics?: string[];
-  }>,
+  }>
 ) {
   const res = await agentMemory.bulkCreateLongTermMemories({
     memories: facts.slice(0, 100).map((f) => ({
-      id:         f.id,
-      text:       f.text,
+      id: f.id,
+      text: f.text,
       memoryType: f.memoryType ?? "semantic",
-      sessionId:  f.sessionId,
-      ownerId:    f.ownerId,
-      namespace:  f.namespace,
-      topics:     f.topics ?? [],
+      sessionId: f.sessionId,
+      ownerId: f.ownerId,
+      namespace: f.namespace,
+      topics: f.topics ?? [],
     })),
   });
   // res.created: string[], res.errors?: Array<{id: string; error: string}>
@@ -103,6 +105,7 @@ if (res.errors?.length) {
 ```
 
 **Constraints:**
+
 - `memories`: 1–100 items per call.
 - `id`: 1–64 chars, `[a-zA-Z0-9-]`.
 - `text`: 1–50000 chars.

@@ -27,6 +27,7 @@ FT.AGGREGATE idx:products "*" LOAD *
 ```
 
 **Performance tips:**
+
 - Add `SORTABLE` to fields used in `SORTBY`
 - Use `TAG SORTABLE UNF` for best performance on tag fields
 - Use `NOSTEM` if you don't need stemming

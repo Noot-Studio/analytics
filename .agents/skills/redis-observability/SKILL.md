@@ -22,15 +22,15 @@ What to watch, what to run, and what to alert on. Covers the metrics every Redis
 
 These come from `INFO` and should be exported to your monitoring system.
 
-| Metric | What it tells you | Alert when |
-|---|---|---|
-| `used_memory` | Current memory usage | > 80% of `maxmemory` |
-| `connected_clients` | Open connections | Sudden spikes or drops |
-| `blocked_clients` | Clients waiting on blocking ops | > 0 sustained |
-| `instantaneous_ops_per_sec` | Current throughput | Significant drops |
-| `keyspace_hits` / `keyspace_misses` | Cache hit ratio | Hit ratio < 80% |
-| `rejected_connections` | Hit `maxclients` cap | > 0 |
-| `rdb_last_save_time` | Last persistence snapshot | Too old vs. RPO |
+| Metric                              | What it tells you               | Alert when             |
+| ----------------------------------- | ------------------------------- | ---------------------- |
+| `used_memory`                       | Current memory usage            | > 80% of `maxmemory`   |
+| `connected_clients`                 | Open connections                | Sudden spikes or drops |
+| `blocked_clients`                   | Clients waiting on blocking ops | > 0 sustained          |
+| `instantaneous_ops_per_sec`         | Current throughput              | Significant drops      |
+| `keyspace_hits` / `keyspace_misses` | Cache hit ratio                 | Hit ratio < 80%        |
+| `rejected_connections`              | Hit `maxclients` cap            | > 0                    |
+| `rdb_last_save_time`                | Last persistence snapshot       | Too old vs. RPO        |
 
 ```python
 info = redis.info()
@@ -47,13 +47,13 @@ See [references/metrics.md](references/metrics.md).
 
 Reach for these when something looks off.
 
-| Topic | Command |
-|---|---|
-| Slow commands | `SLOWLOG GET 10` / `SLOWLOG LEN` / `SLOWLOG RESET` |
-| Server snapshot | `INFO all` (or `INFO memory` / `INFO stats` / `INFO clients` / `INFO replication`) |
-| Memory diagnostics | `MEMORY DOCTOR` / `MEMORY STATS` / `MEMORY USAGE <key>` |
-| Connections | `CLIENT LIST` / `CLIENT INFO` |
-| RQE / Search | `FT.INFO <idx>` / `FT.PROFILE <idx> SEARCH QUERY "..."` |
+| Topic              | Command                                                                            |
+| ------------------ | ---------------------------------------------------------------------------------- |
+| Slow commands      | `SLOWLOG GET 10` / `SLOWLOG LEN` / `SLOWLOG RESET`                                 |
+| Server snapshot    | `INFO all` (or `INFO memory` / `INFO stats` / `INFO clients` / `INFO replication`) |
+| Memory diagnostics | `MEMORY DOCTOR` / `MEMORY STATS` / `MEMORY USAGE <key>`                            |
+| Connections        | `CLIENT LIST` / `CLIENT INFO`                                                      |
+| RQE / Search       | `FT.INFO <idx>` / `FT.PROFILE <idx> SEARCH QUERY "..."`                            |
 
 The two most useful for incident triage:
 

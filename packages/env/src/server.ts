@@ -3,13 +3,21 @@ import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 
 export const env = createEnv({
+  emptyStringAsUndefined: true,
+  runtimeEnv: process.env,
   server: {
-    DATABASE_URL: z.string().min(1),
     BETTER_AUTH_SECRET: z.string().min(32),
     BETTER_AUTH_URL: z.url(),
+    CLICKHOUSE_DATABASE: z.string().min(1).default("analytics"),
+    CLICKHOUSE_PASSWORD: z.string().default("analytics"),
+    CLICKHOUSE_URL: z.url().default("http://localhost:8123"),
+    CLICKHOUSE_USER: z.string().min(1).default("analytics"),
     CORS_ORIGIN: z.url(),
-    NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+    DATABASE_URL: z.string().min(1),
+    KAFKA_BROKERS: z.string().min(1).default("localhost:19092"),
+    NODE_ENV: z
+      .enum(["development", "production", "test"])
+      .default("development"),
+    REDIS_URL: z.string().min(1).default("redis://localhost:6379"),
   },
-  runtimeEnv: process.env,
-  emptyStringAsUndefined: true,
 });

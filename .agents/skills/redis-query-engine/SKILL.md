@@ -35,14 +35,14 @@ See [references/dialect.md](references/dialect.md).
 
 The field type decides both what you can query and how fast that query is. Use the narrowest type that supports your access pattern.
 
-| Field type | Use when | Notes |
-|---|---|---|
-| `TEXT` | Full-text search needed | Tokenized + stemmed; **not** for exact match |
-| `TAG` | Exact match / filtering | Add `SORTABLE UNF` for fastest tag queries |
-| `NUMERIC` | Range queries, sorting | Prices, counts, timestamps |
-| `GEO` | Lat/long point queries | Single points (stores, users) |
-| `GEOSHAPE` | Polygon / area queries | Delivery zones, regions |
-| `VECTOR` | Similarity search | HNSW or FLAT; see redis-vector-search |
+| Field type | Use when                | Notes                                        |
+| ---------- | ----------------------- | -------------------------------------------- |
+| `TEXT`     | Full-text search needed | Tokenized + stemmed; **not** for exact match |
+| `TAG`      | Exact match / filtering | Add `SORTABLE UNF` for fastest tag queries   |
+| `NUMERIC`  | Range queries, sorting  | Prices, counts, timestamps                   |
+| `GEO`      | Lat/long point queries  | Single points (stores, users)                |
+| `GEOSHAPE` | Polygon / area queries  | Delivery zones, regions                      |
+| `VECTOR`   | Similarity search       | HNSW or FLAT; see redis-vector-search        |
 
 The classic mistake is using `TEXT` for a category or status field because "it's a string." `TAG` is 10× faster for those.
 
@@ -90,7 +90,7 @@ See [references/index-management.md](references/index-management.md).
 
 By default `FT.CREATE` walks all existing keys that match the prefix and indexes them. Use `SKIPINITIALSCAN` only when:
 
-- You're standing up the index for a *new* feature and existing data shouldn't be queryable.
+- You're standing up the index for a _new_ feature and existing data shouldn't be queryable.
 - Existing data is too large to scan synchronously.
 - You're indexing event streams where only future events matter.
 

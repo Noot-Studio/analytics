@@ -92,12 +92,19 @@ Client-side: `log`, `setIdentity`, `clearIdentity` are auto-imported in componen
 // lib/evlog.ts
 import type { DrainContext } from "evlog";
 import { createEvlog } from "evlog/next";
-import { createUserAgentEnricher, createRequestSizeEnricher } from "evlog/enrichers";
+import {
+  createUserAgentEnricher,
+  createRequestSizeEnricher,
+} from "evlog/enrichers";
 import { createDrainPipeline } from "evlog/pipeline";
 
 const enrichers = [createUserAgentEnricher(), createRequestSizeEnricher()];
-const pipeline = createDrainPipeline<DrainContext>({ batch: { size: 50, intervalMs: 5000 } });
-const drain = pipeline(createAxiomDrain({ dataset: "logs", apiKey: process.env.AXIOM_API_KEY! }));
+const pipeline = createDrainPipeline<DrainContext>({
+  batch: { size: 50, intervalMs: 5000 },
+});
+const drain = pipeline(
+  createAxiomDrain({ dataset: "logs", apiKey: process.env.AXIOM_API_KEY! })
+);
 
 export const { withEvlog, useLogger, log, createError } = createEvlog({
   service: "my-app",
@@ -215,7 +222,7 @@ export async function POST(request: NextRequest) {
   const { service: _, ...sanitized } = body;
   console.log(
     "[CLIENT LOG]",
-    JSON.stringify({ ...sanitized, service: "my-app", source: "client" }),
+    JSON.stringify({ ...sanitized, service: "my-app", source: "client" })
   );
   return new Response(null, { status: 204 });
 }
@@ -446,7 +453,7 @@ app.use(
     keep: (ctx) => {
       if (ctx.duration && ctx.duration > 2000) ctx.shouldKeep = true;
     },
-  }),
+  })
 );
 ```
 
@@ -481,8 +488,13 @@ app.onError((error, c) => {
   c.get("log").error(error);
   const parsed = parseError(error);
   return c.json(
-    { message: parsed.message, why: parsed.why, fix: parsed.fix, link: parsed.link },
-    parsed.status as ContentfulStatusCode,
+    {
+      message: parsed.message,
+      why: parsed.why,
+      fix: parsed.fix,
+      link: parsed.link,
+    },
+    parsed.status as ContentfulStatusCode
   );
 });
 ```
@@ -502,7 +514,7 @@ app.use(
     keep: (ctx) => {
       if (ctx.duration && ctx.duration > 2000) ctx.shouldKeep = true;
     },
-  }),
+  })
 );
 ```
 
@@ -598,7 +610,7 @@ app.use(
     keep: (ctx) => {
       if (ctx.duration && ctx.duration > 2000) ctx.shouldKeep = true;
     },
-  }),
+  })
 );
 ```
 
@@ -690,7 +702,9 @@ const router = {
 const handler = withEvlog(new RPCHandler(router));
 
 export default async function fetch(request: Request) {
-  const { matched, response } = await handler.handle(request, { prefix: "/rpc" });
+  const { matched, response } = await handler.handle(request, {
+    prefix: "/rpc",
+  });
   return matched ? response : new Response("Not Found", { status: 404 });
 }
 ```
@@ -991,14 +1005,21 @@ This adds `ai.tools` (per-tool `{ name, durationMs, success, error? }`) and `ai.
 ### Embeddings
 
 ```typescript
-const { embedding, usage } = await embed({ model: embeddingModel, value: query });
+const { embedding, usage } = await embed({
+  model: embeddingModel,
+  value: query,
+});
 ai.captureEmbed({ usage, model: "text-embedding-3-small", dimensions: 1536 });
 ```
 
 For `embedMany`, pass the batch count:
 
 ```typescript
-ai.captureEmbed({ usage, model: "text-embedding-3-small", count: documents.length });
+ai.captureEmbed({
+  usage,
+  model: "text-embedding-3-small",
+  count: documents.length,
+});
 ```
 
 ### Cost estimation
@@ -1039,7 +1060,11 @@ import { createError } from "evlog"; // or auto-imported in Nuxt
 throw createError({ message: "Database connection failed", status: 500 });
 
 // Standard
-throw createError({ message: "Payment failed", status: 402, why: "Card declined by issuer" });
+throw createError({
+  message: "Payment failed",
+  status: 402,
+  why: "Card declined by issuer",
+});
 
 // Complete
 throw createError({

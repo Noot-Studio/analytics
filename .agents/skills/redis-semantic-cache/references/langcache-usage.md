@@ -5,6 +5,7 @@
 LangCache is a fully-managed semantic caching service on Redis Cloud that reduces LLM costs and latency.
 
 **How it works:**
+
 1. Your app sends a prompt to LangCache via `POST /v1/caches/{cacheId}/entries/search`
 2. LangCache generates an embedding and searches for similar cached responses
 3. If found (cache hit), returns the cached response instantly

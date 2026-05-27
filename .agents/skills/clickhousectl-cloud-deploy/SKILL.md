@@ -14,6 +14,7 @@ This skill walks through deploying to ClickHouse Cloud using `clickhousectl`. It
 ## When to Apply
 
 Use this skill when the user wants to:
+
 - Deploy their ClickHouse application to production
 - Host ClickHouse as a managed cloud service
 - Migrate from a local ClickHouse setup to ClickHouse Cloud

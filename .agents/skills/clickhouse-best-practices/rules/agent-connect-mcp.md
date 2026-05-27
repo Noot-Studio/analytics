@@ -50,16 +50,17 @@ Uses OAuth. Read-only. No env vars needed.
 pip install mcp-clickhouse
 ```
 
-| Variable | Example | Notes |
-|----------|---------|-------|
-| `CLICKHOUSE_HOST` | `abc123.clickhouse.cloud` | Hostname |
-| `CLICKHOUSE_USER` | `default` | Database user |
-| `CLICKHOUSE_PASSWORD` | `your-password` | Database password |
-| `CLICKHOUSE_SECURE` | `true` | Always `true` for Cloud |
+| Variable              | Example                   | Notes                   |
+| --------------------- | ------------------------- | ----------------------- |
+| `CLICKHOUSE_HOST`     | `abc123.clickhouse.cloud` | Hostname                |
+| `CLICKHOUSE_USER`     | `default`                 | Database user           |
+| `CLICKHOUSE_PASSWORD` | `your-password`           | Database password       |
+| `CLICKHOUSE_SECURE`   | `true`                    | Always `true` for Cloud |
 
 Enable writes: `export CLICKHOUSE_ALLOW_WRITE_ACCESS=true`
 
 **Limitations:**
+
 - MCP has ~200-500ms overhead per call. For large result sets or batch operations, use CLI.
 - MCP's `list_tables` may not surface column `COMMENT` annotations — query `system.columns` directly for full schema context (see `agent-discovery-schema`).
 
@@ -104,12 +105,12 @@ For self-managed: check `config.xml` or ask your administrator.
 
 Always specify a format. The default (TabSeparated without headers) is unparseable by agents.
 
-| Format | Tokens (1K rows) | Best For |
-|--------|------------------|----------|
-| `JSON` | ~20K | Single queries — includes column types, row count, statistics |
-| `JSONCompact` | ~10K | Same metadata as JSON but rows as arrays — good for wide tables |
-| `JSONEachRow` | ~15K | Streaming large results, piping through `jq` |
-| `TabSeparatedWithNames` | ~4K | Minimal tokens, simple tabular data |
+| Format                  | Tokens (1K rows) | Best For                                                        |
+| ----------------------- | ---------------- | --------------------------------------------------------------- |
+| `JSON`                  | ~20K             | Single queries — includes column types, row count, statistics   |
+| `JSONCompact`           | ~10K             | Same metadata as JSON but rows as arrays — good for wide tables |
+| `JSONEachRow`           | ~15K             | Streaming large results, piping through `jq`                    |
+| `TabSeparatedWithNames` | ~4K              | Minimal tokens, simple tabular data                             |
 
 Use `JSON` as the default for agent work. Switch to `TabSeparatedWithNames` when result sets are large and context window budget matters.
 

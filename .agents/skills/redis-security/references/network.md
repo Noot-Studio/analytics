@@ -27,6 +27,7 @@ protected-mode no
 ```
 
 **Security checklist:**
+
 - Use TLS for connections
 - Bind to specific interfaces, not `0.0.0.0`
 - Use firewall rules to restrict access

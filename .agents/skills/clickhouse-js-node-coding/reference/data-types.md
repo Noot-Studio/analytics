@@ -48,7 +48,7 @@ When answering about storing and reading JSON objects:
 ## `Dynamic`, `Variant(...)`, `JSON`
 
 ```ts
-import { createClient } from '@clickhouse/client'
+import { createClient } from "@clickhouse/client";
 
 const client = createClient({
   clickhouse_settings: {
@@ -59,7 +59,7 @@ const client = createClient({
     allow_experimental_dynamic_type: 1,
     allow_experimental_json_type: 1,
   },
-})
+});
 
 await client.command({
   query: `
@@ -73,16 +73,16 @@ await client.command({
     ENGINE MergeTree
     ORDER BY id
   `,
-})
+});
 
 await client.insert({
-  table: 'chjs_dynamic_variant_json',
-  format: 'JSONEachRow',
+  table: "chjs_dynamic_variant_json",
+  format: "JSONEachRow",
   values: [
-    { id: 1, var: 42, dynamic: 'foo', json: { foo: 'x' } },
-    { id: 2, var: 'str', dynamic: 144, json: { bar: 10 } },
+    { id: 1, var: 42, dynamic: "foo", json: { foo: "x" } },
+    { id: 2, var: "str", dynamic: 144, json: { bar: 10 } },
   ],
-})
+});
 
 const rs = await client.query({
   query: `
@@ -93,36 +93,36 @@ const rs = await client.query({
            dynamicType(json.bar)
     FROM chjs_dynamic_variant_json
   `,
-  format: 'JSONEachRow',
-})
-console.log(await rs.json())
+  format: "JSONEachRow",
+});
+console.log(await rs.json());
 ```
 
 Outputs:
 
 ```js
-;[
+[
   {
-    id: '1',
-    var: '42',
-    dynamic: 'foo',
-    json: { foo: 'x' },
-    'variantType(var)': 'Int64',
-    'dynamicType(dynamic)': 'String',
-    'dynamicType(json.foo)': 'String',
-    'dynamicType(json.bar)': 'None',
+    id: "1",
+    var: "42",
+    dynamic: "foo",
+    json: { foo: "x" },
+    "variantType(var)": "Int64",
+    "dynamicType(dynamic)": "String",
+    "dynamicType(json.foo)": "String",
+    "dynamicType(json.bar)": "None",
   },
   {
-    id: '2',
-    var: 'str',
-    dynamic: '144',
-    json: { bar: '10' },
-    'variantType(var)': 'String',
-    'dynamicType(dynamic)': 'Int64',
-    'dynamicType(json.foo)': 'None',
-    'dynamicType(json.bar)': 'Int64',
+    id: "2",
+    var: "str",
+    dynamic: "144",
+    json: { bar: "10" },
+    "variantType(var)": "String",
+    "dynamicType(dynamic)": "Int64",
+    "dynamicType(json.foo)": "None",
+    "dynamicType(json.bar)": "Int64",
   },
-]
+];
 ```
 
 ### Notes
@@ -147,7 +147,7 @@ sub-second precision (`p` digits, up to `9` for nanoseconds). Both require
 ```ts
 const client = createClient({
   clickhouse_settings: { enable_time_time64_type: 1 },
-})
+});
 
 await client.command({
   query: `
@@ -163,38 +163,38 @@ await client.command({
     ENGINE MergeTree
     ORDER BY id
   `,
-})
+});
 
 await client.insert({
-  table: 'chjs_time_time64',
-  format: 'JSONEachRow',
+  table: "chjs_time_time64",
+  format: "JSONEachRow",
   values: [
     {
       id: 1,
-      t: '12:34:56',
-      t64_0: '12:34:56',
-      t64_3: '12:34:56.123',
-      t64_6: '12:34:56.123456',
-      t64_9: '12:34:56.123456789',
+      t: "12:34:56",
+      t64_0: "12:34:56",
+      t64_3: "12:34:56.123",
+      t64_6: "12:34:56.123456",
+      t64_9: "12:34:56.123456789",
     },
     {
       id: 2,
-      t: '999:59:59',
-      t64_0: '999:59:59',
-      t64_3: '999:59:59.999',
-      t64_6: '999:59:59.999999',
-      t64_9: '999:59:59.999999999',
+      t: "999:59:59",
+      t64_0: "999:59:59",
+      t64_3: "999:59:59.999",
+      t64_6: "999:59:59.999999",
+      t64_9: "999:59:59.999999999",
     },
     {
       id: 3,
-      t: '-999:59:59',
-      t64_0: '-999:59:59',
-      t64_3: '-999:59:59.999',
-      t64_6: '-999:59:59.999999',
-      t64_9: '-999:59:59.999999999',
+      t: "-999:59:59",
+      t64_0: "-999:59:59",
+      t64_3: "-999:59:59.999",
+      t64_6: "-999:59:59.999999",
+      t64_9: "-999:59:59.999999999",
     },
   ],
-})
+});
 ```
 
 ### Notes

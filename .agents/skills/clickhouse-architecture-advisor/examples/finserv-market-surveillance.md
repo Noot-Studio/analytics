@@ -39,6 +39,7 @@ derived
 medium
 
 **Source**
+
 - https://clickhouse.com/docs/en/guides/replacing-merge-tree
 
 ### 2. Use ReplacingMergeTree for current-state table if version semantics are clean
@@ -56,6 +57,7 @@ official
 high
 
 **Source**
+
 - https://clickhouse.com/docs/en/guides/replacing-merge-tree
 
 ### 3. Use dictionaries for small reference data used in surveillance rules
@@ -73,6 +75,7 @@ official
 high
 
 **Source**
+
 - https://clickhouse.com/docs/en/sql-reference/dictionaries
 
 ## Example raw events table

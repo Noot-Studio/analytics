@@ -2,14 +2,14 @@
 
 Each field type has different capabilities and performance characteristics.
 
-| Field Type | Use When | Notes |
-|------------|----------|-------|
-| TEXT | Full-text search needed | Tokenized, stemmed |
-| TAG | Exact match, filtering | Faster than TEXT for filtering |
-| NUMERIC | Range queries, sorting | Use for prices, counts, timestamps |
-| GEO | Point location queries | Lat/long coordinates (single points) |
-| GEOSHAPE | Area/region queries | Polygons, circles, rectangles |
-| VECTOR | Similarity search | HNSW or FLAT algorithm |
+| Field Type | Use When                | Notes                                |
+| ---------- | ----------------------- | ------------------------------------ |
+| TEXT       | Full-text search needed | Tokenized, stemmed                   |
+| TAG        | Exact match, filtering  | Faster than TEXT for filtering       |
+| NUMERIC    | Range queries, sorting  | Use for prices, counts, timestamps   |
+| GEO        | Point location queries  | Lat/long coordinates (single points) |
+| GEOSHAPE   | Area/region queries     | Polygons, circles, rectangles        |
+| VECTOR     | Similarity search       | HNSW or FLAT algorithm               |
 
 **Correct:** Use TAG for exact matching.
 
@@ -22,6 +22,7 @@ FT.CREATE idx:products ON HASH PREFIX 1 product:
 ```
 
 **Java** (Jedis):
+
 ```java
 import redis.clients.jedis.search.*;
 
@@ -48,6 +49,7 @@ FT.CREATE idx:products ON HASH PREFIX 1 product:
 ```
 
 **Java** (Jedis):
+
 ```java
 // Bad: TEXT for categories adds unnecessary overhead
 Schema schema = new Schema()

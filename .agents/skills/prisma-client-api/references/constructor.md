@@ -105,7 +105,9 @@ const prisma = new PrismaClient({
   comments: [prismaQueryInsights(), traceContext(), queryTags()],
 });
 
-await withQueryTags({ route: "/api/users", requestId: "req-123" }, () => prisma.user.findMany());
+await withQueryTags({ route: "/api/users", requestId: "req-123" }, () =>
+  prisma.user.findMany()
+);
 ```
 
 Use `comments` only for SQL providers. This is the clean way to add trace or query-shape metadata without changing your query calls.

@@ -1656,7 +1656,7 @@ On self-hosted, GROUP BY and ORDER BY have no automatic memory ceiling — set t
 
 - **Timeout** (`TIMEOUT_EXCEEDED`): Narrow the time range, add sort key filters, run `EXPLAIN ESTIMATE` to check scan size before retrying. Consider `max_estimated_execution_time` to reject expensive queries up front.
 
-- **Memory error** (`MEMORY_LIMIT_EXCEEDED`): Reduce actual memory use — narrow filters, add `LIMIT`, lower GROUP BY cardinality, enable `max_bytes_before_external_group_by` (already on by default in Cloud, off on self-hosted), or split into smaller time windows. Raising `max_memory_usage` only helps if you're authorized and the ceiling is genuinely the problem; *lowering* it makes the error happen sooner, not later.
+- **Memory error** (`MEMORY_LIMIT_EXCEEDED`): Reduce actual memory use — narrow filters, add `LIMIT`, lower GROUP BY cardinality, enable `max_bytes_before_external_group_by` (already on by default in Cloud, off on self-hosted), or split into smaller time windows. Raising `max_memory_usage` only helps if you're authorized and the ceiling is genuinely the problem; _lowering_ it makes the error happen sooner, not later.
 
 - **Too many parts** (`TOO_MANY_PARTS`): Back off inserts — merges are behind. Wait and retry.
 

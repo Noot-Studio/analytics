@@ -8,8 +8,10 @@ import { appRouter } from "@sbox-analytics/api/routers/index";
 import { auth } from "@sbox-analytics/auth";
 import { env } from "@sbox-analytics/env/server";
 import { initLogger } from "evlog";
-import { createAuthMiddleware, type BetterAuthInstance } from "evlog/better-auth";
-import { evlog, type EvlogVariables } from "evlog/hono";
+import { createAuthMiddleware } from "evlog/better-auth";
+import type { BetterAuthInstance } from "evlog/better-auth";
+import { evlog } from "evlog/hono";
+import type { EvlogVariables } from "evlog/hono";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 
@@ -33,24 +35,24 @@ app.use("*", async (c, next) => {
 app.use(
   "/*",
   cors({
-    origin: env.CORS_ORIGIN,
-    allowMethods: ["GET", "POST", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
+    allowMethods: ["GET", "POST", "OPTIONS"],
     credentials: true,
-  }),
+    origin: env.CORS_ORIGIN,
+  })
 );
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
 export const apiHandler = new OpenAPIHandler(appRouter, {
-  plugins: [
-    new OpenAPIReferencePlugin({
-      schemaConverters: [new ZodToJsonSchemaConverter()],
-    }),
-  ],
   interceptors: [
     onError((error) => {
       console.error(error);
+    }),
+  ],
+  plugins: [
+    new OpenAPIReferencePlugin({
+      schemaConverters: [new ZodToJsonSchemaConverter()],
     }),
   ],
 });
@@ -67,8 +69,8 @@ app.use("/*", async (c, next) => {
   const context = await createContext({ context: c });
 
   const rpcResult = await rpcHandler.handle(c.req.raw, {
+    context,
     prefix: "/rpc",
-    context: context,
   });
 
   if (rpcResult.matched) {
@@ -76,8 +78,8 @@ app.use("/*", async (c, next) => {
   }
 
   const apiResult = await apiHandler.handle(c.req.raw, {
+    context,
     prefix: "/api-reference",
-    context: context,
   });
 
   if (apiResult.matched) {
@@ -87,8 +89,6 @@ app.use("/*", async (c, next) => {
   await next();
 });
 
-app.get("/", (c) => {
-  return c.text("OK");
-});
+app.get("/", (c) => c.text("OK"));
 
 export default app;

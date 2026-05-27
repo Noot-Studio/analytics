@@ -25,10 +25,11 @@
  * (normalizing paths, generating filenames, globbing + parsing frontmatter).
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import { getCritiqueDir } from './impeccable-paths.mjs';
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+import { getCritiqueDir } from "./impeccable-paths.mjs";
 
 const SLUG_MAX = 50;
 
@@ -41,14 +42,22 @@ const SLUG_MAX = 50;
  * phrase.
  */
 export function slugFromTarget(resolved, { cwd = process.cwd() } = {}) {
-  if (!resolved || typeof resolved !== 'string') return null;
+  if (!resolved || typeof resolved !== "string") {
+    return null;
+  }
   const trimmed = resolved.trim();
-  if (!trimmed) return null;
+  if (!trimmed) {
+    return null;
+  }
 
   // URL
   if (/^https?:\/\//i.test(trimmed)) {
     let url;
-    try { url = new URL(trimmed); } catch { return null; }
+    try {
+      url = new URL(trimmed);
+    } catch {
+      return null;
+    }
     const hostPath = `${url.hostname}${url.pathname}`;
     return kebab(hostPath);
   }
@@ -60,24 +69,30 @@ export function slugFromTarget(resolved, { cwd = process.cwd() } = {}) {
   // If the target is outside cwd, fall back to the basename so we still
   // produce a stable slug (vs the absolute path, which would include
   // home dirs / usernames).
-  if (rel.startsWith('..') || path.isAbsolute(rel)) {
+  if (rel.startsWith("..") || path.isAbsolute(rel)) {
     rel = path.basename(abs);
   }
-  if (!rel || rel === '.' || rel === '') return null;
+  if (!rel || rel === "." || rel === "") {
+    return null;
+  }
   return kebab(rel);
 }
 
 function kebab(s) {
   const slug = s
     .toLowerCase()
-    .replace(/[/\\.]+/g, '-')
-    .replace(/[^a-z0-9-]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-  if (!slug) return null;
+    .replaceAll(/[/\\.]+/g, "-")
+    .replaceAll(/[^a-z0-9-]+/g, "-")
+    .replaceAll(/-+/g, "-")
+    .replaceAll(/^-|-$/g, "");
+  if (!slug) {
+    return null;
+  }
   // Cap from the tail — the tail (filename) is more identifying than the
   // top-level directory.
-  return slug.length <= SLUG_MAX ? slug : slug.slice(slug.length - SLUG_MAX).replace(/^-/, '');
+  return slug.length <= SLUG_MAX
+    ? slug
+    : slug.slice(slug.length - SLUG_MAX).replace(/^-/, "");
 }
 
 /**
@@ -85,8 +100,8 @@ function kebab(s) {
  * Plain colons aren't allowed on Windows filesystems.
  */
 export function nowFilenameStamp(date = new Date()) {
-  const iso = date.toISOString();           // 2026-05-12T18:30:00.123Z
-  return iso.replace(/[:.]/g, '-').replace(/-\d+Z$/, 'Z');
+  const iso = date.toISOString(); // 2026-05-12T18:30:00.123Z
+  return iso.replaceAll(/[:.]/g, "-").replace(/-\d+Z$/, "Z");
 }
 
 /**
@@ -96,8 +111,16 @@ export function nowFilenameStamp(date = new Date()) {
  *
  * Returns the absolute path written.
  */
-export function writeSnapshot({ slug, meta, body, cwd = process.cwd(), now = new Date() }) {
-  if (!slug) throw new Error('writeSnapshot requires a slug');
+export function writeSnapshot({
+  slug,
+  meta,
+  body,
+  cwd = process.cwd(),
+  now = new Date(),
+}) {
+  if (!slug) {
+    throw new Error("writeSnapshot requires a slug");
+  }
   const dir = getCritiqueDir(cwd);
   fs.mkdirSync(dir, { recursive: true });
   const timestamp = nowFilenameStamp(now);
@@ -106,35 +129,45 @@ export function writeSnapshot({ slug, meta, body, cwd = process.cwd(), now = new
   // always win. Otherwise a caller-supplied meta blob (parsed from the
   // IMPECCABLE_CRITIQUE_META env var) could clobber them, leaving the
   // filename in disagreement with its frontmatter and corrupting trends.
-  const front = serializeFrontmatter({ ...meta, timestamp, slug });
-  fs.writeFileSync(filePath, `${front}\n${body.trim()}\n`, 'utf-8');
+  const front = serializeFrontmatter({ ...meta, slug, timestamp });
+  fs.writeFileSync(filePath, `${front}\n${body.trim()}\n`, "utf-8");
   return filePath;
 }
 
 function serializeFrontmatter(obj) {
-  const lines = ['---'];
+  const lines = ["---"];
   for (const [key, value] of Object.entries(obj)) {
-    if (value === undefined || value === null) continue;
-    const str = typeof value === 'string' ? value : String(value);
+    if (value === undefined || value === null) {
+      continue;
+    }
+    const str = typeof value === "string" ? value : String(value);
     // Quote strings that contain : or # to keep parsing simple.
-    const needsQuotes = typeof value === 'string' && /[:#]/.test(str);
+    const needsQuotes = typeof value === "string" && /[:#]/.test(str);
     lines.push(`${key}: ${needsQuotes ? JSON.stringify(str) : str}`);
   }
-  lines.push('---');
-  return lines.join('\n');
+  lines.push("---");
+  return lines.join("\n");
 }
 
 function parseFrontmatter(text) {
   const match = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  if (!match) return {};
+  if (!match) {
+    return {};
+  }
   const out = {};
   for (const line of match[1].split(/\r?\n/)) {
-    const colon = line.indexOf(':');
-    if (colon < 0) continue;
+    const colon = line.indexOf(":");
+    if (colon === -1) {
+      continue;
+    }
     const key = line.slice(0, colon).trim();
     let value = line.slice(colon + 1).trim();
     if (/^".*"$/.test(value)) {
-      try { value = JSON.parse(value); } catch { /* leave as-is */ }
+      try {
+        value = JSON.parse(value);
+      } catch {
+        /* leave as-is */
+      }
     } else if (/^-?\d+$/.test(value)) {
       value = Number(value);
     }
@@ -148,11 +181,14 @@ function parseFrontmatter(text) {
  */
 function listSnapshotsForSlug(slug, cwd) {
   const dir = getCritiqueDir(cwd);
-  if (!fs.existsSync(dir)) return [];
+  if (!fs.existsSync(dir)) {
+    return [];
+  }
   const suffix = `__${slug}.md`;
-  return fs.readdirSync(dir)
+  return fs
+    .readdirSync(dir)
     .filter((f) => f.endsWith(suffix))
-    .sort()
+    .toSorted()
     .map((f) => path.join(dir, f));
 }
 
@@ -162,10 +198,12 @@ function listSnapshotsForSlug(slug, cwd) {
  */
 export function readLatestSnapshot(slug, { cwd = process.cwd() } = {}) {
   const all = listSnapshotsForSlug(slug, cwd);
-  if (!all.length) return null;
-  const latest = all[all.length - 1];
-  const body = fs.readFileSync(latest, 'utf-8');
-  return { path: latest, body, meta: parseFrontmatter(body) };
+  if (!all.length) {
+    return null;
+  }
+  const latest = all.at(-1);
+  const body = fs.readFileSync(latest, "utf-8");
+  return { body, meta: parseFrontmatter(body), path: latest };
 }
 
 /**
@@ -175,7 +213,7 @@ export function readLatestSnapshot(slug, { cwd = process.cwd() } = {}) {
 export function readTrend(slug, { limit = 5, cwd = process.cwd() } = {}) {
   const all = listSnapshotsForSlug(slug, cwd);
   const slice = all.slice(-limit);
-  return slice.map((file) => parseFrontmatter(fs.readFileSync(file, 'utf-8')));
+  return slice.map((file) => parseFrontmatter(fs.readFileSync(file, "utf-8")));
 }
 
 // ---- CLI ---------------------------------------------------------------
@@ -183,49 +221,68 @@ export function readTrend(slug, { limit = 5, cwd = process.cwd() } = {}) {
 function main(argv) {
   const [cmd, ...args] = argv;
   switch (cmd) {
-    case 'slug': {
+    case "slug": {
       const slug = slugFromTarget(args[0]);
-      if (!slug) { process.stderr.write('no stable slug for input\n'); process.exit(1); }
+      if (!slug) {
+        process.stderr.write("no stable slug for input\n");
+        process.exit(1);
+      }
       process.stdout.write(`${slug}\n`);
       return;
     }
-    case 'write': {
+    case "write": {
       const [slug, bodyFile] = args;
-      if (!slug || !bodyFile) { process.stderr.write('usage: write <slug> <body-file>\n'); process.exit(1); }
-      const raw = fs.readFileSync(bodyFile, 'utf-8');
+      if (!slug || !bodyFile) {
+        process.stderr.write("usage: write <slug> <body-file>\n");
+        process.exit(1);
+      }
+      const raw = fs.readFileSync(bodyFile, "utf-8");
       // The body file may be a full report. The caller passes the meta as
       // a JSON object on stdin if it wants structured frontmatter; otherwise
       // we write with minimal metadata.
       let meta = {};
       const metaArg = process.env.IMPECCABLE_CRITIQUE_META;
       if (metaArg) {
-        try { meta = JSON.parse(metaArg); } catch { /* ignore */ }
+        try {
+          meta = JSON.parse(metaArg);
+        } catch {
+          /* ignore */
+        }
       }
-      const out = writeSnapshot({ slug, meta, body: raw });
+      const out = writeSnapshot({ body: raw, meta, slug });
       process.stdout.write(`${out}\n`);
       return;
     }
-    case 'latest': {
+    case "latest": {
       const latest = readLatestSnapshot(args[0]);
-      if (!latest) { process.exit(2); }
+      if (!latest) {
+        process.exit(2);
+      }
       process.stdout.write(latest.body);
       return;
     }
-    case 'trend': {
+    case "trend": {
       const rows = readTrend(args[0], { limit: args[1] ? Number(args[1]) : 5 });
-      process.stdout.write(JSON.stringify(rows, null, 2) + '\n');
+      process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
       return;
     }
-    default:
-      process.stderr.write('usage: critique-storage.mjs <slug|write|latest|trend> [args]\n');
+    default: {
+      process.stderr.write(
+        "usage: critique-storage.mjs <slug|write|latest|trend> [args]\n"
+      );
       process.exit(1);
+    }
   }
 }
 
 function isMainModule() {
-  if (!process.argv[1]) return false;
+  if (!process.argv[1]) {
+    return false;
+  }
   try {
-    return fs.realpathSync(fileURLToPath(import.meta.url)) === fs.realpathSync(process.argv[1]);
+    return (
+      fs.realpathSync(import.meta.filename) === fs.realpathSync(process.argv[1])
+    );
   } catch {
     // pathToFileURL normalizes Windows paths; keep it as a fallback for any
     // environment where realpath is unavailable.

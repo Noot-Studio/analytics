@@ -4,13 +4,18 @@ import type { AppRouterClient } from "@sbox-analytics/api/routers/index";
 import { Toaster } from "@sbox-analytics/ui/components/sonner";
 import type { QueryClient } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { HeadContent, Outlet, createRootRouteWithContext } from "@tanstack/react-router";
+import {
+  HeadContent,
+  Outlet,
+  createRootRouteWithContext,
+} from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { useState } from "react";
 
 import Header from "@/components/header";
 import { ThemeProvider } from "@/components/theme-provider";
-import { link, orpc } from "@/utils/orpc";
+import type { orpc } from "@/utils/orpc";
+import { link } from "@/utils/orpc";
 
 import "../index.css";
 
@@ -22,19 +27,19 @@ export interface RouterAppContext {
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   component: RootComponent,
   head: () => ({
+    links: [
+      {
+        href: "/favicon.ico",
+        rel: "icon",
+      },
+    ],
     meta: [
       {
         title: "sbox-analytics",
       },
       {
-        name: "description",
         content: "sbox-analytics is a web application",
-      },
-    ],
-    links: [
-      {
-        rel: "icon",
-        href: "/favicon.ico",
+        name: "description",
       },
     ],
   }),

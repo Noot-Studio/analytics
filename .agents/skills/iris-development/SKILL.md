@@ -22,12 +22,10 @@ A background **promotion** worker — managed by Redis Cloud — extracts durabl
 
 All code samples use the official SDKs:
 
-
 | Language   | Package                    | Class         | Install                            |
 | ---------- | -------------------------- | ------------- | ---------------------------------- |
 | Python     | `redis-agent-memory`       | `AgentMemory` | `pip install redis-agent-memory`   |
 | TypeScript | `@redis-iris/agent-memory` | `AgentMemory` | `npm add @redis-iris/agent-memory` |
-
 
 Both SDKs read the bearer token from `AGENT_MEMORY_API_KEY` and the default store ID from `AGENT_MEMORY_STORE_ID`. The production data-plane URL is `https://gcp-us-east4.memory.redis.io`; the exact URL for your service is also shown in the Cloud console after provisioning.
 
@@ -42,14 +40,12 @@ Reference these guidelines when:
 
 ## Rule Categories by Priority
 
-
 | Priority | Category                | Impact | Prefix       |
 | -------- | ----------------------- | ------ | ------------ |
 | 1        | Setup & Cloud Service   | HIGH   | `setup-`     |
 | 2        | Session Memory / Events | HIGH   | `session-`   |
 | 3        | Long-Term Memory        | HIGH   | `ltm-`       |
 | 4        | Memory Promotion        | MEDIUM | `promotion-` |
-
 
 ## Quick Reference
 

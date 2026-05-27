@@ -5,6 +5,7 @@ Enable the `SKIPINITIALSCAN` option when creating an index if you only want to i
 **Correct:** Use SKIPINITIALSCAN when you only need to index new data.
 
 **Python** (redis-py):
+
 ```python
 import redis
 from redis.commands.search.field import TextField, TagField
@@ -32,6 +33,7 @@ client.ft("idx").create_index(
 ```
 
 **Java** (Jedis):
+
 ```java
 import redis.clients.jedis.UnifiedJedis;
 import redis.clients.jedis.search.FTCreateParams;
@@ -57,12 +59,14 @@ try (UnifiedJedis jedis = new UnifiedJedis("redis://localhost:6379")) {
 ```
 
 **When to use SKIPINITIALSCAN:**
+
 - Creating an index for a new feature where existing data is irrelevant
 - Setting up indexes in advance before data arrives
 - When existing data would be too large to scan during index creation
 - Event-driven architectures where you only care about new events
 
 **When NOT to use (default behavior is correct):**
+
 - You need to search existing data immediately after index creation
 - Migrating to a new index schema and need all data indexed
 - Most typical use cases where historical data matters

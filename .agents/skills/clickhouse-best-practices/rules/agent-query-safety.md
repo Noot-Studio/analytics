@@ -39,34 +39,34 @@ SETTINGS max_execution_time = 30,
 
 **Recommended per-query settings:**
 
-| Setting | Recommended | Effect |
-|---------|-------------|--------|
-| `max_rows_to_read` | 1e9 | Caps rows scanned before materialization — the real guardrail |
-| `max_bytes_to_read` | 1e11 | Caps bytes scanned |
-| `max_execution_time` | 30 | Interrupts query when projected execution time exceeds N seconds (see `timeout_before_checking_execution_speed`) |
-| `timeout_before_checking_execution_speed` | 0 | Makes `max_execution_time` behave as a wall-clock limit (default `10` gives queries 10s of grace before timeouts kick in) |
-| `max_estimated_execution_time` | 60 | Rejects queries whose projected runtime exceeds N seconds — kills expensive queries before they start |
-| `max_result_rows` | 10000 | Caps output rows |
-| `result_overflow_mode` | `'break'` | Returns partial result of ≥ `max_result_rows`, rounded up to the next block boundary (it does not truncate exactly) |
+| Setting                                   | Recommended | Effect                                                                                                                    |
+| ----------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `max_rows_to_read`                        | 1e9         | Caps rows scanned before materialization — the real guardrail                                                             |
+| `max_bytes_to_read`                       | 1e11        | Caps bytes scanned                                                                                                        |
+| `max_execution_time`                      | 30          | Interrupts query when projected execution time exceeds N seconds (see `timeout_before_checking_execution_speed`)          |
+| `timeout_before_checking_execution_speed` | 0           | Makes `max_execution_time` behave as a wall-clock limit (default `10` gives queries 10s of grace before timeouts kick in) |
+| `max_estimated_execution_time`            | 60          | Rejects queries whose projected runtime exceeds N seconds — kills expensive queries before they start                     |
+| `max_result_rows`                         | 10000       | Caps output rows                                                                                                          |
+| `result_overflow_mode`                    | `'break'`   | Returns partial result of ≥ `max_result_rows`, rounded up to the next block boundary (it does not truncate exactly)       |
 
 Limits are checked at block boundaries, so actual scans and runtime can overshoot slightly.
 
 **Cloud vs self-hosted defaults that matter:**
 
-| Setting | Self-hosted default | Cloud default |
-|---------|---------------------|---------------|
-| `max_memory_usage` | `0` (unlimited) | Depends on replica RAM — not unlimited |
-| `max_bytes_before_external_group_by` | `0` (no spill) | Half the memory per replica — spills automatically |
-| `max_bytes_before_external_sort` | `0` (no spill) | Half the memory per replica — spills automatically |
-| `max_rows_to_read` / `max_bytes_to_read` | `0` (unlimited) | `0` (unlimited) — must be set explicitly on both |
-| `max_execution_time` | `0` (unlimited) | `0` (unlimited) — must be set explicitly on both |
+| Setting                                  | Self-hosted default | Cloud default                                      |
+| ---------------------------------------- | ------------------- | -------------------------------------------------- |
+| `max_memory_usage`                       | `0` (unlimited)     | Depends on replica RAM — not unlimited             |
+| `max_bytes_before_external_group_by`     | `0` (no spill)      | Half the memory per replica — spills automatically |
+| `max_bytes_before_external_sort`         | `0` (no spill)      | Half the memory per replica — spills automatically |
+| `max_rows_to_read` / `max_bytes_to_read` | `0` (unlimited)     | `0` (unlimited) — must be set explicitly on both   |
+| `max_execution_time`                     | `0` (unlimited)     | `0` (unlimited) — must be set explicitly on both   |
 
 On self-hosted, GROUP BY and ORDER BY have no automatic memory ceiling — set the `max_bytes_before_external_*` settings explicitly or enforce via profile. On Cloud, GROUP BY / ORDER BY spill to disk automatically and per-query memory is bounded, but scan and execution-time caps are still your job.
 
 **When things go wrong:**
 
 - **Timeout** (`TIMEOUT_EXCEEDED`): Narrow the time range, add sort key filters, run `EXPLAIN ESTIMATE` to check scan size before retrying. Consider `max_estimated_execution_time` to reject expensive queries up front.
-- **Memory error** (`MEMORY_LIMIT_EXCEEDED`): Reduce actual memory use — narrow filters, add `LIMIT`, lower GROUP BY cardinality, enable `max_bytes_before_external_group_by` (already on by default in Cloud, off on self-hosted), or split into smaller time windows. Raising `max_memory_usage` only helps if you're authorized and the ceiling is genuinely the problem; *lowering* it makes the error happen sooner, not later.
+- **Memory error** (`MEMORY_LIMIT_EXCEEDED`): Reduce actual memory use — narrow filters, add `LIMIT`, lower GROUP BY cardinality, enable `max_bytes_before_external_group_by` (already on by default in Cloud, off on self-hosted), or split into smaller time windows. Raising `max_memory_usage` only helps if you're authorized and the ceiling is genuinely the problem; _lowering_ it makes the error happen sooner, not later.
 - **Too many parts** (`TOO_MANY_PARTS`): Back off inserts — merges are behind. Wait and retry.
 
 **Role-level hardening (belt-and-suspenders):**

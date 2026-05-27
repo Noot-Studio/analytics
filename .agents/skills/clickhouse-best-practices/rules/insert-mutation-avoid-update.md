@@ -12,6 +12,7 @@ tags: [insert, mutation, UPDATE, ReplacingMergeTree]
 `ALTER TABLE UPDATE` is a mutation that rewrites entire data parts affected by the change. Use alternatives like lightweight UPDATE or ReplacingMergeTree.
 
 **Why mutations are problematic:**
+
 - **Write amplification:** Rewrite complete parts even for minor changes
 - **Disk I/O spike:** Degrades overall cluster performance
 - **No rollback:** Cannot be rolled back after submission
@@ -65,10 +66,10 @@ WHERE last_login < now() - INTERVAL 90 DAY;
 
 **Update strategy comparison:**
 
-| Method | Speed | When to Use |
-|--------|-------|-------------|
-| ALTER UPDATE | Slow | Rare corrections only |
-| ReplacingMergeTree | Fast | Frequent updates |
-| Lightweight UPDATE | Medium | Occasional updates |
+| Method             | Speed  | When to Use           |
+| ------------------ | ------ | --------------------- |
+| ALTER UPDATE       | Slow   | Rare corrections only |
+| ReplacingMergeTree | Fast   | Frequent updates      |
+| Lightweight UPDATE | Medium | Occasional updates    |
 
 Reference: [Avoid Mutations](https://clickhouse.com/docs/best-practices/avoid-mutations)

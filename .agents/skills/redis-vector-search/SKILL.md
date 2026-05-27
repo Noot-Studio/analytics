@@ -59,10 +59,10 @@ See [references/index-creation.md](references/index-creation.md) for redis-py an
 
 ## 2. HNSW vs FLAT
 
-| Algorithm | Speed | Accuracy | Memory | Best for |
-|---|---|---|---|---|
-| **HNSW** | Fast (approximate) | ~95%+ recall (tunable) | Higher | Large datasets (>10k vectors), latency-sensitive |
-| **FLAT** | Slow (exact) | 100% | Lower | Small datasets (<10k), accuracy-critical |
+| Algorithm | Speed              | Accuracy               | Memory | Best for                                         |
+| --------- | ------------------ | ---------------------- | ------ | ------------------------------------------------ |
+| **HNSW**  | Fast (approximate) | ~95%+ recall (tunable) | Higher | Large datasets (>10k vectors), latency-sensitive |
+| **FLAT**  | Slow (exact)       | 100%                   | Lower  | Small datasets (<10k), accuracy-critical         |
 
 Default to **HNSW** for any production-scale workload. Tuning levers:
 
@@ -76,7 +76,7 @@ See [references/algorithm-choice.md](references/algorithm-choice.md).
 
 ## 3. Hybrid search — filter before vector
 
-Apply attribute filters (TAG / NUMERIC) so the engine narrows the search space *before* the vector comparison. Don't fetch a wide result set and then filter client-side — that's slower and less accurate.
+Apply attribute filters (TAG / NUMERIC) so the engine narrows the search space _before_ the vector comparison. Don't fetch a wide result set and then filter client-side — that's slower and less accurate.
 
 ```python
 from redisvl.query import VectorQuery

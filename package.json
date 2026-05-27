@@ -31,6 +31,7 @@
     "check-types": "turbo check-types",
     "dev:web": "turbo -F web dev",
     "dev:server": "turbo -F server dev",
+    "dev:ingest": "turbo -F ingest dev",
     "db:push": "turbo -F @sbox-analytics/db db:push",
     "db:studio": "turbo -F @sbox-analytics/db db:studio",
     "db:generate": "turbo -F @sbox-analytics/db db:generate",

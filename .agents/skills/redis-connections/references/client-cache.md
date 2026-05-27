@@ -5,6 +5,7 @@ Use a connection with client-side caching enabled for any data that will be read
 **Correct:** Enable client-side caching with RESP3 protocol for frequently accessed data.
 
 **Python** (redis-py):
+
 ```python
 import redis
 
@@ -21,6 +22,7 @@ value = client.get("frequently:read:key")
 ```
 
 **Java** (Jedis):
+
 ```java
 import redis.clients.jedis.DefaultJedisClientConfig;
 import redis.clients.jedis.UnifiedJedis;
@@ -41,18 +43,21 @@ UnifiedJedis client = new UnifiedJedis(endpoint, config, cacheConfig);
 ```
 
 **When to use:**
+
 - Configuration data read frequently, updated rarely
 - User session data accessed on every request
 - Feature flags or settings checked repeatedly
 - Any read-heavy workload with low write frequency
 
 **When NOT needed:**
+
 - Data that changes frequently (cache invalidation overhead outweighs benefits)
 - Write-heavy workloads
 - Simple applications where network latency is not a bottleneck
 - When you need guaranteed real-time consistency
 
 **Trade-offs:**
+
 - Adds memory overhead on the client
 - Requires RESP3 protocol
 - Cache invalidation adds complexity for frequently changing data

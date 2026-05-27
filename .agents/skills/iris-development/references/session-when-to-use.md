@@ -1,12 +1,11 @@
-
 ## Choose Session Events vs Long-Term Memory
 
 Redis Agent Memory has two tiers. They serve different jobs — picking the wrong one is the single biggest source of cost and correctness problems.
 
-| Tier | What it stores | Retrieval | Lifetime | Cost shape |
-|---|---|---|---|---|
-| **Session memory** | Raw, ordered conversation events for one session | Whole session or by `eventId` | Session-scoped TTL (configured at store creation) | Cheap writes, no LLM cost on the write path |
-| **Long-term memory** | Extracted facts/summaries/messages | Semantic search across sessions | Default 1 year TTL | Each promotion runs an LLM call |
+| Tier                 | What it stores                                   | Retrieval                       | Lifetime                                          | Cost shape                                  |
+| -------------------- | ------------------------------------------------ | ------------------------------- | ------------------------------------------------- | ------------------------------------------- |
+| **Session memory**   | Raw, ordered conversation events for one session | Whole session or by `eventId`   | Session-scoped TTL (configured at store creation) | Cheap writes, no LLM cost on the write path |
+| **Long-term memory** | Extracted facts/summaries/messages               | Semantic search across sessions | Default 1 year TTL                                | Each promotion runs an LLM call             |
 
 **Correct:** Append every turn of the conversation as a session event. Let the background promotion worker decide what becomes long-term memory.
 
@@ -39,16 +38,16 @@ agent_memory.add_session_event(
 ```typescript
 await agentMemory.addSessionEvent({
   sessionId: sessionId,
-  actorId:   "user-42",
-  role:      "USER",
-  content:   [{ text: userMsg }],
+  actorId: "user-42",
+  role: "USER",
+  content: [{ text: userMsg }],
   createdAt: new Date(),
 });
 await agentMemory.addSessionEvent({
   sessionId: sessionId,
-  actorId:   "agent-1",
-  role:      "ASSISTANT",
-  content:   [{ text: reply }],
+  actorId: "agent-1",
+  role: "ASSISTANT",
+  content: [{ text: reply }],
   createdAt: new Date(),
 });
 ```
@@ -76,11 +75,11 @@ agent_memory.bulk_create_long_term_memories(memories=[
 await agentMemory.bulkCreateLongTermMemories({
   memories: [
     {
-      id:         "user-42-timezone",
-      text:       "User 42 is in Europe/Sofia (UTC+2/+3).",
+      id: "user-42-timezone",
+      text: "User 42 is in Europe/Sofia (UTC+2/+3).",
       memoryType: "semantic",
-      ownerId:    "user-42",
-      topics:     ["profile", "timezone"],
+      ownerId: "user-42",
+      topics: ["profile", "timezone"],
     },
   ],
 });
@@ -100,4 +99,4 @@ for turn in conversation:
 
 Why it's bad: LTM is vector-indexed (cost per write) and unordered (you re-paginate to reconstruct a session). Session memory is append-only and keeps `createdAt` order for free.
 
-**Rule of thumb:** if you'd want to retrieve it in a *different* future conversation, it belongs in LTM (usually via promotion). If you only need it for the current turn or the rest of this session, it stays in session memory.
+**Rule of thumb:** if you'd want to retrieve it in a _different_ future conversation, it belongs in LTM (usually via promotion). If you only need it for the current turn or the rest of this session, it stays in session memory.

@@ -1,4 +1,3 @@
-
 ## Append a Session Event Correctly
 
 `AgentMemory.add_session_event(...)` (Python) / `agentMemory.addSessionEvent(...)` (TypeScript) appends a single event to a session. The session is created on first write; if `session_id` / `sessionId` is omitted the server generates one (32-char UUID without dashes) and returns it on the response. Every successful write also enqueues a promotion job — so payload quality directly affects what lands in long-term memory.
@@ -47,28 +46,28 @@ async function appendEvent(
   agentMemory: AgentMemory,
   args: {
     sessionId: string;
-    actorId:   string;
-    role:      "USER" | "ASSISTANT" | "SYSTEM";
-    text:      string;
+    actorId: string;
+    role: "USER" | "ASSISTANT" | "SYSTEM";
+    text: string;
     metadata?: Record<string, unknown>;
-  },
+  }
 ) {
   const res = await agentMemory.addSessionEvent({
     sessionId: args.sessionId,
-    actorId:   args.actorId,
-    role:      args.role,
-    content:   [{ text: args.text }],
-    createdAt: new Date(),                         // UTC Date — required
-    metadata:  args.metadata,
+    actorId: args.actorId,
+    role: args.role,
+    content: [{ text: args.text }],
+    createdAt: new Date(), // UTC Date — required
+    metadata: args.metadata,
   });
-  return res.event;                                // server-assigned eventId, etc.
+  return res.event; // server-assigned eventId, etc.
 }
 
 await appendEvent(agentMemory, {
   sessionId: "chat-2026-05-18-42",
-  actorId:   "user-42",
-  role:      "USER",
-  text:      "What did we agree on yesterday?",
+  actorId: "user-42",
+  role: "USER",
+  text: "What did we agree on yesterday?",
 });
 ```
 
@@ -90,6 +89,7 @@ agent_memory.add_session_event(
 ```
 
 **Constraints worth remembering:**
+
 - `store_id`, `session_id`, `actor_id`: 1–64 chars, `[a-zA-Z0-9-]` only.
 - `role`: one of `USER`, `ASSISTANT`, `SYSTEM`.
 - `content`: list of typed parts; today only `{"text": "..."}` is supported.

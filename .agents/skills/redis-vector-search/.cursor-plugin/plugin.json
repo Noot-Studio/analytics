@@ -9,5 +9,13 @@
   "homepage": "https://redis.io",
   "repository": "https://github.com/redis/agent-skills",
   "license": "MIT",
-  "keywords": ["redis", "vector-search", "embeddings", "rag", "redisvl", "hnsw", "ai"]
+  "keywords": [
+    "redis",
+    "vector-search",
+    "embeddings",
+    "rag",
+    "redisvl",
+    "hnsw",
+    "ai"
+  ]
 }

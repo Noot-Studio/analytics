@@ -36,12 +36,14 @@ const loader = createServerFn({
   .middleware([staticFunctionMiddleware])
   .handler(async ({ data: slugs }) => {
     const page = source.getPage(slugs);
-    if (!page) throw notFound();
+    if (!page) {
+      throw notFound();
+    }
 
     return {
-      path: page.path,
       markdownUrl: slugsToMarkdownPath(page.slugs).url,
       pageTree: await source.serializePageTree(source.getPageTree()),
+      path: page.path,
     };
   });
 
@@ -55,7 +57,7 @@ const clientLoader = browserCollections.docs.createClientLoader({
     }: {
       markdownUrl: string;
       path: string;
-    },
+    }
   ) {
     return (
       <DocsPage toc={toc}>
@@ -77,12 +79,16 @@ const clientLoader = browserCollections.docs.createClientLoader({
 });
 
 function Page() {
-  const { pageTree, path, markdownUrl } = useFumadocsLoader(Route.useLoaderData());
+  const { pageTree, path, markdownUrl } = useFumadocsLoader(
+    Route.useLoaderData()
+  );
 
   return (
     <DocsLayout {...baseOptions()} tree={pageTree}>
       <Link to={markdownUrl} hidden />
-      <Suspense>{clientLoader.useContent(path, { markdownUrl, path })}</Suspense>
+      <Suspense>
+        {clientLoader.useContent(path, { markdownUrl, path })}
+      </Suspense>
     </DocsLayout>
   );
 }

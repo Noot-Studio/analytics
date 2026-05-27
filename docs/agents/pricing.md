@@ -11,13 +11,13 @@
 
 ## Infrastructure Costs
 
-| Item                                 | Monthly Cost |
-| ------------------------------------ | ------------ |
-| OVH VPS (8 vCores, 24GB RAM)         | ~€25 (~$27)  |
-| Domain + SSL (Cloudflare)            | ~$10–$20     |
-| Polar.sh (payments)                  | ~$25         |
-| Monitoring (Grafana Cloud free tier) | $0           |
-| Backup storage (S3/Backblaze)        | ~$10         |
+| Item                                 | Monthly Cost   |
+| ------------------------------------ | -------------- |
+| OVH VPS (8 vCores, 24GB RAM)         | ~€25 (~$27)    |
+| Domain + SSL (Cloudflare)            | ~$10–$20       |
+| Polar.sh (payments)                  | ~$25           |
+| Monitoring (Grafana Cloud free tier) | $0             |
+| Backup storage (S3/Backblaze)        | ~$10           |
 | **Total**                            | **~$72/month** |
 
 ## Notes
