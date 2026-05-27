@@ -101,5 +101,3 @@ const shutdown = async (signal: NodeJS.Signals) => {
 
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
-
-export default app;
