@@ -174,7 +174,9 @@ export function ChartAreaInteractive() {
             value={[timeRange]}
             onValueChange={(values) => {
               const last = values.at(-1);
-              if (last) {setTimeRange(last);}
+              if (last) {
+                setTimeRange(last);
+              }
             }}
             variant="outline"
             className="hidden *:data-[slot=toggle-group-item]:!px-4 @[767px]/card:flex"
