@@ -1,0 +1,10 @@
+{
+  "name": "ingest",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "go run ./cmd/server",
+    "build": "go build -o dist/ingest ./cmd/server",
+    "check-types": "go vet ./..."
+  }
+}

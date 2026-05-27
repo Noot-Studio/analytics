@@ -9,5 +9,11 @@
   "homepage": "https://redis.io",
   "repository": "https://github.com/redis/agent-skills",
   "license": "MIT",
-  "keywords": ["redis", "database", "data-modeling", "data-structures", "key-naming"]
+  "keywords": [
+    "redis",
+    "database",
+    "data-modeling",
+    "data-structures",
+    "key-naming"
+  ]
 }

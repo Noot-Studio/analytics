@@ -6,21 +6,10 @@ import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  server: {
-    port: 3000,
-  },
   plugins: [
     mdx(),
     tailwindcss(),
     tanstackStart({
-      spa: {
-        enabled: true,
-        prerender: {
-          enabled: true,
-          crawlLinks: true,
-        },
-      },
-
       pages: [
         {
           path: "/docs",
@@ -35,15 +24,26 @@ export default defineConfig({
           path: "llms.txt",
         },
       ],
+
+      spa: {
+        enabled: true,
+        prerender: {
+          crawlLinks: true,
+          enabled: true,
+        },
+      },
     }),
     react(),
     // please see https://tanstack.com/start/latest/docs/framework/react/guide/hosting#nitro for guides on hosting
     nitro(),
   ],
   resolve: {
-    tsconfigPaths: true,
     alias: {
       tslib: "tslib/tslib.es6.js",
     },
+    tsconfigPaths: true,
+  },
+  server: {
+    port: 3000,
   },
 });

@@ -9,5 +9,13 @@
   "homepage": "https://redis.io",
   "repository": "https://github.com/redis/agent-skills",
   "license": "MIT",
-  "keywords": ["iris", "redis", "agent-memory", "ai", "llm", "session-memory", "long-term-memory"]
+  "keywords": [
+    "iris",
+    "redis",
+    "agent-memory",
+    "ai",
+    "llm",
+    "session-memory",
+    "long-term-memory"
+  ]
 }

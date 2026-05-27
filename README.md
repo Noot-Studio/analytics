@@ -83,12 +83,13 @@ If you want to add app-specific blocks instead of shared primitives, run the sha
 sbox-analytics/
 ├── apps/
 │   ├── web/         # Frontend application (React + TanStack Router)
-│   └── server/      # Backend API (Hono, ORPC)
+│   ├── server/      # Backend API (Hono, ORPC)
+│   └── ingest/      # High-throughput event ingestion API (Go + Echo)
 ├── packages/
 │   ├── ui/          # Shared shadcn/ui components and styles
 │   ├── api/         # API layer / business logic
 │   ├── auth/        # Authentication configuration & logic
-│   └── db/          # Database schema & queries
+│   └── db/          # Postgres (Prisma), ClickHouse init, Redpanda, Redis (Docker Compose)
 ```
 
 ## Available Scripts

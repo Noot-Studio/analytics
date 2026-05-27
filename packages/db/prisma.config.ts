@@ -3,16 +3,17 @@ import path from "node:path";
 import dotenv from "dotenv";
 import { defineConfig, env } from "prisma/config";
 
+// Resolves through the symlink at packages/db/.env → repo-root .env.
 dotenv.config({
-  path: "../../apps/server/.env",
+  path: path.join(import.meta.dirname, ".env"),
 });
 
 export default defineConfig({
-  schema: path.join("prisma", "schema"),
-  migrations: {
-    path: path.join("prisma", "migrations"),
-  },
   datasource: {
     url: env("DATABASE_URL"),
   },
+  migrations: {
+    path: path.join("prisma", "migrations"),
+  },
+  schema: path.join("prisma", "schema"),
 });

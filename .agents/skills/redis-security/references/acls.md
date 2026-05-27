@@ -23,6 +23,7 @@ requirepass shared-password
 ```
 
 **ACL categories:**
+
 - `@read` - Read commands
 - `@write` - Write commands
 - `@dangerous` - Commands like FLUSHALL, DEBUG

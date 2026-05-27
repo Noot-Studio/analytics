@@ -1,15 +1,14 @@
-
 ## Authenticate the SDK with a Store API Key
 
 Every data-plane request carries `Authorization: Bearer <store-api-key>`. The SDKs add this header for you — just pass the key (and store ID) at client construction. Both SDKs follow the same convention:
 
-| Field | Python | TypeScript | Environment variable |
-|---|---|---|---|
-| Server URL | `server_url` (1st positional) | `serverURL` | (set yourself, e.g. `AGENT_MEMORY_BASE_URL`) |
-| API key | `api_key` | `apiKey` | `AGENT_MEMORY_API_KEY` |
-| Store ID | `store_id` (global) | `storeId` (global) | `AGENT_MEMORY_STORE_ID` |
+| Field      | Python                        | TypeScript         | Environment variable                         |
+| ---------- | ----------------------------- | ------------------ | -------------------------------------------- |
+| Server URL | `server_url` (1st positional) | `serverURL`        | (set yourself, e.g. `AGENT_MEMORY_BASE_URL`) |
+| API key    | `api_key`                     | `apiKey`           | `AGENT_MEMORY_API_KEY`                       |
+| Store ID   | `store_id` (global)           | `storeId` (global) | `AGENT_MEMORY_STORE_ID`                      |
 
-`store_id` / `storeId` is a *global parameter* — set it on the client once and every per-store operation uses it by default. You can still override it per call.
+`store_id` / `storeId` is a _global parameter_ — set it on the client once and every per-store operation uses it by default. You can still override it per call.
 
 **Correct:** Read the key from a secrets manager (or environment) and construct the client once per process.
 
@@ -40,8 +39,8 @@ import { AgentMemory } from "@redis-iris/agent-memory";
 // Construct once at module scope; the SDK is safe to share across requests.
 export const agentMemory = new AgentMemory({
   serverURL: process.env.AGENT_MEMORY_BASE_URL!,
-  storeId:   process.env.AGENT_MEMORY_STORE_ID!,
-  apiKey:    process.env.AGENT_MEMORY_API_KEY!,
+  storeId: process.env.AGENT_MEMORY_STORE_ID!,
+  apiKey: process.env.AGENT_MEMORY_API_KEY!,
 });
 
 await agentMemory.health();
@@ -67,9 +66,9 @@ def handle(req):
 // Bad: rebuilding the Authorization header manually defeats the SDK's typing,
 // retry, and error-class machinery.
 const res = await fetch(`${URL}/v1/stores/${SID}/session-memory/events`, {
-  method:  "POST",
+  method: "POST",
   headers: { Authorization: `Bearer ${KEY}` },
-  body:    JSON.stringify(event),
+  body: JSON.stringify(event),
 });
 ```
 

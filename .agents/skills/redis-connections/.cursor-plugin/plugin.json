@@ -9,5 +9,12 @@
   "homepage": "https://redis.io",
   "repository": "https://github.com/redis/agent-skills",
   "license": "MIT",
-  "keywords": ["redis", "performance", "connections", "pooling", "pipelining", "client-side-cache"]
+  "keywords": [
+    "redis",
+    "performance",
+    "connections",
+    "pooling",
+    "pipelining",
+    "client-side-cache"
+  ]
 }

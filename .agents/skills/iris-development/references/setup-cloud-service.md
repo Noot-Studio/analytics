@@ -1,4 +1,3 @@
-
 ## Create a Memory Service on Redis Cloud
 
 Redis Cloud provisions the memory store, the backing Redis database, the background promotion worker, and the LLM/embedding provider credentials. Each store gets a unique `storeId` and a **store API key** used as a bearer token on every data-plane request.
@@ -53,18 +52,18 @@ import { AgentMemory } from "@redis-iris/agent-memory";
 
 const agentMemory = new AgentMemory({
   serverURL: process.env.AGENT_MEMORY_BASE_URL!,
-  storeId:   process.env.AGENT_MEMORY_STORE_ID!,
-  apiKey:    process.env.AGENT_MEMORY_API_KEY!,
+  storeId: process.env.AGENT_MEMORY_STORE_ID!,
+  apiKey: process.env.AGENT_MEMORY_API_KEY!,
 });
 
 async function smokeTest() {
   console.log(await agentMemory.health());
 
   const res = await agentMemory.addSessionEvent({
-    actorId:   "user-42",
-    role:      "USER",
-    content:   [{ text: "hello" }],
-    createdAt: new Date(),                       // SDK serializes to UTC ISO-8601
+    actorId: "user-42",
+    role: "USER",
+    content: [{ text: "hello" }],
+    createdAt: new Date(), // SDK serializes to UTC ISO-8601
   });
   console.log(res.event.eventId);
 }

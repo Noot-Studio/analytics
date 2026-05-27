@@ -34,6 +34,7 @@ response = llm.generate(f"Context: {context}\n\nQuestion: {user_question}")
 ```
 
 **Best practices:**
+
 - Match your distance metric to your embedding model; many modern text embeddings already work well with COSINE
 - Batch inserts using `index.load()` with lists
 - Set appropriate M and EF_CONSTRUCTION for HNSW based on dataset size

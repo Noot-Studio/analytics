@@ -88,6 +88,7 @@ GROUP BY event_type;
 ```
 
 Look for:
+
 - **Keys** section showing your sort key columns are being used for filtering
 - **Parts** and **Granules** counts — if these are not significantly reduced from the total, your filters aren't pruning effectively
 - **Skip** entries showing data skipping index usage
@@ -155,14 +156,14 @@ LIMIT 100;
 
 **Why each step matters:**
 
-| Step | Skipping It Causes |
-|------|-------------------|
-| List databases | Querying wrong or nonexistent database |
-| List tables | Missing the right table, querying the wrong one |
-| Get columns + comments | Wrong column names, misunderstood semantics |
-| Check sort key | Full table scans instead of index-pruned reads |
-| Check skip indexes | Missing optimized filter paths on non-key columns |
-| Sample data | Wrong assumptions about date ranges, nulls, enums |
-| Verify EXPLAIN | Expensive queries that could have been caught before execution |
+| Step                   | Skipping It Causes                                             |
+| ---------------------- | -------------------------------------------------------------- |
+| List databases         | Querying wrong or nonexistent database                         |
+| List tables            | Missing the right table, querying the wrong one                |
+| Get columns + comments | Wrong column names, misunderstood semantics                    |
+| Check sort key         | Full table scans instead of index-pruned reads                 |
+| Check skip indexes     | Missing optimized filter paths on non-key columns              |
+| Sample data            | Wrong assumptions about date ranges, nulls, enums              |
+| Verify EXPLAIN         | Expensive queries that could have been caught before execution |
 
 Reference: [System Tables](https://clickhouse.com/docs/operations/system-tables)

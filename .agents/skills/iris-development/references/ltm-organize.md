@@ -1,16 +1,16 @@
-
 ## Organize Long-Term Memory with namespace, ownerId, topics, and memoryType
 
 LTM records carry four structured fields that exist purely to scope search. They cost nothing extra to populate at write time and make every later search call faster and more precise.
 
-| Field | Type | Purpose | Typical use |
-|---|---|---|---|
-| `owner_id` / `ownerId` | 1–64 chars `[a-zA-Z0-9-]` | The user/agent the memory is *about* | Multi-tenant scoping — always set this for per-user memories |
-| `namespace` | 1–64 chars `[a-zA-Z0-9-]` | Logical bucket within a store | Separate `profile` facts from `interactions` from `tools` |
-| `topics` | List of up to 50 tags, each 1–100 chars | Categorical labels | `["preferences", "ui"]`, `["incident", "p1"]` |
-| `memory_type` / `memoryType` | `semantic` \| `episodic` \| `message` | What the record *is* | See below |
+| Field                        | Type                                    | Purpose                              | Typical use                                                  |
+| ---------------------------- | --------------------------------------- | ------------------------------------ | ------------------------------------------------------------ |
+| `owner_id` / `ownerId`       | 1–64 chars `[a-zA-Z0-9-]`               | The user/agent the memory is _about_ | Multi-tenant scoping — always set this for per-user memories |
+| `namespace`                  | 1–64 chars `[a-zA-Z0-9-]`               | Logical bucket within a store        | Separate `profile` facts from `interactions` from `tools`    |
+| `topics`                     | List of up to 50 tags, each 1–100 chars | Categorical labels                   | `["preferences", "ui"]`, `["incident", "p1"]`                |
+| `memory_type` / `memoryType` | `semantic` \| `episodic` \| `message`   | What the record _is_                 | See below                                                    |
 
 **`memory_type` semantics:**
+
 - `semantic` — a durable fact ("user prefers dark mode"). Cheapest to keep around long-term; survives across sessions.
 - `episodic` — something that happened at a point in time ("user asked about pricing on 2026-05-10"). Pair with `created_at` filters.
 - `message` — a raw conversational turn that was deemed worth retaining verbatim.
@@ -48,20 +48,20 @@ agent_memory.bulk_create_long_term_memories(memories=[
 await agentMemory.bulkCreateLongTermMemories({
   memories: [
     {
-      id:         "user-42-pref-theme",
-      text:       "User 42 prefers dark mode in the dashboard.",
+      id: "user-42-pref-theme",
+      text: "User 42 prefers dark mode in the dashboard.",
       memoryType: "semantic",
-      ownerId:    "user-42",
-      namespace:  "preferences",
-      topics:     ["ui", "theme"],
+      ownerId: "user-42",
+      namespace: "preferences",
+      topics: ["ui", "theme"],
     },
     {
-      id:         "user-42-incident-7821",
-      text:       "User 42 hit a 500 on /api/checkout on 2026-05-10 and was refunded.",
+      id: "user-42-incident-7821",
+      text: "User 42 hit a 500 on /api/checkout on 2026-05-10 and was refunded.",
       memoryType: "episodic",
-      ownerId:    "user-42",
-      namespace:  "interactions",
-      topics:     ["incident", "billing"],
+      ownerId: "user-42",
+      namespace: "interactions",
+      topics: ["incident", "billing"],
     },
   ],
 });
@@ -103,8 +103,8 @@ const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 await agentMemory.searchLongTermMemory({
   text: "checkout failure",
   filter: {
-    topics:    { all: ["incident", "billing"] },
-    createdAt: { gte: sevenDaysAgo },             // Date
+    topics: { all: ["incident", "billing"] },
+    createdAt: { gte: sevenDaysAgo }, // Date
   },
 });
 ```

@@ -35,6 +35,7 @@ filtered = [r for r in results if r["category"] == "technology"]
 ```
 
 **Tips:**
+
 - Use TAG fields for category filters
 - Use NUMERIC fields for date/price ranges
 - Redis auto-selects the filtered vector execution strategy; tune `hybrid_policy` only when needed

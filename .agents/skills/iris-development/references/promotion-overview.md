@@ -1,4 +1,3 @@
-
 ## Understand Background Memory Promotion
 
 Every successful `add_session_event` / `addSessionEvent` enqueues a **promote-working-memory** job, fire-and-forget. The data plane never blocks on the LLM call; Redis Cloud's worker pool consumes the job, reads the session's events, calls an LLM to extract durable facts, and writes resulting records into long-term memory.
@@ -28,7 +27,7 @@ Submitting a job per event would mean an LLM call per turn. To prevent that, the
 
 ### Eventually consistent — design for it
 
-After an `add_session_event` returns 200, a `search_long_term_memory` for the extracted facts may not see them for *up to one deduplication window plus the LLM round-trip*. Don't assert synchronously in tests; poll.
+After an `add_session_event` returns 200, a `search_long_term_memory` for the extracted facts may not see them for _up to one deduplication window plus the LLM round-trip_. Don't assert synchronously in tests; poll.
 
 **Python:**
 
@@ -63,14 +62,14 @@ import { AgentMemory } from "@redis-iris/agent-memory";
 
 async function waitForLtm(
   agentMemory: AgentMemory,
-  args: { query: string; ownerId: string; timeoutMs?: number },
+  args: { query: string; ownerId: string; timeoutMs?: number }
 ) {
   const deadline = Date.now() + (args.timeoutMs ?? 30_000);
   while (Date.now() < deadline) {
     const res = await agentMemory.searchLongTermMemory({
-      text:   args.query,
+      text: args.query,
       filter: { ownerId: { eq: args.ownerId } },
-      limit:  5,
+      limit: 5,
     });
     if (res.memories.length) return res.memories;
     await new Promise((r) => setTimeout(r, 1000));

@@ -95,13 +95,13 @@ conn.close()
 
 ## Troubleshooting
 
-| Problem | Fix |
-|---------|-----|
-| `ImportError: No module named 'chdb'` | `pip install chdb` |
-| `DB::Exception: FILE_NOT_FOUND` | Check file path; use absolute path or verify cwd |
+| Problem                                 | Fix                                                              |
+| --------------------------------------- | ---------------------------------------------------------------- |
+| `ImportError: No module named 'chdb'`   | `pip install chdb`                                               |
+| `DB::Exception: FILE_NOT_FOUND`         | Check file path; use absolute path or verify cwd                 |
 | `DB::Exception: Unknown table function` | Check function name spelling (e.g., `deltaLake` not `deltalake`) |
-| Connection refused to remote DB | Check host:port format; ensure remote DB allows connections |
-| Environment check | Run `python scripts/verify_install.py` (from skill directory) |
+| Connection refused to remote DB         | Check host:port format; ensure remote DB allows connections      |
+| Environment check                       | Run `python scripts/verify_install.py` (from skill directory)    |
 
 ## References
 
@@ -111,6 +111,6 @@ conn.close()
 - [Examples](examples/examples.md) — 9 runnable examples with expected output
 - [Official Docs](https://clickhouse.com/docs/chdb)
 
-> Note: This skill teaches how to *use* chdb SQL.
+> Note: This skill teaches how to _use_ chdb SQL.
 > For pandas-style operations, use the `chdb-datastore` skill.
 > For contributing to chdb source code, see CLAUDE.md in the project root.

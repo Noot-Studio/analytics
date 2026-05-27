@@ -1,10 +1,17 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { getLegacyLiveSessionsDir, getLiveSessionsDir } from './impeccable-paths.mjs';
+import fs from "node:fs";
+import path from "node:path";
 
-const COMPLETED_PHASES = new Set(['completed', 'discarded']);
+import {
+  getLegacyLiveSessionsDir,
+  getLiveSessionsDir,
+} from "./impeccable-paths.mjs";
 
-export function createLiveSessionStore({ cwd = process.cwd(), sessionId } = {}) {
+const COMPLETED_PHASES = new Set(["completed", "discarded"]);
+
+export function createLiveSessionStore({
+  cwd = process.cwd(),
+  sessionId,
+} = {}) {
   const rootDir = getLiveSessionsDir(cwd);
   const legacyRootDir = getLegacyLiveSessionsDir(cwd);
   fs.mkdirSync(rootDir, { recursive: true });
@@ -12,7 +19,9 @@ export function createLiveSessionStore({ cwd = process.cwd(), sessionId } = {}) 
 
   function loadCachedOrRebuild(id) {
     const cached = snapshotCache.get(id);
-    if (cached) return cached;
+    if (cached) {
+      return cached;
+    }
     const journalPath = getReadableJournalPath(id);
     const rebuilt = rebuildSnapshotFromJournal(journalPath, id);
     snapshotCache.set(id, rebuilt);
@@ -21,15 +30,17 @@ export function createLiveSessionStore({ cwd = process.cwd(), sessionId } = {}) 
 
   function getReadableJournalPath(id) {
     const primary = getJournalPath(rootDir, id);
-    if (fs.existsSync(primary)) return primary;
+    if (fs.existsSync(primary)) {
+      return primary;
+    }
     const legacy = getJournalPath(legacyRootDir, id);
-    if (fs.existsSync(legacy)) return legacy;
+    if (fs.existsSync(legacy)) {
+      return legacy;
+    }
     return primary;
   }
 
   return {
-    rootDir,
-    legacyRootDir,
     appendEvent(event) {
       const normalized = normalizeEvent(event, sessionId);
       const journalPath = getJournalPath(rootDir, normalized.id);
@@ -41,85 +52,110 @@ export function createLiveSessionStore({ cwd = process.cwd(), sessionId } = {}) 
       const prior = loadCachedOrRebuild(normalized.id);
       const seq = prior.nextSeq;
       const entry = {
-        seq,
-        id: normalized.id,
-        type: normalized.type,
-        ts: new Date().toISOString(),
         event: normalized,
+        id: normalized.id,
+        seq,
+        ts: new Date().toISOString(),
+        type: normalized.type,
       };
-      fs.appendFileSync(journalPath, JSON.stringify(entry) + '\n');
+      fs.appendFileSync(journalPath, `${JSON.stringify(entry)}\n`);
       const next = applyEvent(prior.snapshot, entry, prior.diagnostics);
-      snapshotCache.set(normalized.id, { snapshot: next, diagnostics: next.diagnostics || [], nextSeq: seq + 1 });
+      snapshotCache.set(normalized.id, {
+        diagnostics: next.diagnostics || [],
+        nextSeq: seq + 1,
+        snapshot: next,
+      });
       writeSnapshot(snapshotPath, next);
       return next;
     },
     getSnapshot(id = sessionId, opts = {}) {
-      if (!id) throw new Error('session id required');
+      if (!id) {
+        throw new Error("session id required");
+      }
       const journalPath = getReadableJournalPath(id);
       const snapshotPath = getSnapshotPath(rootDir, id);
       const rebuilt = rebuildSnapshotFromJournal(journalPath, id);
       snapshotCache.set(id, rebuilt);
       writeSnapshot(snapshotPath, rebuilt.snapshot);
-      if (!opts.includeCompleted && COMPLETED_PHASES.has(rebuilt.snapshot.phase)) return null;
+      if (
+        !opts.includeCompleted &&
+        COMPLETED_PHASES.has(rebuilt.snapshot.phase)
+      ) {
+        return null;
+      }
       return rebuilt.snapshot;
     },
+    legacyRootDir,
     listActiveSessions() {
       const ids = new Set();
       for (const dir of [legacyRootDir, rootDir]) {
-        if (!fs.existsSync(dir)) continue;
+        if (!fs.existsSync(dir)) {
+          continue;
+        }
         for (const name of fs.readdirSync(dir)) {
-          if (name.endsWith('.jsonl')) ids.add(name.slice(0, -'.jsonl'.length));
+          if (name.endsWith(".jsonl")) {
+            ids.add(name.slice(0, -".jsonl".length));
+          }
         }
       }
       return [...ids]
-        .sort()
+        .toSorted()
         .map((id) => this.getSnapshot(id))
         .filter(Boolean);
     },
+    rootDir,
   };
 }
 
 function normalizeEvent(event, fallbackId) {
-  if (!event || typeof event !== 'object') throw new Error('event object required');
+  if (!event || typeof event !== "object") {
+    throw new Error("event object required");
+  }
   const id = event.id || fallbackId;
-  if (!id || typeof id !== 'string') throw new Error('event id required');
-  if (!event.type || typeof event.type !== 'string') throw new Error('event type required');
+  if (!id || typeof id !== "string") {
+    throw new Error("event id required");
+  }
+  if (!event.type || typeof event.type !== "string") {
+    throw new Error("event type required");
+  }
   return { ...event, id };
 }
 
 function getJournalPath(rootDir, id) {
-  return path.join(rootDir, safeSessionId(id) + '.jsonl');
+  return path.join(rootDir, `${safeSessionId(id)}.jsonl`);
 }
 
 function getSnapshotPath(rootDir, id) {
-  return path.join(rootDir, safeSessionId(id) + '.snapshot.json');
+  return path.join(rootDir, `${safeSessionId(id)}.snapshot.json`);
 }
 
 function safeSessionId(id) {
-  if (!/^[A-Za-z0-9_-]{1,128}$/.test(id)) throw new Error('invalid session id: ' + id);
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(id)) {
+    throw new Error(`invalid session id: ${id}`);
+  }
   return id;
 }
 
 function baseSnapshot(id) {
   return {
-    id,
-    phase: 'new',
-    pageUrl: null,
-    sourceFile: null,
-    expectedVariants: 0,
-    arrivedVariants: 0,
-    visibleVariant: null,
-    paramValues: {},
-    pendingEventSeq: null,
-    pendingEvent: null,
-    deliveryLease: null,
-    checkpointRevision: 0,
     activeOwner: null,
-    sourceMarkers: {},
-    fallbackMode: null,
     annotationArtifacts: [],
+    arrivedVariants: 0,
+    checkpointRevision: 0,
+    deliveryLease: null,
     diagnostics: [],
+    expectedVariants: 0,
+    fallbackMode: null,
+    id,
+    pageUrl: null,
+    paramValues: {},
+    pendingEvent: null,
+    pendingEventSeq: null,
+    phase: "new",
+    sourceFile: null,
+    sourceMarkers: {},
     updatedAt: null,
+    visibleVariant: null,
   };
 }
 
@@ -127,37 +163,45 @@ function rebuildSnapshotFromJournal(journalPath, id) {
   let snapshot = baseSnapshot(id);
   const diagnostics = [];
   let nextSeq = 1;
-  if (!fs.existsSync(journalPath)) return { snapshot, diagnostics, nextSeq };
+  if (!fs.existsSync(journalPath)) {
+    return { diagnostics, nextSeq, snapshot };
+  }
 
-  const lines = fs.readFileSync(journalPath, 'utf-8').split('\n');
+  const lines = fs.readFileSync(journalPath, "utf-8").split("\n");
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (!line.trim()) continue;
+    if (!line.trim()) {
+      continue;
+    }
     try {
       const entry = JSON.parse(line);
-      if (!entry || typeof entry !== 'object') throw new Error('entry is not object');
-      if (Number.isInteger(entry.seq)) nextSeq = Math.max(nextSeq, entry.seq + 1);
+      if (!entry || typeof entry !== "object") {
+        throw new Error("entry is not object");
+      }
+      if (Number.isInteger(entry.seq)) {
+        nextSeq = Math.max(nextSeq, entry.seq + 1);
+      }
       snapshot = applyEvent(snapshot, entry);
-    } catch (err) {
+    } catch (error) {
       diagnostics.push({
-        error: 'journal_parse_failed',
+        error: "journal_parse_failed",
         line: i + 1,
-        message: err.message,
+        message: error.message,
       });
     }
   }
   snapshot.diagnostics = [...snapshot.diagnostics, ...diagnostics];
-  return { snapshot, diagnostics, nextSeq };
+  return { diagnostics, nextSeq, snapshot };
 }
 
 function applyEvent(snapshot, entry, inheritedDiagnostics = []) {
   const event = entry.event || entry;
   const next = {
     ...snapshot,
-    paramValues: { ...(snapshot.paramValues || {}) },
-    sourceMarkers: { ...(snapshot.sourceMarkers || {}) },
     annotationArtifacts: [...(snapshot.annotationArtifacts || [])],
     diagnostics: [...(snapshot.diagnostics || [])],
+    paramValues: { ...snapshot.paramValues },
+    sourceMarkers: { ...snapshot.sourceMarkers },
     updatedAt: entry.ts || new Date().toISOString(),
   };
 
@@ -166,73 +210,100 @@ function applyEvent(snapshot, entry, inheritedDiagnostics = []) {
   }
 
   switch (event.type) {
-    case 'generate':
-      next.phase = 'generate_requested';
+    case "generate": {
+      next.phase = "generate_requested";
       next.pageUrl = event.pageUrl ?? next.pageUrl;
       next.expectedVariants = event.count ?? next.expectedVariants;
       next.pendingEventSeq = entry.seq ?? next.pendingEventSeq;
       next.pendingEvent = toPendingEvent(event);
-      if (event.screenshotPath) upsertArtifact(next.annotationArtifacts, { type: 'screenshot', path: event.screenshotPath });
+      if (event.screenshotPath) {
+        upsertArtifact(next.annotationArtifacts, {
+          path: event.screenshotPath,
+          type: "screenshot",
+        });
+      }
       break;
-    case 'variants_ready':
-    case 'agent_done':
-      next.phase = event.carbonize === true ? 'carbonize_required' : 'variants_ready';
+    }
+    case "variants_ready":
+    case "agent_done": {
+      next.phase =
+        event.carbonize === true ? "carbonize_required" : "variants_ready";
       next.sourceFile = event.file ?? next.sourceFile;
-      next.arrivedVariants = event.arrivedVariants ?? (next.arrivedVariants ?? next.expectedVariants);
+      next.arrivedVariants =
+        event.arrivedVariants ?? next.arrivedVariants ?? next.expectedVariants;
       next.pendingEventSeq = null;
       next.pendingEvent = null;
       if (event.carbonize === true) {
         next.diagnostics.push({
-          error: 'carbonize_cleanup_required',
+          error: "carbonize_cleanup_required",
           file: event.file || null,
-          message: 'Accepted variant still has carbonize markers that must be folded into source CSS.',
+          message:
+            "Accepted variant still has carbonize markers that must be folded into source CSS.",
         });
       }
       break;
-    case 'checkpoint':
+    }
+    case "checkpoint": {
       if ((event.revision ?? 0) >= (next.checkpointRevision ?? 0)) {
         next.phase = event.phase ?? next.phase;
         next.checkpointRevision = event.revision ?? next.checkpointRevision;
         next.activeOwner = event.owner ?? next.activeOwner;
         next.arrivedVariants = event.arrivedVariants ?? next.arrivedVariants;
         next.visibleVariant = event.visibleVariant ?? next.visibleVariant;
-        if (event.paramValues) next.paramValues = { ...event.paramValues };
+        if (event.paramValues) {
+          next.paramValues = { ...event.paramValues };
+        }
       } else {
-        next.diagnostics.push({ error: 'stale_checkpoint_ignored', revision: event.revision });
+        next.diagnostics.push({
+          error: "stale_checkpoint_ignored",
+          revision: event.revision,
+        });
       }
       break;
-    case 'accept':
-    case 'accept_intent':
-      next.phase = 'accept_requested';
+    }
+    case "accept":
+    case "accept_intent": {
+      next.phase = "accept_requested";
       next.visibleVariant = Number(event.variantId ?? next.visibleVariant);
-      if (event.paramValues) next.paramValues = { ...event.paramValues };
+      if (event.paramValues) {
+        next.paramValues = { ...event.paramValues };
+      }
       next.pendingEventSeq = entry.seq ?? next.pendingEventSeq;
       next.pendingEvent = toPendingEvent(event);
       break;
-    case 'discard':
-      next.phase = 'discard_requested';
+    }
+    case "discard": {
+      next.phase = "discard_requested";
       next.pendingEventSeq = entry.seq ?? next.pendingEventSeq;
       next.pendingEvent = toPendingEvent(event);
       break;
-    case 'discarded':
-      next.phase = 'discarded';
+    }
+    case "discarded": {
+      next.phase = "discarded";
       next.pendingEventSeq = null;
       next.pendingEvent = null;
       break;
-    case 'complete':
-      next.phase = 'completed';
+    }
+    case "complete": {
+      next.phase = "completed";
       next.pendingEventSeq = null;
       next.pendingEvent = null;
       break;
-    case 'agent_error':
-      next.phase = 'agent_error';
+    }
+    case "agent_error": {
+      next.phase = "agent_error";
       next.pendingEventSeq = null;
       next.pendingEvent = null;
-      next.diagnostics.push({ error: 'agent_error', message: event.message || 'unknown agent error' });
+      next.diagnostics.push({
+        error: "agent_error",
+        message: event.message || "unknown agent error",
+      });
       break;
-    default:
-      next.diagnostics.push({ error: 'unknown_event_type', type: event.type });
+    }
+    default: {
+      next.diagnostics.push({ error: "unknown_event_type", type: event.type });
       break;
+    }
   }
   return next;
 }
@@ -244,11 +315,16 @@ function toPendingEvent(event) {
 }
 
 function upsertArtifact(artifacts, artifact) {
-  if (!artifacts.some((existing) => existing.path === artifact.path && existing.type === artifact.type)) {
+  if (
+    !artifacts.some(
+      (existing) =>
+        existing.path === artifact.path && existing.type === artifact.type
+    )
+  ) {
     artifacts.push(artifact);
   }
 }
 
 function writeSnapshot(snapshotPath, snapshot) {
-  fs.writeFileSync(snapshotPath, JSON.stringify(snapshot, null, 2) + '\n');
+  fs.writeFileSync(snapshotPath, `${JSON.stringify(snapshot, null, 2)}\n`);
 }

@@ -5,6 +5,7 @@ Batch multiple commands into a single round trip to reduce network latency.
 **Correct:** Use pipeline for multiple commands.
 
 **Python** (redis-py):
+
 ```python
 # Good: Single round trip for multiple commands
 pipe = redis.pipeline()
@@ -14,6 +15,7 @@ results = pipe.execute()
 ```
 
 **Java** (Jedis):
+
 ```java
 import redis.clients.jedis.Pipeline;
 
@@ -30,6 +32,7 @@ pipe.sync();
 **Incorrect:** Sequential commands in a loop.
 
 **Python** (redis-py):
+
 ```python
 # Bad: N round trips
 results = []
@@ -38,6 +41,7 @@ for user_id in user_ids:
 ```
 
 **Java** (Jedis):
+
 ```java
 // Bad: 3 separate round trips
 jedis.set("person:1:name", "Alex");

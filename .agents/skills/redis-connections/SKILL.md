@@ -26,10 +26,10 @@ The single biggest mistake in Redis client code is opening a new TCP connection 
 - **Pool** — keep N persistent connections that the application leases per call (redis-py `ConnectionPool`, Jedis `JedisPooled`, go-redis client).
 - **Multiplex** — share a single connection across all requests (Lettuce, NRedisStack).
 
-| Style | Used by | Note |
-|---|---|---|
-| Pool | redis-py, Jedis, go-redis | Each lease blocks if pool exhausted; size the pool to your concurrency |
-| Multiplex | Lettuce, NRedisStack | Single connection; **cannot** carry blocking commands like `BLPOP` |
+| Style     | Used by                   | Note                                                                   |
+| --------- | ------------------------- | ---------------------------------------------------------------------- |
+| Pool      | redis-py, Jedis, go-redis | Each lease blocks if pool exhausted; size the pool to your concurrency |
+| Multiplex | Lettuce, NRedisStack      | Single connection; **cannot** carry blocking commands like `BLPOP`     |
 
 ```python
 # redis-py — connection pool
@@ -58,11 +58,11 @@ See [references/pipelining.md](references/pipelining.md).
 
 Anything that walks the whole keyspace (or a whole large container) blocks the server. Use incremental variants instead.
 
-| Don't | Use |
-|---|---|
-| `KEYS pattern` | `SCAN` cursor loop |
-| `SMEMBERS large_set` | `SSCAN` |
-| `HGETALL large_hash` | `HSCAN` |
+| Don't                        | Use                       |
+| ---------------------------- | ------------------------- |
+| `KEYS pattern`               | `SCAN` cursor loop        |
+| `SMEMBERS large_set`         | `SSCAN`                   |
+| `HGETALL large_hash`         | `HSCAN`                   |
 | `LRANGE 0 -1` on a huge list | Paginate (`LRANGE 0 100`) |
 
 ```python
@@ -98,7 +98,7 @@ See [references/client-cache.md](references/client-cache.md).
 
 ## 5. Set explicit timeouts
 
-Defaults vary by client and may be too generous. Pick values that match the *application's* failure model:
+Defaults vary by client and may be too generous. Pick values that match the _application's_ failure model:
 
 ```python
 r = redis.Redis(

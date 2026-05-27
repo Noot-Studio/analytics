@@ -30,6 +30,7 @@ FT.AGGREGATE idx:products "@category:{electronics}"
 **Note:** DIALECT 2 is required for vector search queries. Most modern client libraries (redis-py 6.0+, go-redis, Lettuce) now use DIALECT 2 by default.
 
 **Why DIALECT 2:**
+
 - Consistent handling of special characters
 - Better NULL value handling
 - More predictable query parsing

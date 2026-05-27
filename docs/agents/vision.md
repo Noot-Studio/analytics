@@ -20,13 +20,13 @@ A real-time analytics platform built specifically for s&box game developers. It 
 
 ## Differentiation
 
-| Dimension    | General Analytics (e.g. Google Analytics) | s&box Analytics                              |
-| ------------ | ----------------------------------------- | -------------------------------------------- |
+| Dimension    | General Analytics (e.g. Google Analytics) | s&box Analytics                               |
+| ------------ | ----------------------------------------- | --------------------------------------------- |
 | Event model  | Pageviews / clicks                        | Game sessions, player states, in-world events |
-| Real-time    | ~24h delay                                | <5s latency                                  |
-| Game metrics | None built-in                             | DAU/MAU, retention curves, session length    |
-| SDK          | JavaScript                                | C# native for s&box                          |
-| Privacy      | Complex opt-out                           | Privacy by default                           |
+| Real-time    | ~24h delay                                | <5s latency                                   |
+| Game metrics | None built-in                             | DAU/MAU, retention curves, session length     |
+| SDK          | JavaScript                                | C# native for s&box                           |
+| Privacy      | Complex opt-out                           | Privacy by default                            |
 
 ## Positioning
 

@@ -14,6 +14,7 @@ This skill walks through setting up a complete local ClickHouse development envi
 ## When to Apply
 
 Use this skill when the user wants to:
+
 - Build an application that needs an analytical database or ClickHouse specifically
 - Set up a local ClickHouse instance for development
 - Install ClickHouse on their machine
@@ -59,6 +60,7 @@ clickhousectl local install stable
 This downloads the ClickHouse binary to `~/.clickhouse/versions/`. The binary is shared across projects so it only needs to be downloaded once.
 
 **Alternative version specifiers** (use if the user has a specific need):
+
 - `lts` — latest long-term support release
 - `26.4` — latest patch of a specific minor version
 - `26.4.2.10` — exact version

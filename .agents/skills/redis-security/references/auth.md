@@ -5,6 +5,7 @@ Never run Redis without authentication in production environments.
 **Correct:** Use password and TLS.
 
 **Python** (redis-py):
+
 ```python
 r = redis.Redis(
     host='localhost',
@@ -16,6 +17,7 @@ r = redis.Redis(
 ```
 
 **Java** (Jedis):
+
 ```java
 import redis.clients.jedis.*;
 import javax.net.ssl.*;
@@ -44,12 +46,14 @@ JedisPooled jedis = new JedisPooled(new HostAndPort("redis-host", 6379), config)
 **Incorrect:** Connecting without authentication.
 
 **Python** (redis-py):
+
 ```python
 # Bad: No authentication
 r = redis.Redis(host='localhost', port=6379)
 ```
 
 **Java** (Jedis):
+
 ```java
 // Bad: No authentication or TLS
 UnifiedJedis jedis = new UnifiedJedis("redis://localhost:6379");

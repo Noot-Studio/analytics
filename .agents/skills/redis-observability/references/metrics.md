@@ -2,15 +2,15 @@
 
 Track these metrics to catch issues before they impact users.
 
-| Metric | What It Tells You | Alert When |
-|--------|-------------------|------------|
-| `used_memory` | Current memory usage | > 80% of maxmemory |
-| `connected_clients` | Number of connections | Sudden spikes or drops |
-| `blocked_clients` | Clients waiting on blocking ops | > 0 sustained |
-| `instantaneous_ops_per_sec` | Current throughput | Significant drops |
-| `keyspace_hits/misses` | Cache hit ratio | Hit ratio < 80% |
-| `rejected_connections` | Connection limit issues | > 0 |
-| `rdb_last_save_time` | Last persistence snapshot | Too old |
+| Metric                      | What It Tells You               | Alert When             |
+| --------------------------- | ------------------------------- | ---------------------- |
+| `used_memory`               | Current memory usage            | > 80% of maxmemory     |
+| `connected_clients`         | Number of connections           | Sudden spikes or drops |
+| `blocked_clients`           | Clients waiting on blocking ops | > 0 sustained          |
+| `instantaneous_ops_per_sec` | Current throughput              | Significant drops      |
+| `keyspace_hits/misses`      | Cache hit ratio                 | Hit ratio < 80%        |
+| `rejected_connections`      | Connection limit issues         | > 0                    |
+| `rdb_last_save_time`        | Last persistence snapshot       | Too old                |
 
 **Correct:** Export metrics to your monitoring system.
 

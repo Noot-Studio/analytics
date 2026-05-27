@@ -54,11 +54,11 @@ See [references/langcache-usage.md](references/langcache-usage.md) for full SDK 
 
 The threshold controls how close (in embedding cosine distance) a new prompt must be to a cached one to count as a hit. Higher = stricter match, fewer false positives. Lower = more hits, more risk of returning an off-topic answer.
 
-| Threshold | Behavior | Use when |
-|---|---|---|
-| 0.95+ | Near-exact match required | Customer-facing answers where wrong responses are costly |
-| 0.9 | Balanced default | Most workloads — start here |
-| 0.8 | Loose semantic match | Internal tools, exploratory queries, FAQ deduplication |
+| Threshold | Behavior                  | Use when                                                 |
+| --------- | ------------------------- | -------------------------------------------------------- |
+| 0.95+     | Near-exact match required | Customer-facing answers where wrong responses are costly |
+| 0.9       | Balanced default          | Most workloads — start here                              |
+| 0.8       | Loose semantic match      | Internal tools, exploratory queries, FAQ deduplication   |
 
 ```python
 # Stricter — fewer false positives

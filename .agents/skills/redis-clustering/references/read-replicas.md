@@ -39,6 +39,7 @@ value = replica.get("key")
 ```
 
 **Considerations:**
+
 - Replica reads are eventually consistent
 - Don't read from replicas for data that was just written
 - Use for read-heavy, slightly-stale-OK workloads (caches, analytics, dashboards)

@@ -9,5 +9,12 @@
   "homepage": "https://redis.io",
   "repository": "https://github.com/redis/agent-skills",
   "license": "MIT",
-  "keywords": ["redis", "search", "query-engine", "ft-create", "ft-search", "indexing"]
+  "keywords": [
+    "redis",
+    "search",
+    "query-engine",
+    "ft-create",
+    "ft-search",
+    "indexing"
+  ]
 }

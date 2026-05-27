@@ -7,14 +7,16 @@ import { routeTree } from "./routeTree.gen";
 import { orpc, queryClient } from "./utils/orpc";
 
 const router = createRouter({
-  routeTree,
-  defaultPreload: "intent",
-  scrollRestoration: true,
-  defaultPendingComponent: () => <Loader />,
-  context: { orpc, queryClient },
   Wrap: function WrapComponent({ children }: { children: React.ReactNode }) {
-    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+    return (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
   },
+  context: { orpc, queryClient },
+  defaultPendingComponent: () => <Loader />,
+  defaultPreload: "intent",
+  routeTree,
+  scrollRestoration: true,
 });
 
 declare module "@tanstack/react-router" {
@@ -23,7 +25,7 @@ declare module "@tanstack/react-router" {
   }
 }
 
-const rootElement = document.getElementById("app");
+const rootElement = document.querySelector("#app");
 
 if (!rootElement) {
   throw new Error("Root element not found");
