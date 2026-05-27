@@ -1,6 +1,7 @@
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -74,38 +75,42 @@ export function OrgSwitcher() {
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}
           >
-            <DropdownMenuLabel>Organizations</DropdownMenuLabel>
-            {organizations?.map((org) => (
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Organizations</DropdownMenuLabel>
+              {organizations?.map((org) => (
+                <DropdownMenuItem
+                  key={org.id}
+                  onClick={() => {
+                    authClient.organization.setActive({
+                      organizationId: org.id,
+                    });
+                  }}
+                >
+                  <IconBuilding className="mr-2 size-4" />
+                  <span className="truncate">{org.name}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
               <DropdownMenuItem
-                key={org.id}
+                onClick={() => navigate({ to: "/dashboard/organization" })}
+              >
+                <IconSettings className="mr-2 size-4" />
+                Organization Settings
+              </DropdownMenuItem>
+              <DropdownMenuItem
                 onClick={() => {
-                  authClient.organization.setActive({
-                    organizationId: org.id,
+                  authClient.organization.create({
+                    name: "New Organization",
+                    slug: `org-${Date.now()}`,
                   });
                 }}
               >
-                <IconBuilding className="mr-2 size-4" />
-                <span className="truncate">{org.name}</span>
+                <IconPlus className="mr-2 size-4" />
+                Create Organization
               </DropdownMenuItem>
-            ))}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => navigate({ to: "/dashboard/organization" })}
-            >
-              <IconSettings className="mr-2 size-4" />
-              Organization Settings
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                authClient.organization.create({
-                  name: "New Organization",
-                  slug: `org-${Date.now()}`,
-                });
-              }}
-            >
-              <IconPlus className="mr-2 size-4" />
-              Create Organization
-            </DropdownMenuItem>
+            </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
