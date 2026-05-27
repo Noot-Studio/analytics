@@ -2,9 +2,26 @@
   "name": "ingest",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
+  "main": "src/index.ts",
   "scripts": {
-    "dev": "go run ./cmd/server",
-    "build": "go build -o dist/ingest ./cmd/server",
-    "check-types": "go vet ./..."
+    "dev": "bun run --hot src/index.ts",
+    "build": "tsdown",
+    "start": "bun run dist/index.mjs",
+    "check-types": "tsc -b"
+  },
+  "dependencies": {
+    "@sbox-analytics/db": "workspace:*",
+    "@sbox-analytics/env": "workspace:*",
+    "evlog": "^2.14.1",
+    "hono": "catalog:",
+    "kafkajs": "^2.2.4",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@sbox-analytics/config": "workspace:*",
+    "@types/bun": "catalog:",
+    "tsdown": "^0.21.9",
+    "typescript": "catalog:"
   }
 }

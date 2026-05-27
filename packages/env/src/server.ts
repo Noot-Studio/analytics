@@ -14,7 +14,9 @@ export const env = createEnv({
     CLICKHOUSE_USER: z.string().min(1).default("analytics"),
     CORS_ORIGIN: z.url(),
     DATABASE_URL: z.string().min(1),
+    INGEST_PORT: z.coerce.number().int().positive().default(8080),
     KAFKA_BROKERS: z.string().min(1).default("localhost:19092"),
+    KAFKA_EVENTS_TOPIC: z.string().min(1).default("events"),
     NODE_ENV: z
       .enum(["development", "production", "test"])
       .default("development"),

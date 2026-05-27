@@ -84,7 +84,7 @@ sbox-analytics/
 ├── apps/
 │   ├── web/         # Frontend application (React + TanStack Router)
 │   ├── server/      # Backend API (Hono, ORPC)
-│   └── ingest/      # High-throughput event ingestion API (Go + Echo)
+│   └── ingest/      # High-throughput event ingestion API (Hono + Bun)
 ├── packages/
 │   ├── ui/          # Shared shadcn/ui components and styles
 │   ├── api/         # API layer / business logic
