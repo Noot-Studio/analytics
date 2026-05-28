@@ -1,12 +1,13 @@
 import { Button } from "@sbox-analytics/ui/components/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@sbox-analytics/ui/components/dialog";
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@sbox-analytics/ui/components/drawer";
 import { Input } from "@sbox-analytics/ui/components/input";
 import { Label } from "@sbox-analytics/ui/components/label";
 import {
@@ -16,11 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@sbox-analytics/ui/components/select";
+import { useIsMobile } from "@sbox-analytics/ui/hooks/use-mobile";
 import { useState } from "react";
 
 import type { ProjectEnvironment } from "../atoms/environment-badge";
 
-interface CreateProjectDialogProps {
+interface CreateProjectDrawerProps {
   isPending: boolean;
   onCreate: (name: string, environment: ProjectEnvironment) => void;
   onOpenChange: (open: boolean) => void;
@@ -33,12 +35,13 @@ const ENVIRONMENTS: ProjectEnvironment[] = [
   "Production",
 ];
 
-export const CreateProjectDialog = ({
+export const CreateProjectDrawer = ({
   isPending,
   onCreate,
   onOpenChange,
   open,
-}: CreateProjectDialogProps) => {
+}: CreateProjectDrawerProps) => {
+  const isMobile = useIsMobile();
   const [name, setName] = useState("");
   const [environment, setEnvironment] =
     useState<ProjectEnvironment>("Development");
@@ -53,16 +56,20 @@ export const CreateProjectDialog = ({
   };
 
   return (
-    <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create Project</DialogTitle>
-          <DialogDescription>
+    <Drawer
+      direction={isMobile ? "bottom" : "right"}
+      onOpenChange={onOpenChange}
+      open={open}
+    >
+      <DrawerContent>
+        <DrawerHeader className="gap-1">
+          <DrawerTitle>Create Project</DrawerTitle>
+          <DrawerDescription>
             Create a new project to track analytics for your game.
-          </DialogDescription>
-        </DialogHeader>
+          </DrawerDescription>
+        </DrawerHeader>
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-4 px-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="name">Project Name</Label>
               <Input
@@ -94,14 +101,17 @@ export const CreateProjectDialog = ({
                 </SelectContent>
               </Select>
             </div>
-          </div>
-          <DialogFooter>
             <Button disabled={isPending || !name.trim()} type="submit">
               {isPending ? "Creating..." : "Create"}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+        <DrawerFooter>
+          <DrawerClose asChild>
+            <Button variant="outline">Cancel</Button>
+          </DrawerClose>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 };
