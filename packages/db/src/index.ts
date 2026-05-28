@@ -10,5 +10,7 @@ export function createPrismaClient() {
   return new PrismaClient({ adapter });
 }
 
+export { ProjectEnvironment } from "../prisma/generated/enums";
+
 const prisma = createPrismaClient();
 export default prisma;

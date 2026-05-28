@@ -1,5 +1,5 @@
 import { ORPCError } from "@orpc/server";
-import prisma from "@sbox-analytics/db";
+import prisma, { ProjectEnvironment } from "@sbox-analytics/db";
 import { z } from "zod";
 
 import { protectedProcedure } from "../index";
@@ -59,8 +59,8 @@ export const projectsRouter = {
     .input(
       z.object({
         environment: z
-          .enum(["Development", "Staging", "Production"])
-          .default("Development"),
+          .nativeEnum(ProjectEnvironment)
+          .default(ProjectEnvironment.Development),
         name: z.string().min(1).max(100),
         slug: z.string().min(1).max(64).optional(),
       })
