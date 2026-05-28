@@ -21,6 +21,7 @@ export const env = createEnv({
       .enum(["development", "production", "test"])
       .default("development"),
     REDIS_URL: z.string().min(1).default("redis://localhost:6379"),
+    SERVER_PORT: z.coerce.number().int().positive().default(3000),
     STEAM_API_KEY: z.string().min(1),
   },
 });
