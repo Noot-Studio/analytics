@@ -1,7 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { ApiKeysSection } from "@/features/api-keys/components/organisms/api-keys-section";
-
 export const Route = createFileRoute("/dashboard/organization")({
   component: OrganizationPage,
 });
@@ -15,7 +13,6 @@ function OrganizationPage() {
           Manage your organization's settings and integrations.
         </p>
       </div>
-      <ApiKeysSection />
     </div>
   );
 }
