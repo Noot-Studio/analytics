@@ -19,15 +19,28 @@ const dailyRow = z.object({
   unique_sessions: z.number(),
 });
 
-async function assertProjectOwnership(
+async function assertProjectAccess(
   projectId: string,
   userId: string
 ): Promise<void> {
   const project = await prisma.project.findFirst({
-    select: { id: true },
-    where: { id: projectId, ownerId: userId },
+    select: { organizationId: true },
+    where: { id: projectId },
   });
+
   if (!project) {
+    throw new ORPCError("FORBIDDEN", { message: "Project not found" });
+  }
+
+  const membership = await prisma.member.findFirst({
+    select: { id: true },
+    where: {
+      userId,
+      organizationId: project.organizationId,
+    },
+  });
+
+  if (!membership) {
     throw new ORPCError("FORBIDDEN", { message: "Project not accessible" });
   }
 }
@@ -37,7 +50,7 @@ export const analyticsRouter = {
   daily: protectedProcedure
     .input(dailyInput)
     .handler(async ({ context, input }) => {
-      await assertProjectOwnership(input.projectId, context.session.user.id);
+      await assertProjectAccess(input.projectId, context.session.user.id);
 
       const result = await clickhouse().query({
         format: "JSON",
@@ -70,7 +83,7 @@ export const analyticsRouter = {
       })
     )
     .handler(async ({ context, input }) => {
-      await assertProjectOwnership(input.projectId, context.session.user.id);
+      await assertProjectAccess(input.projectId, context.session.user.id);
 
       const result = await clickhouse().query({
         format: "JSON",
