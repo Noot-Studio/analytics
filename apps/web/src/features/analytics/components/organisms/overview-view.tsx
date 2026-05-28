@@ -10,23 +10,18 @@ import {
 
 import { orpc } from "@/utils/orpc";
 
+import { isoDaysAgo } from "../../lib/date-window";
 import { MetricCard } from "../molecules/metric-card";
 
 const OVERVIEW_WINDOW_DAYS = 30;
-
-const dateInput = (daysAgo: number): string => {
-  const date = new Date();
-  date.setDate(date.getDate() - daysAgo);
-  return date.toISOString().slice(0, 10);
-};
 
 export const OverviewView = ({ projectId }: { projectId: string }) => {
   const query = useQuery(
     orpc.analytics.daily.queryOptions({
       input: {
-        from: dateInput(OVERVIEW_WINDOW_DAYS),
+        from: isoDaysAgo(OVERVIEW_WINDOW_DAYS),
         projectId,
-        to: dateInput(0),
+        to: isoDaysAgo(0),
       },
     })
   );

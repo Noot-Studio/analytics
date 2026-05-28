@@ -44,23 +44,32 @@ export const EventsTable = ({ rows }: { rows: EventRow[] }) => {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead
-            className="cursor-pointer select-none"
-            onClick={() => toggleSort("event_type")}
-          >
-            {headerLabel("event_type", "Event")}
+          <TableHead>
+            <button
+              type="button"
+              className="inline-flex cursor-pointer select-none items-center gap-1 hover:text-foreground"
+              onClick={() => toggleSort("event_type")}
+            >
+              {headerLabel("event_type", "Event")}
+            </button>
           </TableHead>
-          <TableHead
-            className="cursor-pointer select-none text-right"
-            onClick={() => toggleSort("event_count")}
-          >
-            {headerLabel("event_count", "Count")}
+          <TableHead className="text-right">
+            <button
+              type="button"
+              className="inline-flex cursor-pointer select-none items-center gap-1 hover:text-foreground"
+              onClick={() => toggleSort("event_count")}
+            >
+              {headerLabel("event_count", "Count")}
+            </button>
           </TableHead>
-          <TableHead
-            className="cursor-pointer select-none text-right"
-            onClick={() => toggleSort("unique_players")}
-          >
-            {headerLabel("unique_players", "Unique players")}
+          <TableHead className="text-right">
+            <button
+              type="button"
+              className="inline-flex cursor-pointer select-none items-center gap-1 hover:text-foreground"
+              onClick={() => toggleSort("unique_players")}
+            >
+              {headerLabel("unique_players", "Unique players")}
+            </button>
           </TableHead>
         </TableRow>
       </TableHeader>
