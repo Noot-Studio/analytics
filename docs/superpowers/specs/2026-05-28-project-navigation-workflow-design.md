@@ -99,12 +99,19 @@ sidebar/layout header, `ApiKeysSection` into the Settings page.
   secondary: Settings, Get Help.
 - **Project mode** — header: Back button (→ `/dashboard/projects`) + project name +
   environment badge; primary nav: Overview, Events, Live Events, Settings.
-- New module `components/dashboard/nav-config.ts` exports `orgNav` and
-  `projectNav(projectId)` so deferred pages are added in one place later.
-- New component `components/dashboard/nav-project-header.tsx` for the Back +
-  name + environment header.
-- `NavMain` is reused for both modes by passing `items`. Active highlighting via
+- New module `components/dashboard/nav-config.ts` exports `orgNav`; the
+  project nav list lives with the projects feature as
+  `features/projects/components/molecules/project-nav.tsx` (exports
+  `projectNav(projectId)`), so deferred pages are added in one domain-owned place.
+- New component `features/projects/components/molecules/project-nav-header.tsx`
+  for the Back + name + environment-badge header rendered in project mode.
+- `app-sidebar.tsx` and `NavMain` remain generic app-shell chrome in
+  `components/dashboard/`; they only orchestrate which org/project pieces render.
+  `NavMain` is reused for both modes by passing `items`. Active highlighting via
   TanStack `Link` active state.
+
+See the **Feature Architecture & File Map** section for the full placement of all
+new project-domain UI.
 
 ## Data Model — add `environment`
 
@@ -177,6 +184,57 @@ SDK integration during playtests.
 - Environment (display; inline edit optional — if included, via a
   `projects.update` mutation).
 - A copy-paste SDK setup snippet using the project's publishable key.
+
+## Feature Architecture & File Map
+
+All new UI follows the established convention: **routes are thin and import feature
+organisms/molecules**; domain UI lives under
+`apps/web/src/features/<domain>/components/{atoms,molecules,organisms}`. Generic
+app-shell chrome (sidebar frame, nav primitives) stays in
+`apps/web/src/components/dashboard/`.
+
+New feature: **`features/analytics`** — owns the project analytics page views.
+Existing features extended: **`features/projects`** (nav header, project nav,
+environment Select) and **`features/api-keys`** (reused as-is in Settings).
+
+```
+apps/web/src/
+  components/dashboard/
+    app-sidebar.tsx              ~ refactor: route-driven org/project mode switch
+    nav-config.ts                + orgNav config (generic shell)
+    (NavMain stays generic, reused for both modes)
+
+  features/projects/components/
+    molecules/project-nav.tsx        + projectNav(projectId) item config
+    molecules/project-nav-header.tsx + Back + name + environment badge
+    molecules/create-project-dialog.tsx ~ add environment Select
+    molecules/project-card.tsx       ~ add environment badge, SDK status, activity
+    atoms/environment-badge.tsx      + environment pill
+    atoms/sdk-status-badge.tsx       + derived status pill
+
+  features/analytics/components/
+    organisms/overview-view.tsx      + Overview page body (analytics.daily)
+    organisms/events-view.tsx        + Events table (analytics.events)
+    organisms/live-events-view.tsx   + Live tail (analytics.recent, polled)
+    molecules/metric-card.tsx        + single metric card (+ "Coming soon" variant)
+    molecules/events-table.tsx       + sortable event-type table
+    molecules/live-events-table.tsx  + live-tailing stream table
+    atoms/relative-time.tsx          + shared relative-time label
+
+  features/projects/components/
+    organisms/project-settings-view.tsx + Settings body: composes
+                                          ApiKeysSection + environment + SDK snippet
+
+  routes/dashboard/projects/$projectId/
+    overview.tsx   imports OverviewView
+    events.tsx     imports EventsView
+    live.tsx       imports LiveEventsView
+    settings.tsx   imports ProjectSettingsView
+```
+
+Each route file only wires the loader/params and renders the corresponding feature
+organism — mirroring how `routes/dashboard/projects/index.tsx` composes
+`ProjectsList` + `CreateProjectDialog` today.
 
 ## Data Flow & Error Handling
 
