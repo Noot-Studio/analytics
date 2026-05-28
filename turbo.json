@@ -27,6 +27,10 @@
       "cache": false,
       "persistent": true
     },
+    "db:reset": {
+      "cache": false,
+      "persistent": true
+    },
     "db:studio": {
       "cache": false,
       "persistent": true
