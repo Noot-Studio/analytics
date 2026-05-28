@@ -19,6 +19,12 @@ const dailyRow = z.object({
   unique_sessions: z.number(),
 });
 
+const eventsRow = z.object({
+  event_count: z.number(),
+  event_type: z.string(),
+  unique_players: z.number(),
+});
+
 async function assertProjectAccess(
   projectId: string,
   userId: string
@@ -72,6 +78,32 @@ export const analyticsRouter = {
 
       const json = await result.json<z.infer<typeof dailyRow>>();
       return z.array(dailyRow).parse(json.data);
+    }),
+
+  // Aggregated event-type totals over a date window — backs the Events table.
+  events: protectedProcedure
+    .input(dailyInput)
+    .handler(async ({ context, input }) => {
+      await assertProjectAccess(input.projectId, context.session.user.id);
+
+      const result = await clickhouse().query({
+        format: "JSON",
+        query: `
+          SELECT
+            event_type                           AS event_type,
+            toUInt64(countMerge(event_count))    AS event_count,
+            toUInt64(uniqMerge(unique_players))  AS unique_players
+          FROM analytics.events_daily
+          WHERE project_id = {projectId:String}
+            AND event_date BETWEEN {from:Date} AND {to:Date}
+          GROUP BY event_type
+          ORDER BY event_count DESC
+        `,
+        query_params: input,
+      });
+
+      const json = await result.json<z.infer<typeof eventsRow>>();
+      return z.array(eventsRow).parse(json.data);
     }),
 
   // Most recent raw events — for the dashboard's live stream view.
