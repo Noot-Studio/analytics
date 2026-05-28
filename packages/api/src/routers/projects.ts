@@ -150,7 +150,7 @@ export const projectsRouter = {
       orderBy: { createdAt: "desc" },
       select: {
         _count: {
-          select: { apiKeys: true },
+          select: { apiKeys: { where: { revokedAt: null } } },
         },
         createdAt: true,
         id: true,
