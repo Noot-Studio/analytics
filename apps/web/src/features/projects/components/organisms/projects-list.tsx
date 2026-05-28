@@ -14,16 +14,30 @@ import {
   TableRow,
 } from "@sbox-analytics/ui/components/table";
 import { IconDotsVertical } from "@tabler/icons-react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
 
 import { orpc } from "@/utils/orpc";
 
+import { ConfirmButton } from "../atoms/confirm-button";
 import { EnvironmentBadge } from "../atoms/environment-badge";
 
 export const ProjectsList = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const listQuery = useQuery(orpc.projects.list.queryOptions());
+
+  const deleteMutation = useMutation({
+    ...orpc.projects.delete.mutationOptions(),
+    onError: () => toast.error("Failed to delete project"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: orpc.projects.list.queryOptions().queryKey,
+      });
+      toast.success("Project deleted");
+    },
+  });
 
   if (listQuery.isLoading) {
     return (
@@ -116,6 +130,17 @@ export const ProjectsList = () => {
                   >
                     Edit
                   </DropdownMenuItem>
+                  <ConfirmButton
+                    label="Delete"
+                    onConfirm={() => deleteMutation.mutate({ id: project.id })}
+                    render={
+                      <DropdownMenuItem
+                        closeOnClick={false}
+                        disabled={deleteMutation.isPending}
+                        variant="destructive"
+                      />
+                    }
+                  />
                 </DropdownMenuContent>
               </DropdownMenu>
             </TableCell>
