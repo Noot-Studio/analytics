@@ -267,12 +267,14 @@ export const buildQuery = (config: QueryConfig): QueryResult => {
 
   // Group by properties
   if (config.groupBy) {
-    for (const property of config.groupBy) {
+    for (let i = 0; i < config.groupBy.length; i += 1) {
+      const property = config.groupBy[i]!;
       const paramName = getPropertyParamName(property, propertyParams);
+      const alias = `group_col_${i}`;
       selectColumns.push(
-        `JSONExtractString(properties, {${paramName}:String}) AS ${property}`
+        `JSONExtractString(properties, {${paramName}:String}) AS ${alias}`
       );
-      groupByColumns.push(property);
+      groupByColumns.push(alias);
     }
   }
 
