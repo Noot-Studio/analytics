@@ -42,7 +42,9 @@ function ProjectsIndexPage() {
       <ProjectsList />
       <CreateProjectDialog
         isPending={createMutation.isPending}
-        onCreate={(name) => createMutation.mutate({ name })}
+        onCreate={(name, environment) =>
+          createMutation.mutate({ environment, name })
+        }
         onOpenChange={setCreateOpen}
         open={createOpen}
       />
