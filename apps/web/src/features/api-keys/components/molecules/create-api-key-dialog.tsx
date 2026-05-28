@@ -39,11 +39,11 @@ export function CreateApiKeyDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (name.trim()) onCreate(name.trim());
+    if (name.trim()) {onCreate(name.trim());}
   };
 
   const handleClose = (next: boolean) => {
-    if (!next) setName("");
+    if (!next) {setName("");}
     onOpenChange(next);
   };
 
