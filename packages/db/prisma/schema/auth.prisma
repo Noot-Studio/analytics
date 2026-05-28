@@ -75,6 +75,7 @@ model Organization {
 
   members     Member[]
   invitations Invitation[]
+  apiKeys     ApiKey[]
 
   @@map("organization")
 }
