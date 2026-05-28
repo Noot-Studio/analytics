@@ -35,8 +35,8 @@ async function assertProjectAccess(
   const membership = await prisma.member.findFirst({
     select: { id: true },
     where: {
-      userId,
       organizationId: project.organizationId,
+      userId,
     },
   });
 

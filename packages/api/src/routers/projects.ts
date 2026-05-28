@@ -17,18 +17,18 @@ function requireActiveOrg(context: {
 function generateSlug(name: string): string {
   return name
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
+    .replaceAll(/[^a-z0-9]+/g, "-")
+    .replaceAll(/^-|-$/g, "")
     .slice(0, 64);
 }
 
 async function assertOrgMembership(
   userId: string,
-  organizationId: string,
+  organizationId: string
 ): Promise<void> {
   const member = await prisma.member.findFirst({
     select: { id: true },
-    where: { userId, organizationId },
+    where: { organizationId, userId },
   });
   if (!member) {
     throw new ORPCError("FORBIDDEN", {
@@ -39,7 +39,7 @@ async function assertOrgMembership(
 
 async function assertProjectAccess(
   userId: string,
-  projectId: string,
+  projectId: string
 ): Promise<string> {
   const project = await prisma.project.findFirst({
     select: { organizationId: true },
@@ -60,7 +60,7 @@ export const projectsRouter = {
       z.object({
         name: z.string().min(1).max(100),
         slug: z.string().min(1).max(64).optional(),
-      }),
+      })
     )
     .handler(async ({ context, input }) => {
       const organizationId = requireActiveOrg(context);
@@ -82,69 +82,17 @@ export const projectsRouter = {
       const project = await prisma.project.create({
         data: {
           name: input.name,
-          slug,
           organizationId,
+          slug,
         },
         select: {
+          createdAt: true,
           id: true,
           name: true,
-          slug: true,
           organizationId: true,
-          createdAt: true,
+          slug: true,
         },
       });
-
-      return project;
-    }),
-
-  list: protectedProcedure.handler(async ({ context }) => {
-    const organizationId = requireActiveOrg(context);
-    await assertOrgMembership(context.session.user.id, organizationId);
-
-    return prisma.project.findMany({
-      where: { organizationId },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        createdAt: true,
-        _count: {
-          select: { apiKeys: true },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-  }),
-
-  get: protectedProcedure
-    .input(z.object({ id: z.string().min(1) }))
-    .handler(async ({ context, input }) => {
-      await assertProjectAccess(context.session.user.id, input.id);
-
-      const project = await prisma.project.findFirst({
-        where: { id: input.id },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          organizationId: true,
-          createdAt: true,
-          apiKeys: {
-            where: { revokedAt: null },
-            select: {
-              id: true,
-              name: true,
-              publishableKey: true,
-              createdAt: true,
-              lastUsedAt: true,
-            },
-          },
-        },
-      });
-
-      if (!project) {
-        throw new ORPCError("NOT_FOUND", { message: "Project not found" });
-      }
 
       return project;
     }),
@@ -160,4 +108,56 @@ export const projectsRouter = {
 
       return { id: input.id };
     }),
+
+  get: protectedProcedure
+    .input(z.object({ id: z.string().min(1) }))
+    .handler(async ({ context, input }) => {
+      await assertProjectAccess(context.session.user.id, input.id);
+
+      const project = await prisma.project.findFirst({
+        select: {
+          apiKeys: {
+            select: {
+              createdAt: true,
+              id: true,
+              lastUsedAt: true,
+              name: true,
+              publishableKey: true,
+            },
+            where: { revokedAt: null },
+          },
+          createdAt: true,
+          id: true,
+          name: true,
+          organizationId: true,
+          slug: true,
+        },
+        where: { id: input.id },
+      });
+
+      if (!project) {
+        throw new ORPCError("NOT_FOUND", { message: "Project not found" });
+      }
+
+      return project;
+    }),
+
+  list: protectedProcedure.handler(async ({ context }) => {
+    const organizationId = requireActiveOrg(context);
+    await assertOrgMembership(context.session.user.id, organizationId);
+
+    return prisma.project.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        _count: {
+          select: { apiKeys: true },
+        },
+        createdAt: true,
+        id: true,
+        name: true,
+        slug: true,
+      },
+      where: { organizationId },
+    });
+  }),
 };

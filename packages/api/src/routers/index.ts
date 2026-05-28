@@ -10,12 +10,12 @@ export const appRouter = {
   analytics: analyticsRouter,
   apiKeys: apiKeysRouter,
   customAnalytics: customAnalyticsRouter,
-  projects: projectsRouter,
   healthCheck: publicProcedure.handler(() => "OK"),
   privateData: protectedProcedure.handler(({ context }) => ({
     message: "This is private",
     user: context.session?.user,
   })),
+  projects: projectsRouter,
 };
 export type AppRouter = typeof appRouter;
 export type AppRouterClient = RouterClient<typeof appRouter>;
