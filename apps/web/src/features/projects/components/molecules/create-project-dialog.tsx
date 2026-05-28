@@ -9,14 +9,29 @@ import {
 } from "@sbox-analytics/ui/components/dialog";
 import { Input } from "@sbox-analytics/ui/components/input";
 import { Label } from "@sbox-analytics/ui/components/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@sbox-analytics/ui/components/select";
 import { useState } from "react";
+
+import type { ProjectEnvironment } from "../atoms/environment-badge";
 
 interface CreateProjectDialogProps {
   isPending: boolean;
-  onCreate: (name: string) => void;
+  onCreate: (name: string, environment: ProjectEnvironment) => void;
   onOpenChange: (open: boolean) => void;
   open: boolean;
 }
+
+const ENVIRONMENTS: ProjectEnvironment[] = [
+  "Development",
+  "Staging",
+  "Production",
+];
 
 export const CreateProjectDialog = ({
   isPending,
@@ -25,12 +40,15 @@ export const CreateProjectDialog = ({
   open,
 }: CreateProjectDialogProps) => {
   const [name, setName] = useState("");
+  const [environment, setEnvironment] =
+    useState<ProjectEnvironment>("Development");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim()) {
-      onCreate(name.trim());
+      onCreate(name.trim(), environment);
       setName("");
+      setEnvironment("Development");
     }
   };
 
@@ -53,6 +71,28 @@ export const CreateProjectDialog = ({
                 placeholder="My Awesome Game"
                 value={name}
               />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="environment">Environment</Label>
+              <Select
+                onValueChange={(value) => {
+                  if (value) {
+                    setEnvironment(value as ProjectEnvironment);
+                  }
+                }}
+                value={environment}
+              >
+                <SelectTrigger id="environment">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ENVIRONMENTS.map((env) => (
+                    <SelectItem key={env} value={env}>
+                      {env}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>
