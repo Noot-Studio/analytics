@@ -1,9 +1,16 @@
+enum ProjectEnvironment {
+  Development
+  Staging
+  Production
+}
+
 model Project {
-  id             String       @id @default(cuid())
+  id             String             @id @default(cuid())
   slug           String
   name           String
+  environment    ProjectEnvironment @default(Development)
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
