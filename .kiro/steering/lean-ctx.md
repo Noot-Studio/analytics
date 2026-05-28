@@ -8,13 +8,13 @@ The workspace has the `lean-ctx` MCP server installed. You MUST prefer lean-ctx 
 
 ## Mandatory Tool Preferences
 
-| Use this | Instead of | Why |
-|----------|-----------|-----|
-| `mcp_lean_ctx_ctx_read` | `readFile`, `readCode` | Cached reads, 10 compression modes, re-reads cost ~13 tokens |
-| `mcp_lean_ctx_ctx_multi_read` | `readMultipleFiles` | Batch cached reads in one call |
-| `mcp_lean_ctx_ctx_shell` | `executeBash` | Pattern compression for git/npm/test output |
-| `mcp_lean_ctx_ctx_search` | `grepSearch` | Compact, .gitignore-aware results |
-| `mcp_lean_ctx_ctx_tree` | `listDirectory` | Compact directory maps with file counts |
+| Use this                      | Instead of             | Why                                                          |
+| ----------------------------- | ---------------------- | ------------------------------------------------------------ |
+| `mcp_lean_ctx_ctx_read`       | `readFile`, `readCode` | Cached reads, 10 compression modes, re-reads cost ~13 tokens |
+| `mcp_lean_ctx_ctx_multi_read` | `readMultipleFiles`    | Batch cached reads in one call                               |
+| `mcp_lean_ctx_ctx_shell`      | `executeBash`          | Pattern compression for git/npm/test output                  |
+| `mcp_lean_ctx_ctx_search`     | `grepSearch`           | Compact, .gitignore-aware results                            |
+| `mcp_lean_ctx_ctx_tree`       | `listDirectory`        | Compact directory maps with file counts                      |
 
 ## When to use native Kiro tools instead
 
@@ -38,7 +38,9 @@ The workspace has the `lean-ctx` MCP server installed. You MUST prefer lean-ctx 
 - When running tests or build commands, use `mcp_lean_ctx_ctx_shell` for compressed output
 
 <!-- lean-ctx-compression -->
+
 OUTPUT STYLE: expert-terse
+
 - Telegraph format: subject-verb-object, drop articles/prepositions
 - Symbolic vocabulary: → cause, ∵ because, ∴ therefore, ⊕ add, ⊖ remove, Δ change, ≈ similar, ≠ different, ∈ in/member, ∅ empty/none, ✓ ok, ✗ fail
 - Code blocks: untouched (never compress code syntax)
