@@ -8,7 +8,6 @@ model User {
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
   accounts      Account[]
-  projects      Project[]
   members       Member[]
   invitations   Invitation[]
 
@@ -75,7 +74,7 @@ model Organization {
 
   members     Member[]
   invitations Invitation[]
-  apiKeys     ApiKey[]
+  projects    Project[]
 
   @@map("organization")
 }
