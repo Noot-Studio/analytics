@@ -6,13 +6,6 @@ import { z } from "zod";
 
 import { protectedProcedure } from "../index";
 
-function requireActiveOrg(organizationId: string | null | undefined): string {
-  if (!organizationId) {
-    throw new ORPCError("FORBIDDEN", { message: "No active organization" });
-  }
-  return organizationId;
-}
-
 function hashSecret(secret: string): string {
   return createHash("sha256").update(secret).digest("hex");
 }
@@ -23,70 +16,116 @@ function generateKeyPair() {
   return { publishableKey, secretHash: hashSecret(secretKey), secretKey };
 }
 
+async function assertProjectAccess(
+  userId: string,
+  projectId: string
+): Promise<void> {
+  const project = await prisma.project.findFirst({
+    select: { organizationId: true },
+    where: { id: projectId },
+  });
+  
+  if (!project) {
+    throw new ORPCError("NOT_FOUND", { message: "Project not found" });
+  }
+
+  const membership = await prisma.member.findFirst({
+    select: { id: true },
+    where: {
+      userId,
+      organizationId: project.organizationId,
+    },
+  });
+
+  if (!membership) {
+    throw new ORPCError("FORBIDDEN", { message: "Project not accessible" });
+  }
+}
+
 export const apiKeysRouter = {
   create: protectedProcedure
-    .input(z.object({ name: z.string().min(1).max(100) }))
+    .input(z.object({
+      projectId: z.string().min(1),
+      name: z.string().min(1).max(100),
+    }))
     .handler(async ({ context, input }) => {
-      const organizationId = requireActiveOrg(
-        context.session.session.activeOrganizationId
-      );
+      await assertProjectAccess(context.session.user.id, input.projectId);
+      
       const { publishableKey, secretKey, secretHash } = generateKeyPair();
       const apiKey = await prisma.apiKey.create({
-        data: { name: input.name, organizationId, publishableKey, secretHash },
+        data: {
+          name: input.name,
+          projectId: input.projectId,
+          publishableKey,
+          secretHash,
+        },
         select: { id: true, name: true, publishableKey: true },
       });
       return { ...apiKey, secretKey };
     }),
 
-  list: protectedProcedure.handler(async ({ context }) => {
-    const organizationId = requireActiveOrg(
-      context.session.session.activeOrganizationId
-    );
-    return prisma.apiKey.findMany({
-      orderBy: { createdAt: "desc" },
-      select: {
-        createdAt: true,
-        id: true,
-        lastUsedAt: true,
-        name: true,
-        publishableKey: true,
-      },
-      where: { organizationId, revokedAt: null },
-    });
-  }),
+  list: protectedProcedure
+    .input(z.object({
+      projectId: z.string().min(1),
+    }))
+    .handler(async ({ context, input }) => {
+      await assertProjectAccess(context.session.user.id, input.projectId);
+
+      return prisma.apiKey.findMany({
+        orderBy: { createdAt: "desc" },
+        select: {
+          createdAt: true,
+          id: true,
+          lastUsedAt: true,
+          name: true,
+          publishableKey: true,
+        },
+        where: { projectId: input.projectId, revokedAt: null },
+      });
+    }),
 
   revoke: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
     .handler(async ({ context, input }) => {
-      const organizationId = requireActiveOrg(
-        context.session.session.activeOrganizationId
-      );
-      try {
-        await prisma.apiKey.update({
-          data: { revokedAt: new Date() },
-          where: { id: input.id, organizationId, revokedAt: null },
-        });
-      } catch {
-        throw new ORPCError("FORBIDDEN", { message: "API key not found" });
+      const apiKey = await prisma.apiKey.findFirst({
+        select: { projectId: true },
+        where: { id: input.id, revokedAt: null },
+      });
+
+      if (!apiKey) {
+        throw new ORPCError("NOT_FOUND", { message: "API key not found" });
       }
+
+      await assertProjectAccess(context.session.user.id, apiKey.projectId);
+
+      await prisma.apiKey.update({
+        data: { revokedAt: new Date() },
+        where: { id: input.id },
+      });
+
       return { id: input.id };
     }),
 
   rotate: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
     .handler(async ({ context, input }) => {
-      const organizationId = requireActiveOrg(
-        context.session.session.activeOrganizationId
-      );
-      const { publishableKey, secretKey, secretHash } = generateKeyPair();
-      try {
-        await prisma.apiKey.update({
-          data: { publishableKey, secretHash },
-          where: { id: input.id, organizationId, revokedAt: null },
-        });
-      } catch {
-        throw new ORPCError("FORBIDDEN", { message: "API key not found" });
+      const apiKey = await prisma.apiKey.findFirst({
+        select: { projectId: true },
+        where: { id: input.id, revokedAt: null },
+      });
+
+      if (!apiKey) {
+        throw new ORPCError("NOT_FOUND", { message: "API key not found" });
       }
+
+      await assertProjectAccess(context.session.user.id, apiKey.projectId);
+
+      const { publishableKey, secretKey, secretHash } = generateKeyPair();
+      await prisma.apiKey.update({
+        data: { publishableKey, secretHash },
+        where: { id: input.id },
+      });
+
       return { publishableKey, secretKey };
     }),
 };
