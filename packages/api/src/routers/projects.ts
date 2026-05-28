@@ -59,7 +59,7 @@ export const projectsRouter = {
     .input(
       z.object({
         environment: z
-          .nativeEnum(ProjectEnvironment)
+          .enum(ProjectEnvironment)
           .default(ProjectEnvironment.Development),
         name: z.string().min(1).max(100),
         slug: z.string().min(1).max(64).optional(),
