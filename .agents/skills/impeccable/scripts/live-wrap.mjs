@@ -103,7 +103,9 @@ The agent should insert variant HTML at insertLine.`);
           ...genOpts,
           includeGenerated: true,
         });
-        if (generatedHit) {break;}
+        if (generatedHit) {
+          break;
+        }
       }
       if (generatedHit) {
         console.error(
@@ -163,16 +165,16 @@ The agent should insert variant HTML at insertLine.`);
       // Once a more-specific query (ID, full className combo) yielded a unique
       // result, stop — falling through to the loose tag+single-class query
       // would readmit the siblings we just disambiguated past.
-      if (candidates.length === 1) {break;}
+      if (candidates.length === 1) {
+        break;
+      }
     }
     if (candidates.length === 0) {
       console.error(
         JSON.stringify({
-          error:
-            `Found file but could not locate element in ${ 
-            targetFile 
-            }. Searched for: ${ 
-            queries.join(", ")}`,
+          error: `Found file but could not locate element in ${
+            targetFile
+          }. Searched for: ${queries.join(", ")}`,
         })
       );
       process.exit(1);
@@ -196,8 +198,8 @@ The agent should insert variant HTML at insertLine.`);
         console.error(
           JSON.stringify({
             candidates: filtered.map((c) => ({
-              startLine: c.startLine + 1,
               endLine: c.endLine + 1,
+              startLine: c.startLine + 1,
             })),
             error: "element_ambiguous",
             fallback: "agent-driven",
@@ -211,16 +213,16 @@ The agent should insert variant HTML at insertLine.`);
   } else {
     for (const q of queries) {
       match = findElement(lines, q, tag);
-      if (match) {break;}
+      if (match) {
+        break;
+      }
     }
     if (!match) {
       console.error(
         JSON.stringify({
-          error:
-            `Found file but could not locate element in ${ 
-            targetFile 
-            }. Searched for: ${ 
-            queries.join(", ")}`,
+          error: `Found file but could not locate element in ${
+            targetFile
+          }. Searched for: ${queries.join(", ")}`,
         })
       );
       process.exit(1);
@@ -271,70 +273,42 @@ The agent should insert variant HTML at insertLine.`);
   // so the entire scaffold gets removed cleanly.
   const wrapperLines = isJsx
     ? [
-        `${indent 
-          }<div data-impeccable-variants="${ 
-          id 
-          }" data-impeccable-variant-count="${ 
-          count 
-          }" ${ 
-          styleContents 
-          }>`,
-        `${indent 
-          }  ${ 
-          commentSyntax.open 
-          } impeccable-variants-start ${ 
-          id 
-          } ${ 
-          commentSyntax.close}`,
-        `${indent  }  ${  commentSyntax.open  } Original ${  commentSyntax.close}`,
-        `${indent  }  <div data-impeccable-variant="original">`,
+        `${indent}<div data-impeccable-variants="${
+          id
+        }" data-impeccable-variant-count="${count}" ${styleContents}>`,
+        `${indent}  ${commentSyntax.open} impeccable-variants-start ${id} ${
+          commentSyntax.close
+        }`,
+        `${indent}  ${commentSyntax.open} Original ${commentSyntax.close}`,
+        `${indent}  <div data-impeccable-variant="original">`,
         reindentOriginal("    "),
-        `${indent  }  </div>`,
-        `${indent 
-          }  ${ 
-          commentSyntax.open 
-          } Variants: insert below this line ${ 
-          commentSyntax.close}`,
-        `${indent 
-          }  ${ 
-          commentSyntax.open 
-          } impeccable-variants-end ${ 
-          id 
-          } ${ 
-          commentSyntax.close}`,
-        `${indent  }</div>`,
+        `${indent}  </div>`,
+        `${indent}  ${commentSyntax.open} Variants: insert below this line ${
+          commentSyntax.close
+        }`,
+        `${indent}  ${commentSyntax.open} impeccable-variants-end ${id} ${
+          commentSyntax.close
+        }`,
+        `${indent}</div>`,
       ]
     : [
-        `${indent +
-          commentSyntax.open 
-          } impeccable-variants-start ${ 
-          id 
-          } ${ 
-          commentSyntax.close}`,
-        `${indent 
-          }<div data-impeccable-variants="${ 
-          id 
-          }" data-impeccable-variant-count="${ 
-          count 
-          }" ${ 
-          styleContents 
-          }>`,
-        `${indent  }  ${  commentSyntax.open  } Original ${  commentSyntax.close}`,
-        `${indent  }  <div data-impeccable-variant="original">`,
+        `${indent + commentSyntax.open} impeccable-variants-start ${id} ${
+          commentSyntax.close
+        }`,
+        `${indent}<div data-impeccable-variants="${
+          id
+        }" data-impeccable-variant-count="${count}" ${styleContents}>`,
+        `${indent}  ${commentSyntax.open} Original ${commentSyntax.close}`,
+        `${indent}  <div data-impeccable-variant="original">`,
         originalIndented,
-        `${indent  }  </div>`,
-        `${indent 
-          }  ${ 
-          commentSyntax.open 
-          } Variants: insert below this line ${ 
-          commentSyntax.close}`,
-        `${indent  }</div>`,
-        `${indent +
-          commentSyntax.open 
-          } impeccable-variants-end ${ 
-          id 
-          } ${ 
-          commentSyntax.close}`,
+        `${indent}  </div>`,
+        `${indent}  ${commentSyntax.open} Variants: insert below this line ${
+          commentSyntax.close
+        }`,
+        `${indent}</div>`,
+        `${indent + commentSyntax.open} impeccable-variants-end ${id} ${
+          commentSyntax.close
+        }`,
       ];
 
   // Replace the original element with the wrapper
@@ -396,7 +370,7 @@ function buildSearchQueries(elementId, classes, tag, query) {
 
   // 1. ID is the most specific
   if (elementId) {
-    queries.push(`id="${  elementId  }"`);
+    queries.push(`id="${elementId}"`);
   }
 
   // 2. Full class attribute match (for elements with distinctive multi-class combos).
@@ -410,8 +384,8 @@ function buildSearchQueries(elementId, classes, tag, query) {
     if (classList.length > 1) {
       const joined = classList.join(" ");
       const sorted = [...classList].toSorted((a, b) => b.length - a.length);
-      queries.push(`class="${  joined  }"`);
-      queries.push(`className="${  joined  }"`);
+      queries.push(`class="${joined}"`);
+      queries.push(`className="${joined}"`);
       queries.push(sorted[0]); // most distinctive single class, fallback
     } else if (classList.length === 1) {
       queries.push(classList[0]);
@@ -422,8 +396,8 @@ function buildSearchQueries(elementId, classes, tag, query) {
   // Same dual-emit for JSX compatibility.
   if (tag && classes) {
     const firstClass = classes.split(",")[0].trim();
-    queries.push(`<${  tag  } class="${  firstClass}`);
-    queries.push(`<${  tag  } className="${  firstClass}`);
+    queries.push(`<${tag} class="${firstClass}`);
+    queries.push(`<${tag} className="${firstClass}`);
   }
 
   // 4. Raw fallback query
@@ -458,7 +432,9 @@ function detectStyleMode(filePath) {
 }
 
 function buildCssSelectorPrefixExamples(styleMode, count) {
-  if (styleMode !== "astro-global-prefixed") {return [];}
+  if (styleMode !== "astro-global-prefixed") {
+    return [];
+  }
   return Array.from(
     { length: count },
     (_, i) => `[data-impeccable-variant="${i + 1}"]`
@@ -525,17 +501,25 @@ function findFileWithQuery(query, cwd, genOpts = {}) {
 
   for (const dir of searchDirs) {
     const absDir = path.join(cwd, dir);
-    if (!fs.existsSync(absDir)) {continue;}
+    if (!fs.existsSync(absDir)) {
+      continue;
+    }
     const result = searchDir(absDir, query, seen, 0, genOpts);
-    if (result) {return result;}
+    if (result) {
+      return result;
+    }
   }
   return null;
 }
 
 function searchDir(dir, query, seen, depth, genOpts) {
-  if (depth > 5) {return null;} // don't go too deep
+  if (depth > 5) {
+    return null;
+  } // don't go too deep
   const realDir = fs.realpathSync(dir);
-  if (seen.has(realDir)) {return null;}
+  if (seen.has(realDir)) {
+    return null;
+  }
   seen.add(realDir);
 
   let entries;
@@ -547,7 +531,9 @@ function searchDir(dir, query, seen, depth, genOpts) {
 
   // Check files first
   for (const entry of entries) {
-    if (!entry.isFile()) {continue;}
+    if (!entry.isFile()) {
+      continue;
+    }
     const ext = path.extname(entry.name).toLowerCase();
     if (!EXTENSIONS.has(ext)) {
       continue;

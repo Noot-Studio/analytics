@@ -300,11 +300,14 @@ function isValidVariantId(v) {
 }
 
 function validateEvent(msg) {
-  if (!msg || typeof msg !== "object" || !msg.type)
-    {return "Missing or invalid message";}
+  if (!msg || typeof msg !== "object" || !msg.type) {
+    return "Missing or invalid message";
+  }
   switch (msg.type) {
     case "generate": {
-      if (!isValidId(msg.id)) return "generate: missing or malformed id";
+      if (!isValidId(msg.id)) {
+        return "generate: missing or malformed id";
+      }
       if (!msg.action || !VISUAL_ACTIONS.has(msg.action)) {
         return "generate: invalid action";
       }
@@ -330,9 +333,12 @@ function validateEvent(msg) {
       return null;
     }
     case "accept": {
-      if (!isValidId(msg.id)) {return "accept: missing or malformed id";}
-      if (!isValidVariantId(msg.variantId))
-        {return "accept: missing or malformed variantId";}
+      if (!isValidId(msg.id)) {
+        return "accept: missing or malformed id";
+      }
+      if (!isValidVariantId(msg.variantId)) {
+        return "accept: missing or malformed variantId";
+      }
       if (msg.paramValues !== undefined) {
         if (
           typeof msg.paramValues !== "object" ||
@@ -348,9 +354,12 @@ function validateEvent(msg) {
       return isValidId(msg.id) ? null : "discard: missing or malformed id";
     }
     case "checkpoint": {
-      if (!isValidId(msg.id)) {return "checkpoint: missing or malformed id";}
-      if (!Number.isInteger(msg.revision) || msg.revision < 0)
-        {return "checkpoint: revision must be a non-negative integer";}
+      if (!isValidId(msg.id)) {
+        return "checkpoint: missing or malformed id";
+      }
+      if (!Number.isInteger(msg.revision) || msg.revision < 0) {
+        return "checkpoint: revision must be a non-negative integer";
+      }
       if (
         msg.paramValues !== undefined &&
         (typeof msg.paramValues !== "object" ||
@@ -365,12 +374,13 @@ function validateEvent(msg) {
       return null;
     }
     case "prefetch": {
-      if (!msg.pageUrl || typeof msg.pageUrl !== "string")
-        {return "prefetch: missing pageUrl";}
+      if (!msg.pageUrl || typeof msg.pageUrl !== "string") {
+        return "prefetch: missing pageUrl";
+      }
       return null;
     }
     default: {
-      return `Unknown event type: ${  msg.type}`;
+      return `Unknown event type: ${msg.type}`;
     }
   }
 }
@@ -406,7 +416,7 @@ function createRequestHandler({ detectScript, sessionPath, livePath }) {
         liveScript = fs.readFileSync(livePath, "utf-8");
       } catch (error) {
         res.writeHead(500, { "Content-Type": "text/plain" });
-        res.end(`Error reading live browser scripts: ${  error.message}`);
+        res.end(`Error reading live browser scripts: ${error.message}`);
         return;
       }
       const body =
@@ -504,7 +514,7 @@ function createRequestHandler({ detectScript, sessionPath, livePath }) {
           fs.writeFileSync(absPath, Buffer.concat(chunks));
         } catch (error) {
           res.writeHead(500, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ error: `Write failed: ${  error.message}` }));
+          res.end(JSON.stringify({ error: `Write failed: ${error.message}` }));
           return;
         }
         res.writeHead(200, { "Content-Type": "application/json" });
@@ -628,8 +638,7 @@ function createRequestHandler({ detectScript, sessionPath, livePath }) {
         try {
           response.sidecar = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
         } catch (error) {
-          response.sidecarError =
-            `Failed to parse .impeccable/design.json: ${  error.message}`;
+          response.sidecarError = `Failed to parse .impeccable/design.json: ${error.message}`;
         }
       }
 
@@ -1055,9 +1064,7 @@ if (existingRecord?.info) {
       `Live server already running on port ${existing.port} (pid ${existing.pid}).`
     );
     console.error(
-      `Stop it first with: node ${path.basename(
-        import.meta.filename
-      )} stop`
+      `Stop it first with: node ${path.basename(import.meta.filename)} stop`
     );
     process.exit(1);
   } catch {

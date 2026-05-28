@@ -72,12 +72,12 @@ Section appended to `/dashboard/organization` (`apps/web/src/routes/dashboard/or
 
 Follows the existing `features/<feature>/components/<atoms|molecules|organisms>/` convention.
 
-| File                                                                                        | Purpose                                      |
-| ------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| `apps/web/src/features/api-keys/components/organisms/api-keys-section.tsx`                 | Full section: table, query, mutation wiring  |
-| `apps/web/src/features/api-keys/components/molecules/create-api-key-dialog.tsx`            | Create flow + one-time secret reveal         |
-| `apps/web/src/features/api-keys/components/molecules/rotate-api-key-dialog.tsx`            | Rotate confirmation + one-time secret reveal |
-| `apps/web/src/features/api-keys/components/molecules/revoke-api-key-dialog.tsx`            | Revoke confirmation                          |
+| File                                                                            | Purpose                                      |
+| ------------------------------------------------------------------------------- | -------------------------------------------- |
+| `apps/web/src/features/api-keys/components/organisms/api-keys-section.tsx`      | Full section: table, query, mutation wiring  |
+| `apps/web/src/features/api-keys/components/molecules/create-api-key-dialog.tsx` | Create flow + one-time secret reveal         |
+| `apps/web/src/features/api-keys/components/molecules/rotate-api-key-dialog.tsx` | Rotate confirmation + one-time secret reveal |
+| `apps/web/src/features/api-keys/components/molecules/revoke-api-key-dialog.tsx` | Revoke confirmation                          |
 
 ### Table columns
 

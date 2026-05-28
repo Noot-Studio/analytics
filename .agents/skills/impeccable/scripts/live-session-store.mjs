@@ -58,7 +58,7 @@ export function createLiveSessionStore({
         ts: new Date().toISOString(),
         type: normalized.type,
       };
-      fs.appendFileSync(journalPath, `${JSON.stringify(entry)  }\n`);
+      fs.appendFileSync(journalPath, `${JSON.stringify(entry)}\n`);
       const next = applyEvent(prior.snapshot, entry, prior.diagnostics);
       snapshotCache.set(normalized.id, {
         diagnostics: next.diagnostics || [],
@@ -69,7 +69,9 @@ export function createLiveSessionStore({
       return next;
     },
     getSnapshot(id = sessionId, opts = {}) {
-      if (!id) {throw new Error("session id required");}
+      if (!id) {
+        throw new Error("session id required");
+      }
       const journalPath = getReadableJournalPath(id);
       const snapshotPath = getSnapshotPath(rootDir, id);
       const rebuilt = rebuildSnapshotFromJournal(journalPath, id);
@@ -78,17 +80,22 @@ export function createLiveSessionStore({
       if (
         !opts.includeCompleted &&
         COMPLETED_PHASES.has(rebuilt.snapshot.phase)
-      )
-        {return null;}
+      ) {
+        return null;
+      }
       return rebuilt.snapshot;
     },
     legacyRootDir,
     listActiveSessions() {
       const ids = new Set();
       for (const dir of [legacyRootDir, rootDir]) {
-        if (!fs.existsSync(dir)) {continue;}
+        if (!fs.existsSync(dir)) {
+          continue;
+        }
         for (const name of fs.readdirSync(dir)) {
-          if (name.endsWith(".jsonl")) {ids.add(name.slice(0, -".jsonl".length));}
+          if (name.endsWith(".jsonl")) {
+            ids.add(name.slice(0, -".jsonl".length));
+          }
         }
       }
       return [...ids]
@@ -124,7 +131,7 @@ function getSnapshotPath(rootDir, id) {
 
 function safeSessionId(id) {
   if (!/^[A-Za-z0-9_-]{1,128}$/.test(id)) {
-    throw new Error(`invalid session id: ${  id}`);
+    throw new Error(`invalid session id: ${id}`);
   }
   return id;
 }
@@ -209,11 +216,12 @@ function applyEvent(snapshot, entry, inheritedDiagnostics = []) {
       next.expectedVariants = event.count ?? next.expectedVariants;
       next.pendingEventSeq = entry.seq ?? next.pendingEventSeq;
       next.pendingEvent = toPendingEvent(event);
-      if (event.screenshotPath)
-        {upsertArtifact(next.annotationArtifacts, {
-          type: "screenshot",
+      if (event.screenshotPath) {
+        upsertArtifact(next.annotationArtifacts, {
           path: event.screenshotPath,
-        });}
+          type: "screenshot",
+        });
+      }
       break;
     }
     case "variants_ready":
@@ -242,7 +250,9 @@ function applyEvent(snapshot, entry, inheritedDiagnostics = []) {
         next.activeOwner = event.owner ?? next.activeOwner;
         next.arrivedVariants = event.arrivedVariants ?? next.arrivedVariants;
         next.visibleVariant = event.visibleVariant ?? next.visibleVariant;
-        if (event.paramValues) {next.paramValues = { ...event.paramValues };}
+        if (event.paramValues) {
+          next.paramValues = { ...event.paramValues };
+        }
       } else {
         next.diagnostics.push({
           error: "stale_checkpoint_ignored",
@@ -255,7 +265,9 @@ function applyEvent(snapshot, entry, inheritedDiagnostics = []) {
     case "accept_intent": {
       next.phase = "accept_requested";
       next.visibleVariant = Number(event.variantId ?? next.visibleVariant);
-      if (event.paramValues) {next.paramValues = { ...event.paramValues };}
+      if (event.paramValues) {
+        next.paramValues = { ...event.paramValues };
+      }
       next.pendingEventSeq = entry.seq ?? next.pendingEventSeq;
       next.pendingEvent = toPendingEvent(event);
       break;
