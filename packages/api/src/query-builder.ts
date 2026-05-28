@@ -49,14 +49,28 @@ interface QueryResult {
   params: Record<string, unknown>;
 }
 
+const getPropertyParamName = (
+  property: string,
+  propertyParams: Map<string, string>
+): string => {
+  let paramName = propertyParams.get(property);
+  if (!paramName) {
+    paramName = `prop_${property}_name`;
+    propertyParams.set(property, paramName);
+  }
+  return paramName;
+};
+
 export const buildPropertyAccessor = (
   property: string,
-  valueType: "string" | "number"
+  valueType: "string" | "number",
+  propertyParams: Map<string, string>
 ): string => {
+  const paramName = getPropertyParamName(property, propertyParams);
   if (valueType === "number") {
-    return `JSONExtractFloat64(properties, '${property}')`;
+    return `JSONExtractFloat64(properties, {${paramName}:String})`;
   }
-  return `JSONExtractString(properties, '${property}')`;
+  return `JSONExtractString(properties, {${paramName}:String})`;
 };
 
 export const getValueType = (value: unknown): "string" | "number" => {
@@ -68,12 +82,13 @@ export const getValueType = (value: unknown): "string" | "number" => {
 
 export const buildFilterCondition = (
   filter: Filter,
-  index: number
+  index: number,
+  propertyParams: Map<string, string>
 ): { condition: string; paramName: string; paramValue: unknown } => {
   const valueType = getValueType(
     Array.isArray(filter.value) ? filter.value[0] : filter.value
   );
-  const accessor = buildPropertyAccessor(filter.property, valueType);
+  const accessor = buildPropertyAccessor(filter.property, valueType, propertyParams);
   const paramName = `filter_${index}_value`;
 
   switch (filter.operator) {
@@ -161,7 +176,8 @@ export const buildFilterCondition = (
 
 export const buildAggregation = (
   aggregation: QueryConfig["aggregation"],
-  aggregateProperty?: string
+  aggregateProperty: string | undefined,
+  propertyParams: Map<string, string>
 ): string => {
   switch (aggregation) {
     case "count": {
@@ -177,25 +193,29 @@ export const buildAggregation = (
       if (!aggregateProperty) {
         throw new Error("aggregateProperty required for avg");
       }
-      return `avg(JSONExtractFloat64(properties, '${aggregateProperty}')) AS value`;
+      const paramName = getPropertyParamName(aggregateProperty, propertyParams);
+      return `avg(JSONExtractFloat64(properties, {${paramName}:String})) AS value`;
     }
     case "sum": {
       if (!aggregateProperty) {
         throw new Error("aggregateProperty required for sum");
       }
-      return `sum(JSONExtractFloat64(properties, '${aggregateProperty}')) AS value`;
+      const paramName = getPropertyParamName(aggregateProperty, propertyParams);
+      return `sum(JSONExtractFloat64(properties, {${paramName}:String})) AS value`;
     }
     case "min": {
       if (!aggregateProperty) {
         throw new Error("aggregateProperty required for min");
       }
-      return `min(JSONExtractFloat64(properties, '${aggregateProperty}')) AS value`;
+      const paramName = getPropertyParamName(aggregateProperty, propertyParams);
+      return `min(JSONExtractFloat64(properties, {${paramName}:String})) AS value`;
     }
     case "max": {
       if (!aggregateProperty) {
         throw new Error("aggregateProperty required for max");
       }
-      return `max(JSONExtractFloat64(properties, '${aggregateProperty}')) AS value`;
+      const paramName = getPropertyParamName(aggregateProperty, propertyParams);
+      return `max(JSONExtractFloat64(properties, {${paramName}:String})) AS value`;
     }
     default: {
       throw new Error(`Unsupported aggregation: ${aggregation}`);
@@ -229,6 +249,7 @@ export const buildTimeBucket = (
 };
 
 export const buildQuery = (config: QueryConfig): QueryResult => {
+  const propertyParams = new Map<string, string>();
   const selectColumns: string[] = [];
   const groupByColumns: string[] = [];
   const params: Record<string, unknown> = {
@@ -247,8 +268,9 @@ export const buildQuery = (config: QueryConfig): QueryResult => {
   // Group by properties
   if (config.groupBy) {
     for (const property of config.groupBy) {
+      const paramName = getPropertyParamName(property, propertyParams);
       selectColumns.push(
-        `JSONExtractString(properties, '${property}') AS ${property}`
+        `JSONExtractString(properties, {${paramName}:String}) AS ${property}`
       );
       groupByColumns.push(property);
     }
@@ -256,7 +278,7 @@ export const buildQuery = (config: QueryConfig): QueryResult => {
 
   // Aggregation
   selectColumns.push(
-    buildAggregation(config.aggregation, config.aggregateProperty)
+    buildAggregation(config.aggregation, config.aggregateProperty, propertyParams)
   );
 
   // Build WHERE clauses
@@ -276,7 +298,8 @@ export const buildQuery = (config: QueryConfig): QueryResult => {
       if (filter) {
         const { condition, paramName, paramValue } = buildFilterCondition(
           filter,
-          i
+          i,
+          propertyParams
         );
         whereConditions.push(condition);
 
@@ -303,6 +326,11 @@ export const buildQuery = (config: QueryConfig): QueryResult => {
   query += `\nORDER BY ${groupByColumns.length > 0 ? groupByColumns.join(", ") : "timestamp DESC"}`;
   query += `\nLIMIT {limit:UInt32}`;
   params.limit = config.limit;
+
+  // Add property name params
+  for (const [property, paramName] of propertyParams) {
+    params[paramName] = property;
+  }
 
   return { params, query };
 };
