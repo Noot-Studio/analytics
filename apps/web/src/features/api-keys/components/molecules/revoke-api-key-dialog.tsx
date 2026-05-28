@@ -29,8 +29,9 @@ export function RevokeApiKeyDialog({
         <DialogHeader>
           <DialogTitle>Revoke API Key</DialogTitle>
           <DialogDescription>
-            Revoke <span className="font-medium text-foreground">{keyName}</span>
-            ? Any game client using this key will stop working immediately. This
+            Revoke{" "}
+            <span className="font-medium text-foreground">{keyName}</span>? Any
+            game client using this key will stop working immediately. This
             cannot be undone.
           </DialogDescription>
         </DialogHeader>
