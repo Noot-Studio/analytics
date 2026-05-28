@@ -18,12 +18,12 @@ interface CreateProjectDialogProps {
   open: boolean;
 }
 
-export function CreateProjectDialog({
+export const CreateProjectDialog = ({
   isPending,
   onCreate,
   onOpenChange,
   open,
-}: CreateProjectDialogProps) {
+}: CreateProjectDialogProps) => {
   const [name, setName] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -64,4 +64,4 @@ export function CreateProjectDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};

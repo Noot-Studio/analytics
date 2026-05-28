@@ -45,20 +45,43 @@ JSON response → Dashboard chart/table
 ```typescript
 z.object({
   projectId: z.string().min(1),
-  
+
   eventType: z.string().min(1).optional(),
   // Filter by specific event type, or omit for "all events"
 
-  filters: z.array(z.object({
-    property: z.string().min(1),           // e.g. "level", "weapon"
-    operator: z.enum(["eq", "neq", "gt", "gte", "lt", "lte", "contains", "starts_with", "in"]),
-    value: z.union([z.string(), z.number(), z.array(z.string())])
-  })).max(10).optional(),
+  filters: z
+    .array(
+      z.object({
+        property: z.string().min(1), // e.g. "level", "weapon"
+        operator: z.enum([
+          "eq",
+          "neq",
+          "gt",
+          "gte",
+          "lt",
+          "lte",
+          "contains",
+          "starts_with",
+          "in",
+        ]),
+        value: z.union([z.string(), z.number(), z.array(z.string())]),
+      })
+    )
+    .max(10)
+    .optional(),
 
   groupBy: z.array(z.string().min(1)).max(5).optional(),
   // Group by event properties (e.g. ["weapon", "map"])
 
-  aggregation: z.enum(["count", "unique_players", "unique_sessions", "avg", "sum", "min", "max"]),
+  aggregation: z.enum([
+    "count",
+    "unique_players",
+    "unique_sessions",
+    "avg",
+    "sum",
+    "min",
+    "max",
+  ]),
   // What to compute
 
   aggregateProperty: z.string().min(1).optional(),
@@ -66,14 +89,14 @@ z.object({
 
   timeRange: z.object({
     from: z.iso.date(),
-    to: z.iso.date()
+    to: z.iso.date(),
   }),
 
   granularity: z.enum(["hour", "day", "week", "month", "none"]).default("day"),
   // Time bucketing. "none" = single total value
 
-  limit: z.number().int().min(1).max(1000).default(100)
-})
+  limit: z.number().int().min(1).max(1000).default(100),
+});
 ```
 
 ### Response Schema
@@ -82,13 +105,13 @@ z.object({
 z.array(z.object({
   // Dimensions (only if granularity != "none")
   timestamp: z.string().optional(),
-  
+
   // Dynamic based on groupBy
   [propertyName: string]: z.string().optional(),
-  
+
   // Metrics
   value: z.number(),                  // The aggregated result
-  
+
   // Metadata
   event_count: z.number().optional()  // Raw event count (for avg/sum context)
 }))
@@ -141,45 +164,46 @@ z.array(z.object({
 ### Type Detection
 
 Since `properties` is stored as a JSON string, we auto-detect the property type from the filter value:
+
 - `string` → `JSONExtractString(properties, 'prop')`
 - `number` → `JSONExtractFloat64(properties, 'prop')`
 - `array` (for `in` operator) → `JSONExtractString(properties, 'prop')`
 
 ### Filter → SQL Mapping
 
-| Operator | SQL |
-|----------|-----|
-| `eq` | `= {value}` |
-| `neq` | `!= {value}` |
-| `gt` | `> {value}` |
-| `gte` | `>= {value}` |
-| `lt` | `< {value}` |
-| `lte` | `<= {value}` |
-| `contains` | `LIKE '%{value}%'` |
-| `starts_with` | `LIKE '{value}%'` |
-| `in` | `IN ({value1}, {value2}, ...)` |
+| Operator      | SQL                            |
+| ------------- | ------------------------------ |
+| `eq`          | `= {value}`                    |
+| `neq`         | `!= {value}`                   |
+| `gt`          | `> {value}`                    |
+| `gte`         | `>= {value}`                   |
+| `lt`          | `< {value}`                    |
+| `lte`         | `<= {value}`                   |
+| `contains`    | `LIKE '%{value}%'`             |
+| `starts_with` | `LIKE '{value}%'`              |
+| `in`          | `IN ({value1}, {value2}, ...)` |
 
 ### Aggregation → SQL
 
-| Aggregation | SQL |
-|-------------|-----|
-| `count` | `count()` |
-| `unique_players` | `uniq(player_id)` |
-| `unique_sessions` | `uniq(session_id)` |
-| `avg` | `avg(JSONExtractFloat64(properties, 'prop'))` |
-| `sum` | `sum(JSONExtractFloat64(properties, 'prop'))` |
-| `min` | `min(JSONExtractFloat64(properties, 'prop'))` |
-| `max` | `max(JSONExtractFloat64(properties, 'prop'))` |
+| Aggregation       | SQL                                           |
+| ----------------- | --------------------------------------------- |
+| `count`           | `count()`                                     |
+| `unique_players`  | `uniq(player_id)`                             |
+| `unique_sessions` | `uniq(session_id)`                            |
+| `avg`             | `avg(JSONExtractFloat64(properties, 'prop'))` |
+| `sum`             | `sum(JSONExtractFloat64(properties, 'prop'))` |
+| `min`             | `min(JSONExtractFloat64(properties, 'prop'))` |
+| `max`             | `max(JSONExtractFloat64(properties, 'prop'))` |
 
 ### Granularity → Time Bucketing
 
-| Granularity | SQL |
-|-------------|-----|
-| `hour` | `toStartOfHour(timestamp) AS time_bucket` |
-| `day` | `toStartOfDay(timestamp) AS time_bucket` |
-| `week` | `toStartOfWeek(timestamp) AS time_bucket` |
-| `month` | `toStartOfMonth(timestamp) AS time_bucket` |
-| `none` | No time column in SELECT |
+| Granularity | SQL                                        |
+| ----------- | ------------------------------------------ |
+| `hour`      | `toStartOfHour(timestamp) AS time_bucket`  |
+| `day`       | `toStartOfDay(timestamp) AS time_bucket`   |
+| `week`      | `toStartOfWeek(timestamp) AS time_bucket`  |
+| `month`     | `toStartOfMonth(timestamp) AS time_bucket` |
+| `none`      | No time column in SELECT                   |
 
 ### Complete Generated SQL Example
 
@@ -210,12 +234,12 @@ For numeric aggregations (`avg`, `sum`, `min`, `max`), the user must specify whi
 
 ## Error Handling
 
-| Status | Trigger |
-|--------|---------|
-| `400` | Invalid query config (Zod validation failure) |
-| `403` | Project not accessible (existing `assertProjectOwnership`) |
-| `422` | Query too complex (>10 filters, >5 groupBy fields) |
-| `500` | ClickHouse query execution failure |
+| Status | Trigger                                                    |
+| ------ | ---------------------------------------------------------- |
+| `400`  | Invalid query config (Zod validation failure)              |
+| `403`  | Project not accessible (existing `assertProjectOwnership`) |
+| `422`  | Query too complex (>10 filters, >5 groupBy fields)         |
+| `500`  | ClickHouse query execution failure                         |
 
 ## Limits
 

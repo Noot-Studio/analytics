@@ -2,18 +2,25 @@ import { useQuery } from "@tanstack/react-query";
 
 import { orpc } from "@/utils/orpc";
 
-import { CreateProjectDialog } from "../molecules/create-project-dialog";
 import { ProjectCard } from "../molecules/project-card";
 
-export function ProjectsList() {
+export const ProjectsList = () => {
   const listQuery = useQuery(orpc.projects.list.queryOptions());
 
   if (listQuery.isLoading) {
-    return <div className="py-8 text-center text-muted-foreground">Loading projects...</div>;
+    return (
+      <div className="py-8 text-center text-muted-foreground">
+        Loading projects...
+      </div>
+    );
   }
 
   if (listQuery.isError) {
-    return <div className="py-8 text-center text-destructive">Failed to load projects.</div>;
+    return (
+      <div className="py-8 text-center text-destructive">
+        Failed to load projects.
+      </div>
+    );
   }
 
   const projects = listQuery.data ?? [];
@@ -32,4 +39,4 @@ export function ProjectsList() {
       ))}
     </div>
   );
-}
+};

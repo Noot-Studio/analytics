@@ -24,7 +24,7 @@ async function assertProjectAccess(
     select: { organizationId: true },
     where: { id: projectId },
   });
-  
+
   if (!project) {
     throw new ORPCError("NOT_FOUND", { message: "Project not found" });
   }
@@ -32,8 +32,8 @@ async function assertProjectAccess(
   const membership = await prisma.member.findFirst({
     select: { id: true },
     where: {
-      userId,
       organizationId: project.organizationId,
+      userId,
     },
   });
 
@@ -44,13 +44,15 @@ async function assertProjectAccess(
 
 export const apiKeysRouter = {
   create: protectedProcedure
-    .input(z.object({
-      projectId: z.string().min(1),
-      name: z.string().min(1).max(100),
-    }))
+    .input(
+      z.object({
+        name: z.string().min(1).max(100),
+        projectId: z.string().min(1),
+      })
+    )
     .handler(async ({ context, input }) => {
       await assertProjectAccess(context.session.user.id, input.projectId);
-      
+
       const { publishableKey, secretKey, secretHash } = generateKeyPair();
       const apiKey = await prisma.apiKey.create({
         data: {
@@ -65,9 +67,11 @@ export const apiKeysRouter = {
     }),
 
   list: protectedProcedure
-    .input(z.object({
-      projectId: z.string().min(1),
-    }))
+    .input(
+      z.object({
+        projectId: z.string().min(1),
+      })
+    )
     .handler(async ({ context, input }) => {
       await assertProjectAccess(context.session.user.id, input.projectId);
 

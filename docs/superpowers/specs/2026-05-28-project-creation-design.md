@@ -75,12 +75,12 @@ User, Member, Session, Account, Verification remain unchanged.
 
 ### Key Changes
 
-| Before | After |
-|--------|-------|
-| `Project.ownerId` | `Project.organizationId` (org owns project) |
-| `ApiKey.organizationId` | `ApiKey.projectId` (keys belong to projects) |
-| Project has no `name` | Project gains `name` field |
-| Project has no `apiKeys` relation | Project gains `apiKeys` relation |
+| Before                            | After                                        |
+| --------------------------------- | -------------------------------------------- |
+| `Project.ownerId`                 | `Project.organizationId` (org owns project)  |
+| `ApiKey.organizationId`           | `ApiKey.projectId` (keys belong to projects) |
+| Project has no `name`             | Project gains `name` field                   |
+| Project has no `apiKeys` relation | Project gains `apiKeys` relation             |
 
 ## API Endpoints
 
@@ -160,7 +160,7 @@ async function assertOrgMembership(
   userId: string,
   organizationId: string,
   minRole: "owner" | "admin" = "admin"
-): Promise<void>
+): Promise<void>;
 
 // assertProjectAccess(userId, projectId)
 // Verifies user has access to the project via org membership
@@ -168,25 +168,26 @@ async function assertOrgMembership(
 async function assertProjectAccess(
   userId: string,
   projectId: string
-): Promise<string>
+): Promise<string>;
 ```
 
 ### Endpoint Permissions
 
-| Endpoint | Required Role |
-|----------|--------------|
+| Endpoint          | Required Role     |
+| ----------------- | ----------------- |
 | `projects.create` | Member (any role) |
-| `projects.list` | Member (any role) |
-| `projects.get` | Member (any role) |
-| `projects.delete` | Owner or Admin |
-| `apiKeys.create` | Member (any role) |
-| `apiKeys.list` | Member (any role) |
-| `apiKeys.revoke` | Member (any role) |
-| `apiKeys.rotate` | Member (any role) |
+| `projects.list`   | Member (any role) |
+| `projects.get`    | Member (any role) |
+| `projects.delete` | Owner or Admin    |
+| `apiKeys.create`  | Member (any role) |
+| `apiKeys.list`    | Member (any role) |
+| `apiKeys.revoke`  | Member (any role) |
+| `apiKeys.rotate`  | Member (any role) |
 
 ### Data Flow
 
 **`projects.create`:**
+
 1. Get `activeOrganizationId` from session
 2. `assertOrgMembership(userId, organizationId)`
 3. Validate slug (unique within org)
@@ -194,6 +195,7 @@ async function assertProjectAccess(
 5. Return project
 
 **`apiKeys.create`:**
+
 1. Validate `projectId` exists
 2. `assertProjectAccess(userId, projectId)` → verifies org membership
 3. Generate key pair (publishable + secret)
@@ -201,6 +203,7 @@ async function assertProjectAccess(
 5. Return key pair (secret shown once)
 
 **`analytics.query` (from custom analytics spec):**
+
 1. `assertProjectAccess(userId, projectId)`
 2. Execute ClickHouse query
 3. Return results
@@ -210,11 +213,12 @@ async function assertProjectAccess(
 ### `apps/ingest/src/keys.ts`
 
 Change the Prisma query from:
+
 ```typescript
 prisma.apiKey.findFirst({
   select: { projectId: true },
   where: { publishableKey, revokedAt: null },
-})
+});
 ```
 
 To match the new schema (which now has `projectId` directly on ApiKey, so this actually works without change — just the schema relation changes).
@@ -235,6 +239,7 @@ To match the new schema (which now has `projectId` directly on ApiKey, so this a
 **This is a breaking change.** Existing data in Postgres will be invalid.
 
 **Steps:**
+
 1. Stop all services (`Ctrl+C` on dev processes)
 2. `bun run db:down` (destroy volumes)
 3. Update Prisma schema files
@@ -245,12 +250,12 @@ To match the new schema (which now has `projectId` directly on ApiKey, so this a
 
 ## Error Handling
 
-| Status | Trigger |
-|--------|---------|
-| `400` | Invalid slug format, duplicate slug in org |
-| `403` | Not a member of the organization, insufficient role |
-| `404` | Project not found |
-| `409` | Project slug already exists in organization |
+| Status | Trigger                                             |
+| ------ | --------------------------------------------------- |
+| `400`  | Invalid slug format, duplicate slug in org          |
+| `403`  | Not a member of the organization, insufficient role |
+| `404`  | Project not found                                   |
+| `409`  | Project slug already exists in organization         |
 
 ## Out of Scope
 

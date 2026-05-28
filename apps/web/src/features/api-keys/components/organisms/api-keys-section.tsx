@@ -65,11 +65,14 @@ export function ApiKeysSection({ projectId }: ApiKeysSectionProps) {
 
   const [revokeTarget, setRevokeTarget] = useState<ApiKeyRow | null>(null);
 
-  const listQuery = useQuery(orpc.apiKeys.list.queryOptions({ projectId }));
+  const listQuery = useQuery(
+    orpc.apiKeys.list.queryOptions({ input: { projectId } })
+  );
 
   const invalidateList = () =>
     queryClient.invalidateQueries({
-      queryKey: orpc.apiKeys.list.queryOptions({ projectId }).queryKey,
+      queryKey: orpc.apiKeys.list.queryOptions({ input: { projectId } })
+        .queryKey,
     });
 
   const createMutation = useMutation({

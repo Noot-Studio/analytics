@@ -1,12 +1,12 @@
 import { Button } from "@sbox-analytics/ui/components/button";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-
-import { ProjectsList } from "@/features/projects/components/organisms/projects-list";
-import { CreateProjectDialog } from "@/features/projects/components/molecules/create-project-dialog";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { orpc } from "@/utils/orpc";
 import { toast } from "sonner";
+
+import { CreateProjectDialog } from "@/features/projects/components/molecules/create-project-dialog";
+import { ProjectsList } from "@/features/projects/components/organisms/projects-list";
+import { orpc } from "@/utils/orpc";
 
 export const Route = createFileRoute("/dashboard/projects/")({
   component: ProjectsIndexPage,

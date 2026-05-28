@@ -88,7 +88,11 @@ export const buildFilterCondition = (
   const valueType = getValueType(
     Array.isArray(filter.value) ? filter.value[0] : filter.value
   );
-  const accessor = buildPropertyAccessor(filter.property, valueType, propertyParams);
+  const accessor = buildPropertyAccessor(
+    filter.property,
+    valueType,
+    propertyParams
+  );
   const paramName = `filter_${index}_value`;
 
   switch (filter.operator) {
@@ -280,7 +284,11 @@ export const buildQuery = (config: QueryConfig): QueryResult => {
 
   // Aggregation
   selectColumns.push(
-    buildAggregation(config.aggregation, config.aggregateProperty, propertyParams)
+    buildAggregation(
+      config.aggregation,
+      config.aggregateProperty,
+      propertyParams
+    )
   );
 
   // Build WHERE clauses
