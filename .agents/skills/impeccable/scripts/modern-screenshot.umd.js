@@ -16,46 +16,35 @@
   const Oe = Math.pow,
     Le = (y, v, N) =>
       v in y
-        ? rr(y, v, { configurable: !0, enumerable: !0, value: N, writable: !0 })
+        ? rr(y, v, { enumerable: !0, configurable: !0, writable: !0, value: N })
         : (y[v] = N),
     D = (y, v) => {
-      for (var N in v || (v = {})) {
-        xe.call(v, N) && Le(y, N, v[N]);
-      }
-      if (Z) {
-        for (var N of Z(v)) {
-          Me.call(v, N) && Le(y, N, v[N]);
-        }
-      }
+      for (var N in v || (v = {})) xe.call(v, N) && Le(y, N, v[N]);
+      if (Z) for (var N of Z(v)) Me.call(v, N) && Le(y, N, v[N]);
       return y;
     },
     M = (y, v) => nr(y, or(v));
   const je = (y, v) => {
-    const N = {};
-    for (var R in y) {
-      xe.call(y, R) && v.indexOf(R) < 0 && (N[R] = y[R]);
-    }
-    if (y != null && Z) {
-      for (var R of Z(y)) {
-        v.indexOf(R) < 0 && Me.call(y, R) && (N[R] = y[R]);
-      }
-    }
+    var N = {};
+    for (var R in y) xe.call(y, R) && v.indexOf(R) < 0 && (N[R] = y[R]);
+    if (y != null && Z)
+      for (var R of Z(y)) v.indexOf(R) < 0 && Me.call(y, R) && (N[R] = y[R]);
     return N;
   };
   const C = (y, v, N) =>
     new Promise((R, O) => {
-      const X = (P) => {
+      var X = (P) => {
           try {
             q(N.next(P));
-          } catch (error) {
-            O(error);
+          } catch (W) {
+            O(W);
           }
         },
         j = (P) => {
           try {
             q(N.throw(P));
-          } catch (error) {
-            O(error);
+          } catch (W) {
+            O(W);
           }
         },
         q = (P) => (P.done ? R(P.value) : Promise.resolve(P.value).then(X, j));
@@ -81,9 +70,7 @@
     const e = new Int32Array(256);
     for (let t = 0; t < 256; t++) {
       let r = t;
-      for (let n = 0; n < 8; n++) {
-        r = r & 1 ? 3_988_292_384 ^ (r >>> 1) : r >>> 1;
-      }
+      for (let n = 0; n < 8; n++) {r = r & 1 ? 3988292384 ^ (r >>> 1) : r >>> 1;}
       e[t] = r;
     }
     return e;
@@ -91,24 +78,20 @@
   function P(e) {
     let t = -1;
     j || (j = q());
-    for (let r = 0; r < e.length; r++) {
-      t = j[(t ^ e[r]) & 255] ^ (t >>> 8);
-    }
+    for (let r = 0; r < e.length; r++) {t = j[(t ^ e[r]) & 255] ^ (t >>> 8);}
     return t ^ -1;
   }
   function W(e) {
     const t = e.length - 1;
-    for (let r = t; r >= 4; r--) {
-      if (
+    for (let r = t; r >= 4; r--)
+      {if (
         e[r - 4] === 9 &&
         e[r - 3] === N &&
         e[r - 2] === R &&
         e[r - 1] === O &&
         e[r] === X
-      ) {
-        return r - 3;
-      }
-    }
+      )
+        return r - 3;}
     return 0;
   }
   function ae(e, t, r = !1) {
@@ -139,10 +122,11 @@
       const s = W(e);
       return (e.set(n, s), e.set(a, s + 13), e);
     }
-    const s = new Uint8Array(4);
-    ((s[0] = 0), (s[1] = 0), (s[2] = 0), (s[3] = 9));
-    const o = new Uint8Array(54);
-    return (o.set(e, 0), o.set(s, 33), o.set(n, 37), o.set(a, 50), o);
+      const s = new Uint8Array(4);
+      ((s[0] = 0), (s[1] = 0), (s[2] = 0), (s[3] = 9));
+      const o = new Uint8Array(54);
+      return (o.set(e, 0), o.set(s, 33), o.set(n, 37), o.set(a, 50), o);
+    
   }
   const qe = "AAlwSFlz",
     We = "AAAJcEhZ",
@@ -199,15 +183,9 @@
   }
   const re = (e) => e.startsWith("data:");
   function ue(e, t) {
-    if (/^[a-z]+:\/\//i.test(e)) {
-      return e;
-    }
-    if (U && e.match(/^\/\//)) {
-      return window.location.protocol + e;
-    }
-    if (e.match(/^[a-z]+:/i) || !U) {
-      return e;
-    }
+    if (/^[a-z]+:\/\//i.test(e)) {return e;}
+    if (U && e.match(/^\/\//)) {return window.location.protocol + e;}
+    if (e.match(/^[a-z]+:/i) || !U) {return e;}
     const r = J().implementation.createHTMLDocument(),
       n = r.createElement("base"),
       i = r.createElement("a");
@@ -259,9 +237,7 @@
           );
         });
       } catch (error) {
-        if (ie) {
-          return dt(e.toDataURL(t, r));
-        }
+        if (ie) return dt(e.toDataURL(t, r));
         throw error;
       }
     });
@@ -276,9 +252,7 @@
       i = window.atob(r),
       a = i.length,
       s = new Uint8Array(a);
-    for (let u = 0; u < a; u += 1) {
-      s[u] = i.codePointAt(u);
-    }
+    for (let u = 0; u < a; u += 1) {s[u] = i.charCodeAt(u);}
     return new Blob([s], { type: n });
   }
   function ge(e, t) {
@@ -314,12 +288,8 @@
       }
       if ((n && (c = setTimeout(l, n)), Y(o))) {
         const d = o.currentSrc || o.src;
-        if (!d) {
-          return o.poster ? L(o.poster, t).then(r) : l();
-        }
-        if (o.readyState >= 2) {
-          return l();
-        }
+        if (!d) {return o.poster ? L(o.poster, t).then(r) : l();}
+        if (o.readyState >= 2) {return l();}
         const m = l,
           f = (h) => {
             (s == null || s("Failed video load", d, h), a == null || a(h), l());
@@ -332,32 +302,27 @@
           o.addEventListener("error", f, { once: !0 }));
       } else {
         const d = ce(o) ? o.href.baseVal : o.currentSrc || o.src;
-        if (!d) {
-          return l();
-        }
+        if (!d) {return l();}
         const m = () =>
-            C(this, null, function* m() {
-              if ($(o) && "decode" in o) {
-                try {
+            C(this, null, function*  m() {
+              if ($(o) && "decode" in o)
+                {try {
                   yield o.decode();
-                } catch (error) {
+                } catch (h) {
                   s == null ||
                     s(
                       "Failed to decode image, trying to render anyway",
                       o.dataset.originalSrc || d,
-                      error
+                      h
                     );
-                }
-              }
+                }}
               l();
             }),
           f = (h) => {
             (s == null || s("Failed image load", o.dataset.originalSrc || d, h),
               l());
           };
-        if ($(o) && o.complete) {
-          return m();
-        }
+        if ($(o) && o.complete) {return m();}
         ((u = () => {
           (o.removeEventListener("load", m), o.removeEventListener("error", f));
         }),
@@ -378,7 +343,7 @@
             ));
     });
   }
-  const he = (function he() {
+  const he = (function  he() {
     let t = 0;
     const r = () =>
       `0000${((Math.random() * Oe(36, 4)) << 0).toString(36)}`.slice(-4);
@@ -435,14 +400,14 @@
               drawImageInterval: 100,
               fetch: D(
                 {
-                  bypassingCache: !1,
-                  placeholderImage:
-                    "data:image/png;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
                   requestInit: wt(
                     (E = t == null ? void 0 : t.fetch) == null
                       ? void 0
                       : E.bypassingCache
                   ),
+                  placeholderImage:
+                    "data:image/png;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+                  bypassingCache: !1,
                 },
                 t == null ? void 0 : t.fetch
               ),
@@ -478,14 +443,14 @@
             fontCssTexts: new Map(),
             fontFamilies: new Map(),
             isEnable: (b) => {
-              let w, S;
+              var w, S;
               return b === "restoreScrollPosition"
-                ? typeof s === "boolean"
+                ? typeof s == "boolean"
                   ? !1
                   : (w = s[b]) != null
                     ? w
                     : !1
-                : typeof s === "boolean"
+                : typeof s == "boolean"
                   ? s
                   : (S = s[b]) != null
                     ? S
@@ -501,14 +466,14 @@
             svgStyleElement: be(o),
             svgStyles: new Map(),
             tasks: [],
-            workers: Array.from({ length: ze && n && i ? i : 0 })
+            workers: [...Array.from({ length: ze && n && i ? i : 0 })]
               .map(() => {
                 try {
                   const b = new Worker(n);
                   return (
                     (b.onmessage = (w) =>
-                      C(this, null, function* onmessage() {
-                        let A, F, B, $e;
+                      C(this, null, function* () {
+                        var A, F, B, $e;
                         const { url: S, result: T } = w.data;
                         T
                           ? (F = (A = u.get(S)) == null ? void 0 : A.resolve) ==
@@ -523,7 +488,7 @@
                             );
                       })),
                     (b.onmessageerror = (w) => {
-                      let T, A;
+                      var T, A;
                       const { url: S } = w.data;
                       (A = (T = u.get(S)) == null ? void 0 : T.reject) ==
                         null ||
@@ -534,8 +499,8 @@
                     }),
                     b
                   );
-                } catch (error) {
-                  return (l.log.warn("Failed to new Worker", error), null);
+                } catch (b) {
+                  return (l.log.warn("Failed to new Worker", b), null);
                 }
               })
               .filter(Boolean),
@@ -549,9 +514,7 @@
     });
   }
   function be(e) {
-    if (!e) {
-      return;
-    }
+    if (!e) {return;}
     const t = e.createElement("style"),
       r = t.ownerDocument.createTextNode(`
 .______background-clip--text {
@@ -583,15 +546,13 @@
             t.log.warn("Failed to drawImage", error);
           }
         };
-      if ((u(), t.isEnable("fixSvgXmlDecode"))) {
-        for (let l = 0; l < i; l++) {
+      if ((u(), t.isEnable("fixSvgXmlDecode")))
+        {for (let l = 0; l < i; l++)
           yield new Promise((d) => {
             setTimeout(() => {
               (c == null || c.clearRect(0, 0, o.width, o.height), u(), d());
             }, l + a);
-          });
-        }
-      }
+          });}
       return ((t.drawImageCount = 0), r.timeEnd("image to canvas"), o);
     });
   }
@@ -624,16 +585,13 @@
     );
   }
   function Se(e, t) {
-    if (e.ownerDocument) {
-      try {
+    if (e.ownerDocument)
+      {try {
         const a = e.toDataURL();
-        if (a !== "data:,") {
-          return _(a, e.ownerDocument);
-        }
-      } catch (error) {
-        t.log.warn("Failed to clone canvas", error);
-      }
-    }
+        if (a !== "data:,") return _(a, e.ownerDocument);
+      } catch (a) {
+        t.log.warn("Failed to clone canvas", a);
+      }}
     const r = e.cloneNode(!1),
       n = e.getContext("2d"),
       i = r.getContext("2d");
@@ -653,9 +611,8 @@
       if (
         (r = e == null ? void 0 : e.contentDocument) != null &&
         r.documentElement
-      ) {
-        return ne(e.contentDocument.documentElement, t);
-      }
+      )
+        {return ne(e.contentDocument.documentElement, t);}
     } catch (error) {
       t.log.warn("Failed to clone iframe", error);
     }
@@ -673,18 +630,16 @@
   }
   function Ct(e, t) {
     return C(this, null, function* () {
-      if (e.ownerDocument && !e.currentSrc && e.poster) {
-        return _(e.poster, e.ownerDocument);
-      }
+      if (e.ownerDocument && !e.currentSrc && e.poster)
+        {return _(e.poster, e.ownerDocument);}
       const r = e.cloneNode(!1);
       ((r.crossOrigin = "anonymous"),
         e.currentSrc && e.currentSrc !== e.src && (r.src = e.currentSrc));
       const n = r.ownerDocument;
       if (n) {
         let i = !0;
-        if ((yield L(r, { onError: () => (i = !1), onWarn: t.log.warn }), !i)) {
-          return e.poster ? _(e.poster, e.ownerDocument) : r;
-        }
+        if ((yield L(r, { onError: () => (i = !1), onWarn: t.log.warn }), !i))
+          {return e.poster ? _(e.poster, e.ownerDocument) : r;}
         ((r.currentTime = e.currentTime),
           yield new Promise((s) => {
             r.addEventListener("seeked", s, { once: !0 });
@@ -750,14 +705,10 @@
       o = [a && "svg", i, s.map((g, p) => `${g}=${p}`).join(","), t]
         .filter(Boolean)
         .join(":");
-    if (n.has(o)) {
-      return n.get(o);
-    }
+    if (n.has(o)) return n.get(o);
     const c = vt(r),
       u = c == null ? void 0 : c.contentWindow;
-    if (!u) {
-      return new Map();
-    }
+    if (!u) return new Map();
     const l = u == null ? void 0 : u.document;
     let d, m;
     (a
@@ -766,10 +717,10 @@
         s.forEach(([g, p]) => {
           m.setAttributeNS(null, g, p);
         }),
-        d.append(m))
+        d.appendChild(m))
       : (d = m = l.createElement(i)),
       (m.textContent = " "),
-      l.body.append(d));
+      l.body.appendChild(d));
     const f = u.getComputedStyle(m, t),
       h = new Map();
     for (let g = f.length, p = 0; p < g; p++) {
@@ -783,19 +734,14 @@
     const n = new Map(),
       i = [],
       a = new Map();
-    if (r) {
-      for (const c of r) {
-        s(c);
-      }
-    } else {
-      for (let c = e.length, u = 0; u < c; u++) {
+    if (r) {for (const c of r) s(c);}
+    else
+      {for (let c = e.length, u = 0; u < c; u++) {
         const l = e.item(u);
         s(l);
-      }
-    }
-    for (let c = i.length, u = 0; u < c; u++) {
-      (o = a.get(i[u])) == null || o.forEach((l, d) => n.set(d, l));
-    }
+      }}
+    for (let c = i.length, u = 0; u < c; u++)
+      {(o = a.get(i[u])) == null || o.forEach((l, d) => n.set(d, l));}
     function s(c) {
       const u = e.getPropertyValue(c),
         l = e.getPropertyPriority(c),
@@ -849,9 +795,7 @@
             "ellipsis" &&
           e.scrollWidth === e.clientWidth &&
           l.set("text-overflow", ["clip", ""])));
-    for (let g = o.length, p = 0; p < g; p++) {
-      o.removeProperty(o.item(p));
-    }
+    for (let g = o.length, p = 0; p < g; p++) {o.removeProperty(o.item(p));}
     return (
       l.forEach(([g, p], E) => {
         o.setProperty(E, g, p);
@@ -879,16 +823,12 @@
       svgStyles: o,
       currentNodeStyle: c,
     } = n;
-    if (!s || !a) {
-      return;
-    }
+    if (!s || !a) {return;}
     function u(l) {
       let w;
       const d = a.getComputedStyle(e, l);
       let m = d.getPropertyValue("content");
-      if (!m || m === "none") {
-        return;
-      }
+      if (!m || m === "none") {return;}
       (i == null || i(m), (m = m.replaceAll(/(')|(")|(counter\(.+\))/g, "")));
       const f = [he()],
         h = Ee(e, l, n);
@@ -907,9 +847,8 @@
           p.push(`${A}: ${S}${T ? " !important" : ""};`);
         }),
         p.length === 1)
-      ) {
-        return;
-      }
+      )
+        {return;}
       try {
         t.className = [t.className, ...f].join(" ");
       } catch (error) {
@@ -926,9 +865,7 @@
   const Te = new Set(["symbol"]);
   function ve(e, t, r, n, i) {
     return C(this, null, function* () {
-      if ((I(r) && (ot(r) || at(r))) || (n.filter && !n.filter(r))) {
-        return;
-      }
+      if ((I(r) && (ot(r) || at(r))) || (n.filter && !n.filter(r))) {return;}
       Te.has(t.nodeName) || Te.has(r.nodeName)
         ? (n.currentParentNodeStyle = void 0)
         : (n.currentParentNodeStyle = n.currentNodeStyle);
@@ -944,28 +881,18 @@
         e.shadowRoot &&
         ((i = (a = e.shadowRoot) == null ? void 0 : a.firstChild),
         r.shadowRoots.push(e.shadowRoot));
-      for (let s = i; s; s = s.nextSibling) {
-        if (!Ze(s)) {
-          if (I(s) && it(s) && typeof s.assignedNodes === "function") {
+      for (let s = i; s; s = s.nextSibling)
+        {if (!Ze(s))
+          if (I(s) && it(s) && typeof s.assignedNodes == "function") {
             const o = s.assignedNodes();
-            for (let c = 0; c < o.length; c++) {
-              yield ve(e, t, o[c], r, n);
-            }
-          } else {
-            yield ve(e, t, s, r, n);
-          }
-        }
-      }
+            for (let c = 0; c < o.length; c++) yield ve(e, t, o[c], r, n);
+          } else yield ve(e, t, s, r, n);}
     });
   }
   function Ut(e, t) {
-    if (!V(e) || !V(t)) {
-      return;
-    }
+    if (!V(e) || !V(t)) {return;}
     const { scrollTop: r, scrollLeft: n } = e;
-    if (!r && !n) {
-      return;
-    }
+    if (!r && !n) {return;}
     const { transform: i } = t.style,
       a = new DOMMatrix(i),
       { a: s, b: o, c, d: u } = a;
@@ -988,11 +915,8 @@
       n && s.setProperty("width", `${n}px`, "important"),
       i && s.setProperty("height", `${i}px`, "important"),
       a)
-    ) {
-      for (const o in a) {
-        s[o] = a[o];
-      }
-    }
+    )
+      {for (const o in a) s[o] = a[o];}
   }
   const Ft = /^[\w-:]+$/;
   function ne(e, t, r = !1, n) {
@@ -1004,9 +928,8 @@
         fontFamilies: s,
         onCloneEachNode: o,
       } = t;
-      if (i && et(e)) {
-        return (n && /\S/.test(e.data) && n(e.data), i.createTextNode(e.data));
-      }
+      if (i && et(e))
+        {return (n && /\S/.test(e.data) && n(e.data), i.createTextNode(e.data));}
       if (i && a && I(e) && (V(e) || H(e))) {
         const f = yield Tt(e, t);
         if (t.isEnable("removeAbnormalAttributes")) {
@@ -1091,9 +1014,8 @@
       s = r ? setTimeout(() => a.abort(), r) : void 0;
     return fetch(t, D({ signal: a.signal }, i))
       .then((c) => {
-        if (!c.ok) {
-          throw new Error("Failed fetch, not 2xx response", { cause: c });
-        }
+        if (!c.ok)
+          {throw new Error("Failed fetch, not 2xx response", { cause: c });}
         switch (n) {
           case "arrayBuffer": {
             return c.arrayBuffer();
@@ -1154,12 +1076,10 @@
           d
         );
       ((E = { reject: void 0, resolve: void 0, response: null, type: n }),
-        (E.response = C(this, null, function* response() {
+        (E.response = C(this, null, function*  response() {
           if (l && n === "image") {
             const A = yield l(r);
-            if (A) {
-              return A;
-            }
+            if (A) {return A;}
           }
           return !G && r.startsWith("http") && g.length
             ? new Promise((A, F) => {
@@ -1169,15 +1089,14 @@
               })
             : Bt(T);
         }).catch((error) => {
-          if ((u.delete(r), n === "image" && f)) {
+          if ((u.delete(r), n === "image" && f))
             return (
               e.log.warn(
                 "Failed to fetch image base64, trying to use placeholder image",
                 s
               ),
-              typeof f === "string" ? f : f(a)
+              typeof f == "string" ? f : f(a)
             );
-          }
           throw error;
         })),
         u.set(r, E));
@@ -1186,21 +1105,18 @@
   }
   function Re(e, t, r, n) {
     return C(this, null, function* () {
-      if (!Ie(e)) {
-        return e;
-      }
-      for (const [i, a] of $t(e, t)) {
-        try {
+      if (!Ie(e)) {return e;}
+      for (const [i, a] of $t(e, t))
+        {try {
           const s = yield z(r, {
+            url: a,
             requestType: n ? "image" : "text",
             responseType: "dataUrl",
-            url: a,
           });
           e = e.replace(Lt(i), `$1${s}$3`);
-        } catch (error) {
-          r.log.warn("Failed to fetch css data url", i, error);
-        }
-      }
+        } catch (s) {
+          r.log.warn("Failed to fetch css data url", i, s);
+        }}
       return e;
     });
   }
@@ -1242,19 +1158,18 @@
   function Ot(e, t) {
     if ($(e)) {
       const r = e.currentSrc || e.src;
-      if (!re(r)) {
-        return [
+      if (!re(r))
+        {return [
           z(t, {
+            url: r,
             imageDom: e,
             requestType: "image",
             responseType: "dataUrl",
-            url: r,
           }).then((n) => {
             n &&
               ((e.srcset = ""), (e.dataset.originalSrc = r), (e.src = n || ""));
           }),
-        ];
-      }
+        ];}
       (G || te) && t.drawImageCount++;
     } else if (H(e) && !re(e.href.baseVal)) {
       const r = e.href.baseVal;
@@ -1276,9 +1191,7 @@
     const { ownerDocument: r, svgDefsElement: n } = t,
       i =
         (o = e.getAttribute("href")) != null ? o : e.getAttribute("xlink:href");
-    if (!i) {
-      return [];
-    }
+    if (!i) {return [];}
     const [a, s] = i.split("#");
     if (s) {
       const c = `#${s}`,
@@ -1286,19 +1199,15 @@
           (l, d) => (l != null ? l : d.querySelector(`svg ${c}`)),
           r == null ? void 0 : r.querySelector(`svg ${c}`)
         );
-      if ((a && e.setAttribute("href", c), n != null && n.querySelector(c))) {
-        return [];
-      }
-      if (u) {
-        return (n == null || n.append(u.cloneNode(!0)), []);
-      }
-      if (a) {
-        return [
-          z(t, { responseType: "text", url: a }).then((l) => {
+      if ((a && e.setAttribute("href", c), n != null && n.querySelector(c)))
+        {return [];}
+      if (u) {return (n == null || n.appendChild(u.cloneNode(!0)), []);}
+      if (a)
+        {return [
+          z(t, { url: a, responseType: "text" }).then((l) => {
             n == null || n.insertAdjacentHTML("beforeend", l);
           }),
-        ];
-      }
+        ];}
     }
     return [];
   }
@@ -1321,63 +1230,56 @@
         tasks: s,
         font: o,
       } = t;
-      if (!(!r || !n || !i.size)) {
-        if (o && o.cssText) {
+      if (!(!r || !n || !i.size))
+        {if (o && o.cssText) {
           const c = Ue(o.cssText, t);
-          n.append(
+          n.appendChild(
             r.createTextNode(`${c}
 `)
           );
         } else {
-          const c = [...r.styleSheets].filter((f) => {
+          const c = Array.from(r.styleSheets).filter((f) => {
               try {
                 return "cssRules" in f && !!f.cssRules.length;
-              } catch (error) {
+              } catch (h) {
                 return (
-                  t.log.warn(
-                    `Error while reading CSS rules from ${f.href}`,
-                    error
-                  ),
+                  t.log.warn(`Error while reading CSS rules from ${f.href}`, h),
                   !1
                 );
               }
             }),
             u = r.implementation.createHTMLDocument(""),
             l = u.createElement("style");
-          u.head.append(l);
+          u.head.appendChild(l);
           const d = l.sheet;
           (yield Promise.all(
             c.flatMap((f) =>
-              [...f.cssRules].map((h) =>
+              Array.from(f.cssRules).map((h) =>
                 C(this, null, function* () {
                   if (Je(h)) {
                     const g = h.href;
                     let p = "";
                     try {
                       p = yield z(t, {
+                        url: g,
                         requestType: "text",
                         responseType: "text",
-                        url: g,
                       });
-                    } catch (error) {
-                      t.log.warn(
-                        `Error fetch remote css import from ${g}`,
-                        error
-                      );
+                    } catch (b) {
+                      t.log.warn(`Error fetch remote css import from ${g}`, b);
                     }
                     const E = p.replace(ke, (b, w, S) =>
                       b.replace(S, ue(S, g))
                     );
-                    for (const b of Ht(E)) {
+                    for (const b of Ht(E))
                       try {
                         d.insertRule(b, d.cssRules.length);
-                      } catch (error) {
+                      } catch (w) {
                         t.log.warn(
                           "Error inserting rule from remote css import",
-                          { error, rule: b }
+                          { rule: b, error: w }
                         );
                       }
-                    }
                   }
                 })
               )
@@ -1390,7 +1292,7 @@
           }),
             m
               .filter((f) => {
-                let h;
+                var h;
                 return (
                   Ye(f) &&
                   Ie(f.style.getPropertyValue("src")) &&
@@ -1403,7 +1305,7 @@
                 const h = f,
                   g = a.get(h.cssText);
                 g
-                  ? n.append(
+                  ? n.appendChild(
                       r.createTextNode(`${g}
 `)
                     )
@@ -1415,30 +1317,25 @@
                       ).then((p) => {
                         ((p = Ue(p, t)),
                           a.set(h.cssText, p),
-                          n.append(
+                          n.appendChild(
                             r.createTextNode(`${p}
 `)
                           ));
                       })
                     );
               }));
-        }
-      }
+        }}
     });
   }
   const Wt = /(\/\*[\s\S]*?\*\/)/g,
     Pe = /((@.*?keyframes [\s\S]*?){([\s\S]*?}\s*?)})/gi;
   function Ht(e) {
-    if (e == null) {
-      return [];
-    }
+    if (e == null) {return [];}
     const t = [];
     let r = e.replace(Wt, "");
     for (;;) {
       const a = Pe.exec(r);
-      if (!a) {
-        break;
-      }
+      if (!a) {break;}
       t.push(a[0]);
     }
     r = r.replace(Pe, "");
@@ -1449,13 +1346,9 @@
       );
     for (;;) {
       let a = n.exec(r);
-      if (a) {
-        i.lastIndex = n.lastIndex;
-      } else if (((a = i.exec(r)), a)) {
-        n.lastIndex = i.lastIndex;
-      } else {
-        break;
-      }
+      if (a) {i.lastIndex = n.lastIndex;}
+      else if (((a = i.exec(r)), a)) {n.lastIndex = i.lastIndex;}
+      else {break;}
       t.push(a[0]);
     }
     return t;
@@ -1469,24 +1362,19 @@
       ? e.replace(zt, (i) => {
           for (;;) {
             const [a, , s] = Vt.exec(i) || [];
-            if (!s) {
-              return "";
-            }
-            if (s === n) {
-              return `src: ${a};`;
-            }
+            if (!s) {return "";}
+            if (s === n) {return `src: ${a};`;}
           }
         })
       : e;
   }
   function oe(e, t = []) {
-    for (const r of [...e]) {
-      Ke(r)
+    for (const r of [...e])
+      {Ke(r)
         ? t.push(...oe(r.cssRules))
-        : ("cssRules" in r
+        : "cssRules" in r
           ? oe(r.cssRules, t)
-          : t.push(r));
-    }
+          : t.push(r);}
     return t;
   }
   const Xt = /\bx?link:?href\s*=\s*["'](?!data:)[^"']+["']/i;
@@ -1496,9 +1384,7 @@
   function _e(e, t) {
     return C(this, null, function* () {
       const r = yield k(e, t);
-      if (I(r.node) && H(r.node) && !Gt(r.node)) {
-        return r.node;
-      }
+      if (I(r.node) && H(r.node) && !Gt(r.node)) {return r.node;}
       const {
         ownerDocument: n,
         log: i,
@@ -1538,12 +1424,10 @@
       const p = a.length;
       let E = 0;
       const b = () =>
-        C(this, null, function* b() {
+        C(this, null, function*  b() {
           for (;;) {
             const S = a.pop();
-            if (!S) {
-              break;
-            }
+            if (!S) {break;}
             try {
               yield S;
             } catch (error) {
@@ -1634,16 +1518,12 @@
           w >= 0
             ? ((d = Math.ceil((w + 28) / 3) * 4), (m = !0))
             : (d = (33 / 3) * 4);
-        } else {
-          a === "image/jpeg" && (d = (18 / 3) * 4);
-        }
+        } else {a === "image/jpeg" && (d = (18 / 3) * 4);}
         const f = l.substring(0, d),
           h = l.substring(d),
           g = window.atob(f),
           p = new Uint8Array(g.length);
-        for (let w = 0; w < p.length; w++) {
-          p[w] = g.codePointAt(w);
-        }
+        for (let w = 0; w < p.length; w++) {p[w] = g.charCodeAt(w);}
         const E = a === "image/png" ? ae(p, s, m) : v(p, s),
           b = window.btoa(String.fromCodePoint(...E));
         c = [u, ",", b, h].join("");

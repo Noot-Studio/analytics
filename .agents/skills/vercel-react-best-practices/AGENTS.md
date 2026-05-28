@@ -540,9 +540,7 @@ import dynamic from "next/dynamic";
 
 const Analytics = dynamic(
   () => import("@vercel/analytics/react").then((m) => m.Analytics),
-  {
-    ssr: false,
-  }
+  { ssr: false }
 );
 
 export default function RootLayout({ children }) {
@@ -580,9 +578,7 @@ import dynamic from "next/dynamic";
 
 const MonacoEditor = dynamic(
   () => import("./monaco-editor").then((m) => m.MonacoEditor),
-  {
-    ssr: false,
-  }
+  { ssr: false }
 );
 
 function CodePanel({ code }: { code: string }) {
@@ -3200,9 +3196,7 @@ function handleSearch(query: string) {
 // Ensure analytics fires within 2 seconds even if browser stays busy
 requestIdleCallback(
   () => analytics.track("page_view", { path: location.pathname }),
-  {
-    timeout: 2000,
-  }
+  { timeout: 2000 }
 );
 ```
 
