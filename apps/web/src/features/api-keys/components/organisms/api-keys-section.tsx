@@ -17,6 +17,10 @@ import { CreateApiKeyDialog } from "../molecules/create-api-key-dialog";
 import { RevokeApiKeyDialog } from "../molecules/revoke-api-key-dialog";
 import { RotateApiKeyDialog } from "../molecules/rotate-api-key-dialog";
 
+interface ApiKeysSectionProps {
+  projectId: string;
+}
+
 interface ApiKeyRow {
   id: string;
   name: string;
@@ -50,7 +54,7 @@ function truncateKey(key: string) {
   return `${key.slice(0, 12)}…`;
 }
 
-export function ApiKeysSection() {
+export function ApiKeysSection({ projectId }: ApiKeysSectionProps) {
   const queryClient = useQueryClient();
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -61,11 +65,11 @@ export function ApiKeysSection() {
 
   const [revokeTarget, setRevokeTarget] = useState<ApiKeyRow | null>(null);
 
-  const listQuery = useQuery(orpc.apiKeys.list.queryOptions());
+  const listQuery = useQuery(orpc.apiKeys.list.queryOptions({ projectId }));
 
   const invalidateList = () =>
     queryClient.invalidateQueries({
-      queryKey: orpc.apiKeys.list.queryOptions().queryKey,
+      queryKey: orpc.apiKeys.list.queryOptions({ projectId }).queryKey,
     });
 
   const createMutation = useMutation({
@@ -179,7 +183,7 @@ export function ApiKeysSection() {
         createdKey={createdKey}
         isPending={createMutation.isPending}
         onOpenChange={handleCreateOpen}
-        onCreate={(name) => createMutation.mutate({ name })}
+        onCreate={(name) => createMutation.mutate({ name, projectId })}
         open={createOpen}
       />
 
