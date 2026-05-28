@@ -4,59 +4,63 @@ import {
   SidebarFooter,
   SidebarHeader,
 } from "@sbox-analytics/ui/components/sidebar";
-import {
-  IconChartBar,
-  IconDashboard,
-  IconDatabase,
-  IconFileWord,
-  IconFolder,
-  IconHelp,
-  IconReport,
-  IconSearch,
-  IconSettings,
-  IconUsers,
-} from "@tabler/icons-react";
+import type { Icon } from "@tabler/icons-react";
+import { useRouterState } from "@tanstack/react-router";
 import type * as React from "react";
 
-import { NavDocuments } from "@/components/dashboard/nav-documents";
+import { orgNavMain, orgNavSecondary } from "@/components/dashboard/nav-config";
 import { NavMain } from "@/components/dashboard/nav-main";
 import { NavSecondary } from "@/components/dashboard/nav-secondary";
 import { NavUser } from "@/components/dashboard/nav-user";
 import { OrgSwitcher } from "@/components/dashboard/org-switcher";
+import { projectNav } from "@/features/projects/components/molecules/project-nav";
+import { ProjectNavHeader } from "@/features/projects/components/molecules/project-nav-header";
 
-const data = {
-  documents: [
-    { icon: IconDatabase, name: "Data Library", url: "/dashboard" },
-    { icon: IconReport, name: "Reports", url: "/dashboard" },
-    { icon: IconFileWord, name: "Word Assistant", url: "/dashboard" },
-  ],
-  navMain: [
-    { icon: IconDashboard, title: "Dashboard", url: "/dashboard" },
-    { icon: IconFolder, title: "Projects", url: "/dashboard/projects" },
-    { icon: IconChartBar, title: "Analytics", url: "/dashboard" },
-    { icon: IconUsers, title: "Team", url: "/dashboard" },
-  ],
-  navSecondary: [
-    { icon: IconSettings, title: "Settings", url: "/dashboard/settings" },
-    { icon: IconHelp, title: "Get Help", url: "/dashboard" },
-    { icon: IconSearch, title: "Search", url: "/dashboard" },
-  ],
-};
+const PROJECT_ROUTE_ID = "/dashboard/projects/$projectId";
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+interface NavSecondaryItem {
+  title: string;
+  url: string;
+  icon: Icon;
+}
+
+export const AppSidebar = ({
+  ...props
+}: React.ComponentProps<typeof Sidebar>) => {
+  const projectId = useRouterState({
+    select: (state) => {
+      const match = state.matches.find(
+        (entry) => entry.routeId === PROJECT_ROUTE_ID
+      );
+      return (match?.params as { projectId?: string } | undefined)?.projectId;
+    },
+  });
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
-        <OrgSwitcher />
+        {projectId ? (
+          <ProjectNavHeader projectId={projectId} />
+        ) : (
+          <OrgSwitcher />
+        )}
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavDocuments items={data.documents} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        {projectId ? (
+          <NavMain items={projectNav(projectId)} />
+        ) : (
+          <>
+            <NavMain items={orgNavMain} />
+            <NavSecondary
+              className="mt-auto"
+              items={orgNavSecondary as NavSecondaryItem[]}
+            />
+          </>
+        )}
       </SidebarContent>
       <SidebarFooter>
         <NavUser />
       </SidebarFooter>
     </Sidebar>
   );
-}
+};
