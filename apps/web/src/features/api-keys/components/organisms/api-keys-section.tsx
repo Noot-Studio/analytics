@@ -38,7 +38,9 @@ interface RotatedKey {
 }
 
 function formatDate(date: Date | null) {
-  if (!date) {return "Never";}
+  if (!date) {
+    return "Never";
+  }
   return new Intl.DateTimeFormat("en-US", {
     dateStyle: "medium",
   }).format(new Date(date));
@@ -95,15 +97,13 @@ export function ApiKeysSection() {
   });
 
   const handleCreateOpen = (open: boolean) => {
-    if (!open) {setCreatedKey(null);}
+    setCreatedKey(null);
     setCreateOpen(open);
   };
 
-  const handleRotateOpen = (open: boolean) => {
-    if (!open) {
-      setRotateTarget(null);
-      setRotatedKey(null);
-    }
+  const handleRotateOpen = (_open: boolean) => {
+    setRotateTarget(null);
+    setRotatedKey(null);
   };
 
   return (
@@ -120,7 +120,11 @@ export function ApiKeysSection() {
         </Button>
       </div>
 
-      {listQuery.data && listQuery.data.length > 0 ? (
+      {listQuery.isError ? (
+        <p className="py-6 text-center text-sm text-destructive">
+          Failed to load API keys.
+        </p>
+      ) : (listQuery.data && listQuery.data.length > 0 ? (
         <Table>
           <TableHeader>
             <TableRow>
@@ -143,7 +147,10 @@ export function ApiKeysSection() {
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
                     <Button
-                      onClick={() => setRotateTarget(key)}
+                      onClick={() => {
+                        setRotatedKey(null);
+                        setRotateTarget(key);
+                      }}
                       size="sm"
                       variant="outline"
                     >
@@ -166,7 +173,7 @@ export function ApiKeysSection() {
         <p className="py-6 text-center text-sm text-muted-foreground">
           No API keys yet. Create one to get started.
         </p>
-      )}
+      ))}
 
       <CreateApiKeyDialog
         createdKey={createdKey}
