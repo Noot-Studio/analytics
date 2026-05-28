@@ -37,7 +37,7 @@ export function CreateApiKeyDialog({
 }: CreateApiKeyDialogProps) {
   const [name, setName] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (name.trim()) {onCreate(name.trim());}
   };
