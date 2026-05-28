@@ -58,6 +58,9 @@ export const projectsRouter = {
   create: protectedProcedure
     .input(
       z.object({
+        environment: z
+          .enum(["Development", "Staging", "Production"])
+          .default("Development"),
         name: z.string().min(1).max(100),
         slug: z.string().min(1).max(64).optional(),
       })
@@ -81,12 +84,14 @@ export const projectsRouter = {
 
       const project = await prisma.project.create({
         data: {
+          environment: input.environment,
           name: input.name,
           organizationId,
           slug,
         },
         select: {
           createdAt: true,
+          environment: true,
           id: true,
           name: true,
           organizationId: true,
@@ -127,6 +132,7 @@ export const projectsRouter = {
             where: { revokedAt: null },
           },
           createdAt: true,
+          environment: true,
           id: true,
           name: true,
           organizationId: true,
@@ -149,10 +155,12 @@ export const projectsRouter = {
     return prisma.project.findMany({
       orderBy: { createdAt: "desc" },
       select: {
-        _count: {
-          select: { apiKeys: { where: { revokedAt: null } } },
+        apiKeys: {
+          select: { lastUsedAt: true },
+          where: { revokedAt: null },
         },
         createdAt: true,
+        environment: true,
         id: true,
         name: true,
         slug: true,
