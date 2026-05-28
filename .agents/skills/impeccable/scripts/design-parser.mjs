@@ -646,7 +646,7 @@ function extractTypography(section) {
     /\*\*Character:\*\*\s*([^\n]+(?:\n[^\n]+)*?)(?=\n\n|\n###|\n##|$)/
   );
   let character = characterMatch
-    ? characterMatch[1].replaceAll('\n', " ").trim()
+    ? characterMatch[1].replaceAll("\n", " ").trim()
     : null;
   if (!character) {
     const paragraphs = collectParagraphs(section.lines).filter(

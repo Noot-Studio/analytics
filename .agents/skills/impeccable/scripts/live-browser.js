@@ -51,12 +51,17 @@
   const FONT = "system-ui, -apple-system, sans-serif";
   const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
   // z-index: detect overlays use 99999, so our UI must be above them
-  const Z = { bar: 100_005, highlight: 100_001, picker: 100_007, toast: 100_010 };
+  const Z = {
+    bar: 100_005,
+    highlight: 100_001,
+    picker: 100_007,
+    toast: 100_010,
+  };
   const EASE = "cubic-bezier(0.22, 1, 0.36, 1)"; // ease-out-quint
   const PREFIX = "impeccable-live";
   const sessionState =
     window.__IMPECCABLE_LIVE_SESSION__?.createLiveBrowserSessionState({
-      idFactory: () => crypto.randomUUID().replaceAll(/-/g, "").slice(0, 8),
+      idFactory: () => crypto.randomUUID().replaceAll("-", "").slice(0, 8),
       prefix: PREFIX,
       storage: localStorage,
     });
@@ -225,15 +230,15 @@
     }
     let s = el.tagName.toLowerCase();
     if (el.id) {
-      s += `#${  el.id}`;
+      s += `#${el.id}`;
     } else if (el.classList.length) {
-      s += `.${  [...el.classList].slice(0, 2).join(".")}`;
+      s += `.${[...el.classList].slice(0, 2).join(".")}`;
     }
     return s;
   }
 
   function id8() {
-    return crypto.randomUUID().replaceAll('-', "").slice(0, 8);
+    return crypto.randomUUID().replaceAll("-", "").slice(0, 8);
   }
 
   // Modal-aware chrome: keep our floating UI clickable inside Radix /
@@ -285,7 +290,7 @@
     highlightEl = document.createElement("div");
     highlightEl.id = `${PREFIX}-highlight`;
     Object.assign(highlightEl.style, {
-      border: `2px solid ${  C.brand}`,
+      border: `2px solid ${C.brand}`,
       borderRadius: "3px",
       boxSizing: "border-box",
       display: "none",
@@ -525,10 +530,10 @@
     }
     const r = el.getBoundingClientRect();
     Object.assign(annotOverlayEl.style, {
-      height: `${r.height  }px`,
-      left: `${r.left  }px`,
-      top: `${r.top  }px`,
-      width: `${r.width  }px`,
+      height: `${r.height}px`,
+      left: `${r.left}px`,
+      top: `${r.top}px`,
+      width: `${r.width}px`,
     });
     annotSvgEl.setAttribute("viewBox", `0 0 ${r.width} ${r.height}`);
   }
@@ -537,8 +542,9 @@
     annotState.comments = [];
     annotState.strokes = [];
     if (annotSvgEl) {
-      while (annotSvgEl.firstChild)
-        {annotSvgEl.removeChild(annotSvgEl.firstChild);}
+      while (annotSvgEl.firstChild) {
+        annotSvgEl.removeChild(annotSvgEl.firstChild);
+      }
     }
     if (annotPinsEl) {
       annotPinsEl.innerHTML = "";
@@ -829,16 +835,16 @@
       cursor: interactive ? "grab" : "default",
       display: "flex",
       gap: "6px",
-      left: `${comment.x - 7  }px`,
+      left: `${comment.x - 7}px`,
       pointerEvents: interactive ? "auto" : "none",
       position: "absolute",
-      top: `${comment.y - 7  }px`,
+      top: `${comment.y - 7}px`,
       touchAction: "none",
     });
     const dot = document.createElement("div");
     Object.assign(dot.style, {
       background: C.brand,
-      border: `2px solid ${  C.white}`,
+      border: `2px solid ${C.white}`,
       borderRadius: "50%",
       boxShadow: "0 1px 3px rgba(0,0,0,0.25)",
       flexShrink: "0",
@@ -881,7 +887,7 @@
     input.placeholder = "Note…";
     Object.assign(input.style, {
       background: C.ink,
-      border: `1px solid ${  C.brand}`,
+      border: `1px solid ${C.brand}`,
       borderRadius: "3px",
       color: C.white,
       fontFamily: FONT,
@@ -970,13 +976,13 @@
     }
     const wrap = document.createElement("div");
     Object.assign(wrap.style, {
-      height: `${rect.height  }px`,
+      height: `${rect.height}px`,
       left: "0",
       overflow: "visible",
       pointerEvents: "none",
       position: "absolute",
       top: "0",
-      width: `${rect.width  }px`,
+      width: `${rect.width}px`,
     });
     if (strokes.length > 0) {
       const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -1027,7 +1033,9 @@
               const p = rule.style[i];
               if (p.startsWith("--") && !props[p]) {
                 const v = cs.getPropertyValue(p).trim();
-                if (v) {props[p] = v;}
+                if (v) {
+                  props[p] = v;
+                }
               }
             }
           }
@@ -1062,12 +1070,12 @@
       id: el.id || null,
       outerHTML: el.outerHTML.slice(0, 10_000),
       parentContext: el.parentElement
-        ? `<${ 
-          el.parentElement.tagName.toLowerCase() 
-          }${el.parentElement.id ? ' id="' + el.parentElement.id + '"' : "" 
-          }${el.parentElement.className
-            ? ' class="' + el.parentElement.className + '"'
-            : "" 
+        ? `<${el.parentElement.tagName.toLowerCase()}${
+            el.parentElement.id ? ` id="${el.parentElement.id}"` : ""
+          }${
+            el.parentElement.className
+              ? ` class="${el.parentElement.className}"`
+              : ""
           }>`
         : null,
       tagName: el.tagName.toLowerCase(),
@@ -1102,7 +1110,7 @@
       WebkitBackdropFilter: "blur(16px)",
       backdropFilter: "blur(16px)",
       background: BP.surface,
-      border: `1px solid ${  BP.hairline}`,
+      border: `1px solid ${BP.hairline}`,
       borderRadius: "10px",
       boxShadow: BAR_SHADOW_DEFAULT,
       color: BP.text,
@@ -1115,12 +1123,10 @@
       padding: "6px",
       position: "fixed",
       transform: "translateY(6px)",
-      transition: `opacity 0.25s ${  EASE  }, transform 0.3s ${  EASE}`,
-      transition:
-        `box-shadow 0.2s ease, opacity 0.25s ${ 
-        EASE 
-        }, transform 0.3s ${ 
-        EASE}`,
+      transition: `opacity 0.25s ${EASE}, transform 0.3s ${EASE}`,
+      transition: `box-shadow 0.2s ease, opacity 0.25s ${
+        EASE
+      }, transform 0.3s ${EASE}`,
       zIndex: Z.bar,
     });
     document.body.append(barEl);
@@ -1158,7 +1164,7 @@
     if (left + barW > window.innerWidth - GAP) {
       left = window.innerWidth - barW - GAP;
     }
-    Object.assign(barEl.style, { left: `${left  }px`, top: `${top  }px` });
+    Object.assign(barEl.style, { left: `${left}px`, top: `${top}px` });
   }
 
   function showBar(mode) {
@@ -1329,7 +1335,7 @@
     // Variant count toggle
     const count = el("button", {
       background: "transparent",
-      border: `1px solid ${  BP.hairline}`,
+      border: `1px solid ${BP.hairline}`,
       borderRadius: "5px",
       color: BP.textDim,
       cursor: "pointer",
@@ -1596,7 +1602,7 @@
     // Discard
     const discard = el("button", {
       background: "transparent",
-      border: `1px solid ${  BP.hairline}`,
+      border: `1px solid ${BP.hairline}`,
       borderRadius: "5px",
       color: BP.textDim,
       cursor: "pointer",
@@ -1637,7 +1643,7 @@
     });
     const spinner = el("div", {
       animation: "impeccable-spin 0.6s linear infinite",
-      border: `2px solid ${  BP.hairline}`,
+      border: `2px solid ${BP.hairline}`,
       borderRadius: "50%",
       borderTopColor: BP.accent,
       flexShrink: "0",
@@ -1718,7 +1724,7 @@
         height: active ? "8px" : "6px",
         opacity: arrived ? (active ? "1" : "0.6") : "0.4",
         transform: arrived ? "scale(1)" : "scale(0.85)",
-        transition: `all 0.2s ${  EASE}`,
+        transition: `all 0.2s ${EASE}`,
         width: active ? "8px" : "6px",
       });
       if (clickable && arrived) {
@@ -1740,7 +1746,7 @@
     const b = el("button", {
       alignItems: "center",
       background: "transparent",
-      border: `1px solid ${  BP.hairline}`,
+      border: `1px solid ${BP.hairline}`,
       borderRadius: "5px",
       color: BP.text,
       cursor: "pointer",
@@ -1789,7 +1795,7 @@
       WebkitBackdropFilter: "blur(10px)",
       backdropFilter: "blur(10px)",
       background: P.surface,
-      border: `1px solid ${  P.hairline}`,
+      border: `1px solid ${P.hairline}`,
       borderRadius: "10px",
       boxShadow:
         "0 8px 30px oklch(0% 0 0 / 0.10), 0 2px 6px oklch(0% 0 0 / 0.06)",
@@ -1800,7 +1806,7 @@
       position: "fixed",
       transform: "scale(0.96) translateY(4px)",
       transformOrigin: "bottom left",
-      transition: `opacity 0.18s ${  EASE  }, transform 0.2s ${  EASE}`,
+      transition: `opacity 0.18s ${EASE}, transform 0.2s ${EASE}`,
       zIndex: Z.picker,
     });
 
@@ -1892,8 +1898,8 @@
     }
     Object.assign(pickerEl.style, {
       display: "block",
-      left: `${barRect.left  }px`,
-      top: `${top  }px`,
+      left: `${barRect.left}px`,
+      top: `${top}px`,
     });
     requestAnimationFrame(() => {
       pickerEl.style.opacity = "1";
@@ -2150,7 +2156,7 @@
           left: initial ? "18px" : "2px",
           position: "absolute",
           top: "2px",
-          transition: `left 0.18s ${  EASE}`,
+          transition: `left 0.18s ${EASE}`,
           width: "16px",
         });
         track.append(knob);
@@ -2176,7 +2182,7 @@
           borderRadius: "5px",
           display: "grid",
           gap: "1px",
-          gridTemplateColumns: `repeat(${  opts.length  }, 1fr)`,
+          gridTemplateColumns: `repeat(${opts.length}, 1fr)`,
           padding: "2px",
         });
         const segBtns = [];
@@ -2772,7 +2778,7 @@
             "ArrowUp",
           ].includes(e.key)
         ) {
-          markGesture(`key:${  e.key}`);
+          markGesture(`key:${e.key}`);
         }
       },
       sig
@@ -3036,13 +3042,16 @@
       switch (msg.type) {
         case "connected": {
           hasProjectContext = !!msg.hasProjectContext;
-          if (!hasProjectContext)
-            {showToast(
+          if (!hasProjectContext) {
+            showToast(
               "No PRODUCT.md found. Variants will be brand-agnostic. Run /impeccable teach to generate one.",
               7000
-            );}
+            );
+          }
           console.log("[impeccable] Live mode connected.");
-          if (state === "IDLE") {state = "PICKING";}
+          if (state === "IDLE") {
+            state = "PICKING";
+          }
           break;
         }
         case "done": {
@@ -3063,9 +3072,12 @@
           // that path with a toast — better than the prior force-reload
           // which reset framework state and left the session stuck.
           setTimeout(() => {
-            if (arrivedVariants >= expectedVariants && expectedVariants > 0)
-              {return;}
-            if (state !== "GENERATING") {return;}
+            if (arrivedVariants >= expectedVariants && expectedVariants > 0) {
+              return;
+            }
+            if (state !== "GENERATING") {
+              return;
+            }
             showToast(
               "Variants ready. If the picked element isn't visible, retrace the path that revealed it — they'll appear automatically.",
               15_000
@@ -3075,7 +3087,7 @@
         }
         case "error": {
           console.error("[impeccable] Error:", msg.message);
-          showToast(`Error: ${  msg.message}`, 5000);
+          showToast(`Error: ${msg.message}`, 5000);
           hideBar();
           state = "PICKING";
           break;
@@ -3891,10 +3903,10 @@ void main() {
     }
     const r = selectedElement.getBoundingClientRect();
     Object.assign(shaderState.canvas.style, {
-      height: `${r.height  }px`,
-      left: `${r.left  }px`,
-      top: `${r.top  }px`,
-      width: `${r.width  }px`,
+      height: `${r.height}px`,
+      left: `${r.left}px`,
+      top: `${r.top}px`,
+      width: `${r.width}px`,
     });
   }
 
@@ -3926,12 +3938,12 @@ void main() {
     canvas.width = Math.max(1, Math.floor(rect.width * dpr));
     canvas.height = Math.max(1, Math.floor(rect.height * dpr));
     Object.assign(canvas.style, {
-      height: `${rect.height  }px`,
-      left: `${rect.left  }px`,
+      height: `${rect.height}px`,
+      left: `${rect.left}px`,
       pointerEvents: "none",
       position: "fixed",
-      top: `${rect.top  }px`,
-      width: `${rect.width  }px`,
+      top: `${rect.top}px`,
+      width: `${rect.width}px`,
       zIndex: Z.bar - 1,
     });
     document.body.append(canvas);
@@ -4146,15 +4158,19 @@ void main() {
       // attribute keep matching until reload replaces it with the carbonize block.
       setTimeout(() => {
         const wrapper = document.querySelector(
-          `[data-impeccable-variants="${  acceptedSessionId  }"]`
+          `[data-impeccable-variants="${acceptedSessionId}"]`
         );
-        if (!wrapper) {return;}
+        if (!wrapper) {
+          return;
+        }
         const accepted = wrapper.querySelector(
-          `[data-impeccable-variant="${  acceptedVariant  }"]`
+          `[data-impeccable-variant="${acceptedVariant}"]`
         );
         if (accepted && accepted.firstElementChild) {
           const parent = wrapper.parentElement;
-          if (!parent) {return;}
+          if (!parent) {
+            return;
+          }
           accepted.style.display = "contents";
           parent.replaceChild(accepted, wrapper);
         }
@@ -4244,11 +4260,15 @@ void main() {
       }
     }
     setTimeout(() => {
-      if (!cleanupSessionId) {return;}
+      if (!cleanupSessionId) {
+        return;
+      }
       const wrapper = document.querySelector(
-        `[data-impeccable-variants="${  cleanupSessionId  }"]`
+        `[data-impeccable-variants="${cleanupSessionId}"]`
       );
-      if (!wrapper) {return;}
+      if (!wrapper) {
+        return;
+      }
       const orig = wrapper.querySelector(
         '[data-impeccable-variant="original"]'
       );
@@ -4297,7 +4317,7 @@ void main() {
     toastEl = el("div", {
       background: C.ink,
       borderRadius: "8px",
-      bottom: `${barTopFromBottom  }px`,
+      bottom: `${barTopFromBottom}px`,
       color: C.white,
       fontFamily: FONT,
       fontSize: "12px",
@@ -4309,7 +4329,7 @@ void main() {
       position: "fixed",
       textAlign: "center",
       transform: "translateX(-50%) translateY(8px)",
-      transition: `opacity 0.25s ${  EASE  }, transform 0.25s ${  EASE}`,
+      transition: `opacity 0.25s ${EASE}, transform 0.25s ${EASE}`,
       zIndex: Z.toast,
     });
     toastEl.id = `${PREFIX}-toast`;
@@ -4570,7 +4590,7 @@ void main() {
       alignItems: "stretch",
       backdropFilter: "blur(16px)",
       background: P.surface,
-      border: `1px solid ${  P.hairline}`,
+      border: `1px solid ${P.hairline}`,
       borderRadius: "10px",
       bottom: "14px",
       boxShadow:
@@ -4585,7 +4605,7 @@ void main() {
       overflow: "hidden", // clip the full-bleed brand mark to the bar radius
       position: "fixed",
       transform: "translateX(-50%) translateY(20px)",
-      transition: `opacity 0.3s ${  EASE  }, transform 0.3s ${  EASE}`,
+      transition: `opacity 0.3s ${EASE}, transform 0.3s ${EASE}`,
       zIndex: Z.bar + 5,
     });
     globalBarEl.id = `${PREFIX}-global-bar`;
@@ -4688,7 +4708,7 @@ void main() {
     // Pick toggle — starts active (primary intent when entering live mode).
     const pickBtn = makeIconBtn({
       ariaLabel: "Pick element",
-      id: `${PREFIX  }-pick-toggle`,
+      id: `${PREFIX}-pick-toggle`,
       label: "Pick",
       onClick: () => togglePick(),
       svg: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>',
@@ -4702,7 +4722,7 @@ void main() {
     // Detect toggle
     const detectBtn = makeIconBtn({
       ariaLabel: "Detect anti-patterns",
-      id: `${PREFIX  }-detect-toggle`,
+      id: `${PREFIX}-detect-toggle`,
       label: "Detect",
       onClick: () => toggleDetect(),
       svg: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
@@ -4726,7 +4746,7 @@ void main() {
     // DESIGN.md panel toggle — quartet of color squares as the mark.
     const designBtn = makeIconBtn({
       ariaLabel: "Toggle DESIGN.md panel",
-      id: `${PREFIX  }-design-toggle`,
+      id: `${PREFIX}-design-toggle`,
       label: "DESIGN.md",
       labelFont: MONO,
       onClick: () => toggleDesignPanel(),
@@ -6240,11 +6260,11 @@ void main() {
 
   function escapeHtml(s) {
     return String(s)
-      .replaceAll('&', "&amp;")
-      .replaceAll('<', "&lt;")
-      .replaceAll('>', "&gt;")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
-      .replaceAll('\'', "&#39;");
+      .replaceAll("'", "&#39;");
   }
 
   function copyToClipboard(text) {
