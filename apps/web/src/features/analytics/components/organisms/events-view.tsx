@@ -10,6 +10,7 @@ import { useState } from "react";
 
 import { orpc } from "@/utils/orpc";
 
+import { isoDaysAgo } from "../../lib/date-window";
 import { EventsTable } from "../molecules/events-table";
 
 const WINDOWS = [
@@ -18,19 +19,13 @@ const WINDOWS = [
   { days: 90, label: "Last 90 days", value: "90" },
 ];
 
-const dateInput = (daysAgo: number): string => {
-  const date = new Date();
-  date.setDate(date.getDate() - daysAgo);
-  return date.toISOString().slice(0, 10);
-};
-
 export const EventsView = ({ projectId }: { projectId: string }) => {
   const [windowValue, setWindowValue] = useState("30");
   const days = WINDOWS.find((entry) => entry.value === windowValue)?.days ?? 30;
 
   const query = useQuery(
     orpc.analytics.events.queryOptions({
-      input: { from: dateInput(days), projectId, to: dateInput(0) },
+      input: { from: isoDaysAgo(days), projectId, to: isoDaysAgo(0) },
     })
   );
 
