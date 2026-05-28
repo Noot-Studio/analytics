@@ -9,6 +9,7 @@ import {
   IconDashboard,
   IconDatabase,
   IconFileWord,
+  IconFolder,
   IconHelp,
   IconReport,
   IconSearch,
@@ -31,6 +32,7 @@ const data = {
   ],
   navMain: [
     { icon: IconDashboard, title: "Dashboard", url: "/dashboard" },
+    { icon: IconFolder, title: "Projects", url: "/dashboard/projects" },
     { icon: IconChartBar, title: "Analytics", url: "/dashboard" },
     { icon: IconUsers, title: "Team", url: "/dashboard" },
   ],
