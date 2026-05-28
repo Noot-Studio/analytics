@@ -2,9 +2,11 @@ import type { RouterClient } from "@orpc/server";
 
 import { protectedProcedure, publicProcedure } from "../index";
 import { analyticsRouter } from "./analytics";
+import { apiKeysRouter } from "./api-keys";
 
 export const appRouter = {
   analytics: analyticsRouter,
+  apiKeys: apiKeysRouter,
   healthCheck: publicProcedure.handler(() => "OK"),
   privateData: protectedProcedure.handler(({ context }) => ({
     message: "This is private",
