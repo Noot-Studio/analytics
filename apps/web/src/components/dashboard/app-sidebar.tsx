@@ -1,10 +1,12 @@
+import { Button } from "@sbox-analytics/ui/components/button";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
 } from "@sbox-analytics/ui/components/sidebar";
-import { useRouterState } from "@tanstack/react-router";
+import { IconArrowLeft } from "@tabler/icons-react";
+import { useRouterState, Link } from "@tanstack/react-router";
 import type * as React from "react";
 
 import { orgNavMain, orgNavSecondary } from "@/components/dashboard/nav-config";
@@ -13,7 +15,6 @@ import { NavSecondary } from "@/components/dashboard/nav-secondary";
 import { NavUser } from "@/components/dashboard/nav-user";
 import { OrgSwitcher } from "@/components/dashboard/org-switcher";
 import { projectNav } from "@/features/projects/components/molecules/project-nav";
-import { ProjectNavHeader } from "@/features/projects/components/molecules/project-nav-header";
 
 const PROJECT_ROUTE_ID = "/dashboard/projects/$projectId";
 
@@ -32,10 +33,14 @@ export const AppSidebar = ({
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
-        {projectId ? (
-          <ProjectNavHeader projectId={projectId} />
-        ) : (
-          <OrgSwitcher />
+        <OrgSwitcher />
+        {projectId && (
+          <Link to="/dashboard/projects">
+            <Button variant="ghost" className="w-full justify-start" size="lg">
+              <IconArrowLeft className="size-4" />
+              Back to projects
+            </Button>
+          </Link>
         )}
       </SidebarHeader>
       <SidebarContent>
