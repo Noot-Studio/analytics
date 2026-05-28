@@ -79,7 +79,7 @@ Output (JSON):
   if (!found) {
     console.log(
       JSON.stringify({
-        error: `Session markers not found for id: ${id}`,
+        error: "Session markers not found for id: " + id,
         handled: false,
       })
     );
@@ -121,9 +121,10 @@ Output (JSON):
     // five-step checklist lives in reference/live.md (loaded once per
     // session); repeating it per-event would waste tokens.
     if (result.carbonize) {
-      result.todo = `REQUIRED before next poll: carbonize cleanup in ${
-        relFile
-      }. See reference/live.md "Required after accept".`;
+      result.todo =
+        `REQUIRED before next poll: carbonize cleanup in ${ 
+        relFile 
+        }. See reference/live.md "Required after accept".`;
     }
     console.log(JSON.stringify({ file: relFile, handled: true, ...result }));
   }
@@ -135,9 +136,7 @@ Output (JSON):
 
 function handleDiscard(id, lines, targetFile) {
   const block = findMarkerBlock(id, lines);
-  if (!block) {
-    return { error: "Markers not found", handled: false };
-  }
+  if (!block) {return { handled: false, error: "Markers not found" };}
 
   const original = extractOriginal(lines, block);
   const isJsx = detectCommentSyntax(targetFile).open === "{/*";
@@ -167,9 +166,7 @@ function handleDiscard(id, lines, targetFile) {
 
 function handleAccept(id, variantNum, lines, targetFile, paramValues) {
   const block = findMarkerBlock(id, lines);
-  if (!block) {
-    return { error: "Markers not found", handled: false };
-  }
+  if (!block) {return { handled: false, error: "Markers not found" };}
 
   const commentSyntax = detectCommentSyntax(targetFile);
   const isJsx = commentSyntax.open === "{/*";
@@ -182,9 +179,8 @@ function handleAccept(id, variantNum, lines, targetFile, paramValues) {
 
   // Extract the chosen variant's inner content
   const variantContent = extractVariant(lines, block, variantNum);
-  if (!variantContent) {
-    return { error: `Variant ${variantNum} not found`, handled: false };
-  }
+  if (!variantContent)
+    {return { handled: false, error: "Variant " + variantNum + " not found" };}
 
   // Extract CSS block if present
   const cssContent = extractCss(lines, block, id);
@@ -202,14 +198,17 @@ function handleAccept(id, variantNum, lines, targetFile, paramValues) {
 
   if (cssContent) {
     replacement.push(
-      `${indent + commentSyntax.open} impeccable-carbonize-start ${id} ${
-        commentSyntax.close
-      }`
+      `${indent +
+        commentSyntax.open 
+        } impeccable-carbonize-start ${ 
+        id 
+        } ${ 
+        commentSyntax.close}`
     );
     // JSX targets need the CSS body wrapped in a template literal so that the
     // `{` and `}` in CSS rules don't get parsed as JSX expressions.
     replacement.push(
-      `${indent}<style data-impeccable-css="${id}">${isJsx ? "{`" : ""}`
+      `${indent  }<style data-impeccable-css="${  id  }">${  isJsx ? "{`" : ""}`
     );
     // Re-indent CSS content to match
     for (const cssLine of cssContent) {
@@ -220,15 +219,23 @@ function handleAccept(id, variantNum, lines, targetFile, paramValues) {
       // Preserve the user's knob positions for the carbonize-cleanup agent
       // to bake into the final CSS when it collapses scoped rules.
       replacement.push(
-        `${indent + commentSyntax.open} impeccable-param-values ${
-          id
-        }: ${JSON.stringify(paramValues)} ${commentSyntax.close}`
+        `${indent +
+          commentSyntax.open 
+          } impeccable-param-values ${ 
+          id 
+          }: ${ 
+          JSON.stringify(paramValues) 
+          } ${ 
+          commentSyntax.close}`
       );
     }
     replacement.push(
-      `${indent + commentSyntax.open} impeccable-carbonize-end ${id} ${
-        commentSyntax.close
-      }`
+      `${indent +
+        commentSyntax.open 
+        } impeccable-carbonize-end ${ 
+        id 
+        } ${ 
+        commentSyntax.close}`
     );
   }
 
@@ -246,10 +253,15 @@ function handleAccept(id, variantNum, lines, targetFile, paramValues) {
       ? "style={{ display: 'contents' }}"
       : 'style="display: contents"';
     replacement.push(
-      `${indent}<div data-impeccable-variant="${variantNum}" ${styleAttr}>`
+      `${indent 
+        }<div data-impeccable-variant="${ 
+        variantNum 
+        }" ${ 
+        styleAttr 
+        }>`
     );
     replacement.push(...restored);
-    replacement.push(`${indent}</div>`);
+    replacement.push(`${indent  }</div>`);
   } else {
     replacement.push(...restored);
   }
@@ -275,13 +287,11 @@ function handleAccept(id, variantNum, lines, targetFile, paramValues) {
 function findMarkerBlock(id, lines) {
   let start = -1;
   let end = -1;
-  const startPattern = `impeccable-variants-start ${id}`;
-  const endPattern = `impeccable-variants-end ${id}`;
+  const startPattern = `impeccable-variants-start ${  id}`;
+  const endPattern = `impeccable-variants-end ${  id}`;
 
   for (let i = 0; i < lines.length; i++) {
-    if (start === -1 && lines[i].includes(startPattern)) {
-      start = i;
-    }
+    if (start === -1 && lines[i].includes(startPattern)) {start = i;}
     if (lines[i].includes(endPattern)) {
       end = i;
       break;
@@ -308,9 +318,7 @@ function findMarkerBlock(id, lines) {
  * extractVariant / extractCss continue to walk the same range.
  */
 function expandReplaceRange(block, lines, isJsx) {
-  if (!isJsx) {
-    return { end: block.end, start: block.start };
-  }
+  if (!isJsx) {return { start: block.start, end: block.end };}
 
   let { start, end } = block;
 
@@ -320,9 +328,7 @@ function expandReplaceRange(block, lines, isJsx) {
   for (let i = start - 1; i >= Math.max(0, start - 12); i--) {
     if (/data-impeccable-variants=/.test(lines[i])) {
       let opener = i;
-      while (opener > 0 && !/<div\b/.test(lines[opener])) {
-        opener--;
-      }
+      while (opener > 0 && !/<div\b/.test(lines[opener])) {opener--;}
       start = opener;
       break;
     }
@@ -345,11 +351,8 @@ function expandReplaceRange(block, lines, isJsx) {
   while ((m = tagRe.exec(joined)) !== null) {
     const isClose = m[0].startsWith("</");
     const isSelfClose = !isClose && m[1] === "/";
-    if (isClose) {
-      depth--;
-    } else if (!isSelfClose) {
-      depth++;
-    }
+    if (isClose) {depth--;}
+    else if (!isSelfClose) {depth++;}
     if (depth <= 0) {
       // m.index is offset within `joined`; convert back to a file line.
       const linesBefore =
@@ -416,19 +419,17 @@ function stripStyleAndJoin(lines, block) {
  */
 function extractInnerByAttr(text, attrMatch) {
   const openerRe = new RegExp(
-    `<([A-Za-z][A-Za-z0-9]*)\\b[^>]*${attrMatch}[^>]*>`
+    `<([A-Za-z][A-Za-z0-9]*)\\b[^>]*${  attrMatch  }[^>]*>`
   );
   const openMatch = text.match(openerRe);
-  if (!openMatch) {
-    return null;
-  }
+  if (!openMatch) {return null;}
 
   const tagName = openMatch[1];
   const innerStart = openMatch.index + openMatch[0].length;
 
   // Match any opener or closer of this tag name after innerStart.
   // (Does not match self-closing <TAG … />, which doesn't contribute to depth.)
-  const tagRe = new RegExp(`<(?:/)?${tagName}\\b[^>]*>`, "g");
+  const tagRe = new RegExp(`<(?:/)?${  tagName  }\\b[^>]*>`, "g");
   tagRe.lastIndex = innerStart;
 
   let depth = 1;
@@ -438,9 +439,7 @@ function extractInnerByAttr(text, attrMatch) {
     const isSelfClose = !isClose && /\/\s*>$/.test(m[0]);
     if (isClose) {
       depth--;
-      if (depth === 0) {
-        return text.slice(innerStart, m.index);
-      }
+      if (depth === 0) {return text.slice(innerStart, m.index);}
     } else if (!isSelfClose) {
       depth++;
     }
@@ -455,9 +454,7 @@ function extractInnerByAttr(text, attrMatch) {
 function extractOriginal(lines, block) {
   const text = stripStyleAndJoin(lines, block);
   const inner = extractInnerByAttr(text, 'data-impeccable-variant="original"');
-  if (inner === null) {
-    return [];
-  }
+  if (inner === null) {return [];}
   return inner.split("\n");
 }
 
@@ -469,19 +466,14 @@ function extractVariant(lines, block, variantNum) {
   const text = stripStyleAndJoin(lines, block);
   const inner = extractInnerByAttr(
     text,
-    `data-impeccable-variant="${variantNum}"`
+    `data-impeccable-variant="${  variantNum  }"`
   );
-  if (inner === null) {
-    return null;
-  }
+  if (inner === null) {return null;}
   const result = inner.split("\n");
   // Collapse a lone empty leading/trailing line (common after string splice).
-  while (result.length > 1 && result[0].trim() === "") {
-    result.shift();
-  }
-  while (result.length > 1 && result.at(-1).trim() === "") {
-    result.pop();
-  }
+  while (result.length > 1 && result[0].trim() === "") {result.shift();}
+  while (result.length > 1 && result.at(-1).trim() === "")
+    {result.pop();}
   return result.length > 0 ? result : null;
 }
 
@@ -496,7 +488,7 @@ function extractVariant(lines, block, variantNum) {
  *      the lines between them.
  */
 function extractCss(lines, block, id) {
-  const styleAttr = `data-impeccable-css="${id}"`;
+  const styleAttr = `data-impeccable-css="${  id  }"`;
   let inStyle = false;
   const content = [];
 
@@ -505,9 +497,7 @@ function extractCss(lines, block, id) {
 
     if (!inStyle && line.includes(styleAttr)) {
       // Self-closing: nothing to carbonize.
-      if (/<style\b[^>]*\/\s*>/.test(line)) {
-        return null;
-      }
+      if (/<style\b[^>]*\/\s*>/.test(line)) {return null;}
       // Same-line open + close: extract inner text.
       const sameLine = line.match(/<style\b[^>]*>([\s\S]*?)<\/style\s*>/);
       if (sameLine) {
@@ -523,16 +513,12 @@ function extractCss(lines, block, id) {
       // (`}</style>`) put the close mid-line, and we don't want to absorb the
       // template-literal punctuation as CSS content.
       const closeIdx = line.indexOf("</style>");
-      if (closeIdx !== -1) {
-        break;
-      }
+      if (closeIdx !== -1) {break;}
       content.push(line);
     }
   }
 
-  if (content.length === 0) {
-    return null;
-  }
+  if (content.length === 0) {return null;}
   return stripJsxTemplateLines(content);
 }
 
@@ -552,15 +538,9 @@ function stripJsxTemplateLines(content) {
 
   // Drop any leading blank lines so we don't miss a `{` line buried below
   // them; same for trailing.
-  while (out.length > 0 && out[0].trim() === "") {
-    out.shift();
-  }
-  while (out.length > 0 && out.at(-1).trim() === "") {
-    out.pop();
-  }
-  if (out.length === 0) {
-    return null;
-  }
+  while (out.length > 0 && out[0].trim() === "") {out.shift();}
+  while (out.length > 0 && out.at(-1).trim() === "") {out.pop();}
+  if (out.length === 0) {return null;}
 
   // Leading `{`: own line, or attached to the first CSS line.
   const firstTrim = out[0].trimStart();
@@ -569,13 +549,9 @@ function stripJsxTemplateLines(content) {
   } else if (firstTrim.startsWith("{`")) {
     const idx = out[0].indexOf("{`");
     out[0] = out[0].slice(0, idx) + out[0].slice(idx + 2);
-    if (out[0].trim() === "") {
-      out.shift();
-    }
+    if (out[0].trim() === "") {out.shift();}
   }
-  if (out.length === 0) {
-    return null;
-  }
+  if (out.length === 0) {return null;}
 
   // Trailing `` ` `` `}`: own line, or attached to the last CSS line.
   const lastIdx = out.length - 1;
@@ -586,9 +562,7 @@ function stripJsxTemplateLines(content) {
     const text = out[lastIdx];
     const idx = text.lastIndexOf("`}");
     out[lastIdx] = text.slice(0, idx) + text.slice(idx + 2);
-    if (out[lastIdx].trim() === "") {
-      out.pop();
-    }
+    if (out[lastIdx].trim() === "") {out.pop();}
   }
 
   return out.length > 0 ? out : null;
@@ -609,21 +583,15 @@ function deindentContent(contentLines, baseIndent) {
   // Find the minimum indentation in the content to determine how much was added
   let minIndent = Infinity;
   for (const line of contentLines) {
-    if (line.trim() === "") {
-      continue;
-    }
+    if (line.trim() === "") {continue;}
     const leadingSpaces = line.match(/^(\s*)/)[1].length;
     minIndent = Math.min(minIndent, leadingSpaces);
   }
-  if (minIndent === Infinity) {
-    minIndent = 0;
-  }
+  if (minIndent === Infinity) {minIndent = 0;}
 
   // Strip the extra indentation and re-add base indent
   return contentLines.map((line) => {
-    if (line.trim() === "") {
-      return "";
-    }
+    if (line.trim() === "") {return "";}
     return baseIndent + line.slice(minIndent);
   });
 }
@@ -641,7 +609,7 @@ function detectCommentSyntax(filePath) {
 // ---------------------------------------------------------------------------
 
 function findSessionFile(id, cwd) {
-  const marker = `impeccable-variants-start ${id}`;
+  const marker = `impeccable-variants-start ${  id}`;
   const searchDirs = [
     "src",
     "app",
@@ -656,9 +624,7 @@ function findSessionFile(id, cwd) {
 
   for (const dir of searchDirs) {
     const absDir = path.join(cwd, dir);
-    if (!fs.existsSync(absDir)) {
-      continue;
-    }
+    if (!fs.existsSync(absDir)) {continue;}
     const result = searchDir(absDir, marker, seen, 0);
     if (result) {
       const content = fs.readFileSync(result, "utf-8");
@@ -669,18 +635,14 @@ function findSessionFile(id, cwd) {
 }
 
 function searchDir(dir, query, seen, depth) {
-  if (depth > 5) {
-    return null;
-  }
+  if (depth > 5) {return null;}
   let realDir;
   try {
     realDir = fs.realpathSync(dir);
   } catch {
     return null;
   }
-  if (seen.has(realDir)) {
-    return null;
-  }
+  if (seen.has(realDir)) {return null;}
   seen.add(realDir);
 
   let entries;
@@ -691,9 +653,7 @@ function searchDir(dir, query, seen, depth) {
   }
 
   for (const entry of entries) {
-    if (!entry.isFile()) {
-      continue;
-    }
+    if (!entry.isFile()) {continue;}
     if (!EXTENSIONS.has(path.extname(entry.name).toLowerCase())) {
       continue;
     }
