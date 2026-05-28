@@ -1,0 +1,1 @@
+apps/fumadocs/AGENTS.md
