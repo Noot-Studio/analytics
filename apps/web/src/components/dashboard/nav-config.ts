@@ -19,7 +19,7 @@ export const orgNavMain: NavItem[] = [
   { icon: IconUsers, title: "Team", url: "/dashboard" },
 ];
 
-export const orgNavSecondary: NavItem[] = [
+export const orgNavSecondary: (NavItem & { icon: Icon })[] = [
   { icon: IconSettings, title: "Settings", url: "/dashboard/settings" },
   { icon: IconHelp, title: "Get Help", url: "/dashboard" },
 ];

@@ -4,7 +4,6 @@ import {
   SidebarFooter,
   SidebarHeader,
 } from "@sbox-analytics/ui/components/sidebar";
-import type { Icon } from "@tabler/icons-react";
 import { useRouterState } from "@tanstack/react-router";
 import type * as React from "react";
 
@@ -17,12 +16,6 @@ import { projectNav } from "@/features/projects/components/molecules/project-nav
 import { ProjectNavHeader } from "@/features/projects/components/molecules/project-nav-header";
 
 const PROJECT_ROUTE_ID = "/dashboard/projects/$projectId";
-
-interface NavSecondaryItem {
-  title: string;
-  url: string;
-  icon: Icon;
-}
 
 export const AppSidebar = ({
   ...props
@@ -51,10 +44,7 @@ export const AppSidebar = ({
         ) : (
           <>
             <NavMain items={orgNavMain} />
-            <NavSecondary
-              className="mt-auto"
-              items={orgNavSecondary as NavSecondaryItem[]}
-            />
+            <NavSecondary className="mt-auto" items={orgNavSecondary} />
           </>
         )}
       </SidebarContent>
