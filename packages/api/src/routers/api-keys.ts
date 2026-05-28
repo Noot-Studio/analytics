@@ -60,18 +60,15 @@ export const apiKeysRouter = {
       const organizationId = requireActiveOrg(
         context.session.session.activeOrganizationId,
       );
-      const existing = await prisma.apiKey.findFirst({
-        where: { id: input.id, organizationId },
-        select: { id: true },
-      });
-      if (!existing) {
+      const { publishableKey, secretKey, secretHash } = generateKeyPair();
+      try {
+        await prisma.apiKey.update({
+          where: { id: input.id, organizationId, revokedAt: null },
+          data: { publishableKey, secretHash },
+        });
+      } catch {
         throw new ORPCError("FORBIDDEN", { message: "API key not found" });
       }
-      const { publishableKey, secretKey, secretHash } = generateKeyPair();
-      await prisma.apiKey.update({
-        where: { id: input.id },
-        data: { publishableKey, secretHash },
-      });
       return { publishableKey, secretKey };
     }),
 
@@ -81,17 +78,14 @@ export const apiKeysRouter = {
       const organizationId = requireActiveOrg(
         context.session.session.activeOrganizationId,
       );
-      const existing = await prisma.apiKey.findFirst({
-        where: { id: input.id, organizationId },
-        select: { id: true },
-      });
-      if (!existing) {
+      try {
+        await prisma.apiKey.update({
+          where: { id: input.id, organizationId, revokedAt: null },
+          data: { revokedAt: new Date() },
+        });
+      } catch {
         throw new ORPCError("FORBIDDEN", { message: "API key not found" });
       }
-      await prisma.apiKey.update({
-        where: { id: input.id },
-        data: { revokedAt: new Date() },
-      });
       return { id: input.id };
     }),
 };
