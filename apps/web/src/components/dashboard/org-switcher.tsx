@@ -21,7 +21,7 @@ import {
   IconSettings,
 } from "@tabler/icons-react";
 import { useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { CreateOrgDrawer } from "@/features/org/components/organisms/create-org-drawer";
 import { authClient } from "@/lib/auth-client";
@@ -34,6 +34,17 @@ export const OrgSwitcher = () => {
     authClient.useListOrganizations();
   const { data: activeOrg, isPending: isLoadingActive } =
     authClient.useActiveOrganization();
+
+  // On sign-in no organization is active yet — default to the first one.
+  useEffect(() => {
+    if (isLoadingOrgs || isLoadingActive || activeOrg) {
+      return;
+    }
+    const firstOrg = organizations?.[0];
+    if (firstOrg) {
+      authClient.organization.setActive({ organizationId: firstOrg.id });
+    }
+  }, [isLoadingOrgs, isLoadingActive, activeOrg, organizations]);
 
   if (isLoadingOrgs || isLoadingActive) {
     return (
