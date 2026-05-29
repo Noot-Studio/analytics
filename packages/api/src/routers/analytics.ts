@@ -81,7 +81,7 @@ export const analyticsRouter = {
     }),
 
   // Aggregated event-type totals over a date window — backs the Events table.
-  events: protectedProcedure
+  breakdown: protectedProcedure
     .input(dailyInput)
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);

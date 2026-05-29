@@ -7,10 +7,10 @@ import { customAnalyticsRouter } from "./custom-analytics";
 import { projectsRouter } from "./projects";
 
 export const appRouter = {
-  analytics: analyticsRouter,
   apiKeys: apiKeysRouter,
   customAnalytics: customAnalyticsRouter,
   healthCheck: publicProcedure.handler(() => "OK"),
+  insights: analyticsRouter,
   privateData: protectedProcedure.handler(({ context }) => ({
     message: "This is private",
     user: context.session?.user,

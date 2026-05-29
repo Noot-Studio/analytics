@@ -26,7 +26,7 @@ const OVERVIEW_WINDOW_DAYS = 30;
 
 export const OverviewView = ({ projectId }: { projectId: string }) => {
   const query = useQuery(
-    orpc.analytics.daily.queryOptions({
+    orpc.insights.daily.queryOptions({
       input: {
         from: isoDaysAgo(OVERVIEW_WINDOW_DAYS),
         projectId,
