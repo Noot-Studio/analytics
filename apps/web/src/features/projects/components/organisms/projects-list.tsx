@@ -6,6 +6,13 @@ import {
   DropdownMenuTrigger,
 } from "@sbox-analytics/ui/components/dropdown-menu";
 import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@sbox-analytics/ui/components/empty";
+import {
   Table,
   TableBody,
   TableCell,
@@ -16,8 +23,10 @@ import {
 import { IconDotsVertical } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { FolderPlus } from "lucide-react";
 import { toast } from "sonner";
 
+import { TableSkeleton } from "@/components/table-skeleton";
 import { orpc } from "@/utils/orpc";
 
 import { ConfirmButton } from "../atoms/confirm-button";
@@ -40,11 +49,7 @@ export const ProjectsList = () => {
   });
 
   if (listQuery.isLoading) {
-    return (
-      <div className="py-8 text-center text-muted-foreground">
-        Loading projects...
-      </div>
-    );
+    return <TableSkeleton rows={5} />;
   }
 
   if (listQuery.isError) {
@@ -59,9 +64,17 @@ export const ProjectsList = () => {
 
   if (projects.length === 0) {
     return (
-      <div className="py-8 text-center text-muted-foreground">
-        No projects yet. Create one to get started.
-      </div>
+      <Empty>
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <FolderPlus />
+          </EmptyMedia>
+          <EmptyTitle>No projects yet</EmptyTitle>
+          <EmptyDescription>
+            Create your first project to start tracking s&box game analytics.
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     );
   }
 

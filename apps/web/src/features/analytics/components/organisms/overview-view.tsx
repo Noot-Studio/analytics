@@ -1,4 +1,13 @@
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@sbox-analytics/ui/components/empty";
+import { Skeleton } from "@sbox-analytics/ui/components/skeleton";
 import { useQuery } from "@tanstack/react-query";
+import { Database } from "lucide-react";
 import {
   Area,
   AreaChart,
@@ -27,7 +36,22 @@ export const OverviewView = ({ projectId }: { projectId: string }) => {
   );
 
   if (query.isLoading) {
-    return <div className="p-4 lg:p-6">Loading overview…</div>;
+    const cardKeys = Array.from({ length: 3 }, (_, index) => `card-${index}`);
+
+    return (
+      <div className="flex flex-col gap-6 p-4 lg:p-6">
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-7 w-40" />
+          <Skeleton className="h-4 w-28" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          {cardKeys.map((key) => (
+            <Skeleton className="h-24 w-full" key={key} />
+          ))}
+        </div>
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
   }
 
   if (query.isError) {
@@ -76,9 +100,18 @@ export const OverviewView = ({ projectId }: { projectId: string }) => {
       </div>
 
       {rows.length === 0 ? (
-        <div className="rounded-lg border border-border border-dashed p-8 text-center text-muted-foreground">
-          No data yet — connect your SDK to start seeing events.
-        </div>
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Database />
+            </EmptyMedia>
+            <EmptyTitle>No data yet</EmptyTitle>
+            <EmptyDescription>
+              Connect your s&box SDK to start seeing events and player activity
+              here.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-3">

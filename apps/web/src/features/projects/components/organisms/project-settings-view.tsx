@@ -1,4 +1,13 @@
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@sbox-analytics/ui/components/empty";
+import { Skeleton } from "@sbox-analytics/ui/components/skeleton";
 import { useQuery } from "@tanstack/react-query";
+import { FolderX } from "lucide-react";
 
 import { ApiKeysSection } from "@/features/api-keys/components/organisms/api-keys-section";
 import { orpc } from "@/utils/orpc";
@@ -13,6 +22,39 @@ export const ProjectSettingsView = ({ projectId }: { projectId: string }) => {
   const publishableKey =
     project?.apiKeys[0]?.publishableKey ?? "pk_your_publishable_key";
 
+  if (projectQuery.isLoading) {
+    return (
+      <div className="flex flex-col gap-8 p-4 lg:p-6">
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-7 w-32" />
+          <Skeleton className="h-4 w-72" />
+        </div>
+        <Skeleton className="h-6 w-24" />
+        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
+
+  if (!project) {
+    return (
+      <div className="p-4 lg:p-6">
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <FolderX />
+            </EmptyMedia>
+            <EmptyTitle>Project not found</EmptyTitle>
+            <EmptyDescription>
+              This project may have been deleted or you no longer have access to
+              it.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-8 p-4 lg:p-6">
       <div>
@@ -24,11 +66,7 @@ export const ProjectSettingsView = ({ projectId }: { projectId: string }) => {
 
       <section className="flex flex-col gap-2">
         <h2 className="font-medium text-sm">Environment</h2>
-        {project ? (
-          <EnvironmentBadge environment={project.environment} />
-        ) : (
-          <span className="text-muted-foreground text-sm">Loading…</span>
-        )}
+        <EnvironmentBadge environment={project.environment} />
       </section>
 
       <ApiKeysSection projectId={projectId} />

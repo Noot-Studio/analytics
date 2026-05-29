@@ -1,7 +1,16 @@
 import { Button } from "@sbox-analytics/ui/components/button";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@sbox-analytics/ui/components/empty";
 import { useQuery } from "@tanstack/react-query";
+import { Radio } from "lucide-react";
 import { useState } from "react";
 
+import { TableSkeleton } from "@/components/table-skeleton";
 import { orpc } from "@/utils/orpc";
 
 import { LiveEventsTable } from "../molecules/live-events-table";
@@ -35,14 +44,23 @@ export const LiveEventsView = ({ projectId }: { projectId: string }) => {
         </Button>
       </div>
 
-      {query.isLoading ? <div>Loading events…</div> : null}
+      {query.isLoading ? <TableSkeleton rows={8} /> : null}
       {query.isError ? (
         <div className="text-destructive">Failed to load live events.</div>
       ) : null}
       {!query.isLoading && !query.isError && rows.length === 0 ? (
-        <div className="rounded-lg border border-border border-dashed p-8 text-center text-muted-foreground">
-          No events yet — connect your SDK.
-        </div>
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Radio />
+            </EmptyMedia>
+            <EmptyTitle>No events yet</EmptyTitle>
+            <EmptyDescription>
+              Connect your s&box SDK and live events will appear here as they
+              arrive.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : null}
       {rows.length > 0 ? <LiveEventsTable rows={rows} /> : null}
     </div>
