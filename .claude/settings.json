@@ -1,14 +1,29 @@
 {
   "hooks": {
-    "PostToolUse": [
+    "PreToolUse": [
       {
+        "matcher": "Write|Edit",
         "hooks": [
           {
-            "command": "bun fix",
-            "type": "command"
+            "type": "command",
+            "command": "bun .claude/hooks/block-env-edits.ts"
           }
-        ],
-        "matcher": "Write|Edit"
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun fix"
+          },
+          {
+            "type": "command",
+            "command": "bun .claude/hooks/check-types-scoped.ts"
+          }
+        ]
       }
     ]
   }

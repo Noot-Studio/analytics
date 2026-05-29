@@ -15,6 +15,22 @@
     "better-auth": {
       "type": "http",
       "url": "https://mcp.inkeep.com/better-auth/mcp"
+    },
+    "clickhouse": {
+      "command": "uvx",
+      "args": ["mcp-clickhouse"],
+      "env": {
+        "CLICKHOUSE_HOST": "localhost",
+        "CLICKHOUSE_PORT": "${CLICKHOUSE_HTTP_PORT}",
+        "CLICKHOUSE_USER": "${CLICKHOUSE_USER}",
+        "CLICKHOUSE_PASSWORD": "${CLICKHOUSE_PASSWORD}",
+        "CLICKHOUSE_DATABASE": "${CLICKHOUSE_DATABASE}",
+        "CLICKHOUSE_SECURE": "false"
+      }
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres", "${DATABASE_URL}"]
     }
   }
 }
