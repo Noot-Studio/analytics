@@ -22,7 +22,7 @@ export const LiveEventsView = ({ projectId }: { projectId: string }) => {
   const [paused, setPaused] = useState(false);
 
   const query = useQuery({
-    ...orpc.analytics.recent.queryOptions({
+    ...orpc.insights.recent.queryOptions({
       input: { limit: LIVE_EVENT_LIMIT, projectId },
     }),
     refetchInterval: paused ? false : POLL_INTERVAL_MS,

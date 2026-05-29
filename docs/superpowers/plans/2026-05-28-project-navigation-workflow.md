@@ -4,7 +4,7 @@
 
 **Goal:** Switch the dashboard sidebar between organization mode and a project-specific mode driven entirely by the URL, and back the project mode with four real data-driven pages (Overview, Events, Live Events, Settings).
 
-**Architecture:** TanStack Router file-based routes are the single source of truth. `app-sidebar.tsx` reads the active route via `useRouterState`; when a `/dashboard/projects/$projectId` route is matched it renders project chrome (Back + name + environment badge + project nav), otherwise org chrome. The existing `$projectId.tsx` leaf becomes a layout route with nested page routes. A new `environment` enum lands on the Project model; the projects list derives SDK status/recent-activity from API-key usage to avoid per-row ClickHouse calls; a new `analytics.events` oRPC procedure aggregates events by type.
+**Architecture:** TanStack Router file-based routes are the single source of truth. `app-sidebar.tsx` reads the active route via `useRouterState`; when a `/dashboard/projects/$projectId` route is matched it renders project chrome (Back + name + environment badge + project nav), otherwise org chrome. The existing `$projectId.tsx` leaf becomes a layout route with nested page routes. A new `environment` enum lands on the Project model; the projects list derives SDK status/recent-activity from API-key usage to avoid per-row ClickHouse calls; a new `insights.breakdown` oRPC procedure aggregates events by type.
 
 **Tech Stack:** React 19, TanStack Router (file-based) + TanStack Query, oRPC, shadcn/base-ui components (`@sbox-analytics/ui`), Recharts, Prisma 7 (Postgres, `db push` workflow — no migrations dir), ClickHouse, Bun, Ultracite (oxlint/oxfmt).
 
@@ -319,7 +319,7 @@ git commit -m "feat(api): expose project environment and active-key usage"
 
 ---
 
-### Task 3: Add the `analytics.events` procedure
+### Task 3: Add the `insights.breakdown` procedure
 
 **Files:**
 
@@ -1215,7 +1215,7 @@ Because the page routes import organisms built in Tasks 11–14, run the full ch
 - Create: `apps/web/src/features/analytics/components/molecules/metric-card.tsx`
 - Create: `apps/web/src/features/analytics/components/organisms/overview-view.tsx`
 
-Backed by `analytics.daily` over the last 30 days. Totals/breakdown/trend are computed client-side; metrics not in the data render as labeled "Coming soon" cards (never faked).
+Backed by `insights.daily` over the last 30 days. Totals/breakdown/trend are computed client-side; metrics not in the data render as labeled "Coming soon" cards (never faked).
 
 - [ ] **Step 1: Create `metric-card.tsx`**
 
@@ -1257,7 +1257,7 @@ export function MetricCard({
 
 - [ ] **Step 2: Create `overview-view.tsx`**
 
-`analytics.daily` returns rows `{ event_date, event_type, event_count, unique_players, unique_sessions }`. Unique Players/Sessions are summed across daily rows — a documented daily-sum approximation (a true global distinct isn't available from the rollup). The trend chart uses Recharts (already a dependency).
+`insights.daily` returns rows `{ event_date, event_type, event_count, unique_players, unique_sessions }`. Unique Players/Sessions are summed across daily rows — a documented daily-sum approximation (a true global distinct isn't available from the rollup). The trend chart uses Recharts (already a dependency).
 
 ```tsx
 import { useQuery } from "@tanstack/react-query";
@@ -1284,7 +1284,7 @@ function dateInput(daysAgo: number): string {
 
 export function OverviewView({ projectId }: { projectId: string }) {
   const query = useQuery(
-    orpc.analytics.daily.queryOptions({
+    orpc.insights.daily.queryOptions({
       input: {
         from: dateInput(OVERVIEW_WINDOW_DAYS),
         projectId,
@@ -1435,7 +1435,7 @@ git commit -m "feat(web): add project Overview page and project layout route"
 - Create: `apps/web/src/features/analytics/components/molecules/events-table.tsx`
 - Create: `apps/web/src/features/analytics/components/organisms/events-view.tsx`
 
-Backed by `analytics.events` (Task 3), returning `{ event_type, event_count, unique_players }` per type. Sortable table + time-window selector. `Table` exports: `Table, TableBody, TableCell, TableHead, TableHeader, TableRow`.
+Backed by `insights.breakdown` (Task 3), returning `{ event_type, event_count, unique_players }` per type. Sortable table + time-window selector. `Table` exports: `Table, TableBody, TableCell, TableHead, TableHeader, TableRow`.
 
 - [ ] **Step 1: Create `events-table.tsx`** (client-side sortable)
 
@@ -1560,7 +1560,7 @@ export function EventsView({ projectId }: { projectId: string }) {
   const days = WINDOWS.find((entry) => entry.value === windowValue)?.days ?? 30;
 
   const query = useQuery(
-    orpc.analytics.events.queryOptions({
+    orpc.insights.breakdown.queryOptions({
       input: { from: dateInput(days), projectId, to: dateInput(0) },
     })
   );
@@ -1634,7 +1634,7 @@ git commit -m "feat(web): add project Events page"
 - Create: `apps/web/src/features/analytics/components/molecules/live-events-table.tsx`
 - Create: `apps/web/src/features/analytics/components/organisms/live-events-view.tsx`
 
-Backed by `analytics.recent` returning `{ event_type, timestamp, session_id, player_id, properties }`. Polls every ~5s with a pause toggle and an empty state.
+Backed by `insights.recent` returning `{ event_type, timestamp, session_id, player_id, properties }`. Polls every ~5s with a pause toggle and an empty state.
 
 - [ ] **Step 1: Create `live-events-table.tsx`**
 
@@ -1706,7 +1706,7 @@ export function LiveEventsView({ projectId }: { projectId: string }) {
   const [paused, setPaused] = useState(false);
 
   const query = useQuery({
-    ...orpc.analytics.recent.queryOptions({
+    ...orpc.insights.recent.queryOptions({
       input: { limit: LIVE_EVENT_LIMIT, projectId },
     }),
     refetchInterval: paused ? false : POLL_INTERVAL_MS,
@@ -1894,7 +1894,7 @@ git commit -m "chore(web): project navigation workflow verification fixups"
 - Route-driven org↔project sidebar switch + Back button → Tasks 8, 9, 10. ✓
 - Project-scoped route structure (layout + nested) → Task 10. ✓
 - Four core pages (Overview/Events/Live/Settings) → Tasks 11, 12, 13, 14. ✓
-- New `analytics.events` procedure → Task 3. ✓
+- New `insights.breakdown` procedure → Task 3. ✓
 - `environment` field + create flow + cards → Tasks 1, 2, 5, 6. ✓
 - Derived projects-list metadata (SDK status, recent activity) → Tasks 2, 7. ✓
 - Feature/file map (analytics feature; projects/api-keys extended) → Tasks 4–14 match the spec's file map. ✓

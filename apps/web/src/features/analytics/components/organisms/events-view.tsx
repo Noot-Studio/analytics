@@ -33,7 +33,7 @@ export const EventsView = ({ projectId }: { projectId: string }) => {
   const days = WINDOWS.find((entry) => entry.value === windowValue)?.days ?? 30;
 
   const query = useQuery(
-    orpc.analytics.events.queryOptions({
+    orpc.insights.breakdown.queryOptions({
       input: { from: isoDaysAgo(days), projectId, to: isoDaysAgo(0) },
     })
   );

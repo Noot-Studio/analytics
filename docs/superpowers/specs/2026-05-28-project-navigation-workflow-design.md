@@ -21,7 +21,7 @@ In scope:
 - Project-scoped route structure (layout + nested pages).
 - Four **core** project pages backed by real data: Overview, Events, Live Events,
   Settings.
-- One new ClickHouse aggregation procedure (`analytics.events`) to back the
+- One new ClickHouse aggregation procedure (`insights.breakdown`) to back the
   Events page.
 - Add an `environment` field to the Project model and surface it in the create
   flow and on project cards.
@@ -53,11 +53,11 @@ Out of scope (deferred to later specs, each its own spec → plan → build cycl
   `id, slug, name, organizationId, createdAt, updatedAt, apiKeys[]`. No
   `platform`, `environment`, or SDK-status fields.
 - `ApiKey` model includes `lastUsedAt` and `revokedAt`.
-- API routers (`packages/api/src/routers`): `analytics.daily`, `analytics.recent`,
+- API routers (`packages/api/src/routers`): `insights.daily`, `insights.recent`,
   `customAnalytics.query`, `projects.{create,delete,get,list}`, `apiKeys.*`.
-  - `analytics.daily` returns rows of
+  - `insights.daily` returns rows of
     `{ event_date, event_type, event_count, unique_players, unique_sessions }`.
-  - `analytics.recent` returns recent raw events
+  - `insights.recent` returns recent raw events
     (`event_type, timestamp, session_id, player_id, properties`).
   - `projects.list` returns projects ordered by `createdAt desc` with active API
     key count.
@@ -79,9 +79,9 @@ routes/dashboard/projects/
                               renders <Outlet/>; on NOT_FOUND/forbidden →
                               redirect('/dashboard/projects') + toast
   $projectId/index.tsx        redirect to ./overview (default landing page)
-  $projectId/overview.tsx     Overview  (analytics.daily)
-  $projectId/events.tsx       Events    (analytics.events — new)
-  $projectId/live.tsx         Live Events (analytics.recent, polled)
+  $projectId/overview.tsx     Overview  (insights.daily)
+  $projectId/events.tsx       Events    (insights.breakdown — new)
+  $projectId/live.tsx         Live Events (insights.recent, polled)
   $projectId/settings.tsx     Settings  (ApiKeysSection + environment + SDK snippet)
 ```
 
@@ -155,7 +155,7 @@ is a possible later enhancement.
 
 ## Core Page Content
 
-### Overview (`analytics.daily`)
+### Overview (`insights.daily`)
 
 Metric cards computed client-side from the daily rows:
 
@@ -165,14 +165,14 @@ Metric cards computed client-side from the daily rows:
   duration, DAU-over-time — render as labeled **"Coming soon"** cards. They are not
   faked.
 
-### Events (`analytics.events` — new procedure)
+### Events (`insights.breakdown` — new procedure)
 
-Add `analytics.events`: a ClickHouse `GROUP BY event_type` aggregation over a time
+Add `insights.breakdown`: a ClickHouse `GROUP BY event_type` aggregation over a time
 window, returning `{ event_type, event_count, unique_players }` per type. The page
 renders a sortable table (event name, count, unique players) with a time-window
-selector. Authorization via `assertProjectAccess`, consistent with `analytics.daily`.
+selector. Authorization via `assertProjectAccess`, consistent with `insights.daily`.
 
-### Live Events (`analytics.recent`)
+### Live Events (`insights.recent`)
 
 Live-tailing table of recent raw events with a refetch interval (~5s) and a
 pause toggle. Empty state: "No events yet — connect your SDK." Useful for debugging
@@ -213,9 +213,9 @@ apps/web/src/
     atoms/sdk-status-badge.tsx       + derived status pill
 
   features/analytics/components/
-    organisms/overview-view.tsx      + Overview page body (analytics.daily)
-    organisms/events-view.tsx        + Events table (analytics.events)
-    organisms/live-events-view.tsx   + Live tail (analytics.recent, polled)
+    organisms/overview-view.tsx      + Overview page body (insights.daily)
+    organisms/events-view.tsx        + Events table (insights.breakdown)
+    organisms/live-events-view.tsx   + Live tail (insights.recent, polled)
     molecules/metric-card.tsx        + single metric card (+ "Coming soon" variant)
     molecules/events-table.tsx       + sortable event-type table
     molecules/live-events-table.tsx  + live-tailing stream table
@@ -257,5 +257,5 @@ test setup is desired later it will be its own spec.
   (`routeTree.gen.ts` via the plugin/`bun run` codegen).
 - Environment edit in Settings depends on a `projects.update` procedure that does
   not exist yet; treat inline edit as optional and additive.
-- `analytics.events` window defaults should match `analytics.daily` conventions for
+- `insights.breakdown` window defaults should match `insights.daily` conventions for
   consistency.
