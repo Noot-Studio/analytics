@@ -1,5 +1,12 @@
 import { Button } from "@sbox-analytics/ui/components/button";
 import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@sbox-analytics/ui/components/empty";
+import {
   Table,
   TableBody,
   TableCell,
@@ -8,9 +15,11 @@ import {
   TableRow,
 } from "@sbox-analytics/ui/components/table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { KeyRound } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { TableSkeleton } from "@/components/table-skeleton";
 import { orpc } from "@/utils/orpc";
 
 import { CreateApiKeyDialog } from "../molecules/create-api-key-dialog";
@@ -131,7 +140,11 @@ export function ApiKeysSection({ projectId }: ApiKeysSectionProps) {
         <p className="py-6 text-center text-sm text-destructive">
           Failed to load API keys.
         </p>
-      ) : (listQuery.data && listQuery.data.length > 0 ? (
+      ) : null}
+      {listQuery.isLoading ? <TableSkeleton rows={4} /> : null}
+      {!(listQuery.isError || listQuery.isLoading) &&
+      listQuery.data &&
+      listQuery.data.length > 0 ? (
         <Table>
           <TableHeader>
             <TableRow>
@@ -176,11 +189,22 @@ export function ApiKeysSection({ projectId }: ApiKeysSectionProps) {
             ))}
           </TableBody>
         </Table>
-      ) : (
-        <p className="py-6 text-center text-sm text-muted-foreground">
-          No API keys yet. Create one to get started.
-        </p>
-      ))}
+      ) : null}
+      {!(listQuery.isError || listQuery.isLoading) &&
+      (!listQuery.data || listQuery.data.length === 0) ? (
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <KeyRound />
+            </EmptyMedia>
+            <EmptyTitle>No API keys yet</EmptyTitle>
+            <EmptyDescription>
+              Create an API key to authenticate your s&box game client with the
+              Ingest API.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      ) : null}
 
       <CreateApiKeyDialog
         createdKey={createdKey}

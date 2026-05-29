@@ -1,4 +1,11 @@
 import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@sbox-analytics/ui/components/empty";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -6,8 +13,10 @@ import {
   SelectValue,
 } from "@sbox-analytics/ui/components/select";
 import { useQuery } from "@tanstack/react-query";
+import { ChartNoAxesColumn } from "lucide-react";
 import { useState } from "react";
 
+import { TableSkeleton } from "@/components/table-skeleton";
 import { orpc } from "@/utils/orpc";
 
 import { isoDaysAgo } from "../../lib/date-window";
@@ -59,14 +68,23 @@ export const EventsView = ({ projectId }: { projectId: string }) => {
         </Select>
       </div>
 
-      {query.isLoading ? <div>Loading events…</div> : null}
+      {query.isLoading ? <TableSkeleton rows={8} /> : null}
       {query.isError ? (
         <div className="text-destructive">Failed to load events.</div>
       ) : null}
       {!query.isLoading && !query.isError && rows.length === 0 ? (
-        <div className="rounded-lg border border-border border-dashed p-8 text-center text-muted-foreground">
-          No events in this window.
-        </div>
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <ChartNoAxesColumn />
+            </EmptyMedia>
+            <EmptyTitle>No events in this window</EmptyTitle>
+            <EmptyDescription>
+              Try a wider time range, or connect your s&box SDK to start sending
+              events.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : null}
       {rows.length > 0 ? <EventsTable rows={rows} /> : null}
     </div>
