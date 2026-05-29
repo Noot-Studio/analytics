@@ -62,7 +62,7 @@ export const analyticsRouter = {
         format: "JSON",
         query: `
           SELECT
-            toString(event_date)             AS event_date,
+            event_date                       AS event_date,
             event_type                        AS event_type,
             toUInt64(uniqMerge(unique_players))  AS unique_players,
             toUInt64(uniqMerge(unique_sessions)) AS unique_sessions,
