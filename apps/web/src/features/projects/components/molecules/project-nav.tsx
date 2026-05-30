@@ -1,8 +1,11 @@
 import {
   IconActivity,
   IconChartBar,
+  IconDeviceGamepad2,
   IconListDetails,
+  IconMap,
   IconSettings,
+  IconUsers,
 } from "@tabler/icons-react";
 
 import type { NavItem } from "@/components/dashboard/nav-config";
@@ -10,9 +13,47 @@ import type { NavItem } from "@/components/dashboard/nav-config";
 export const projectNav = (projectId: string): NavItem[] => {
   const base = `/dashboard/projects/${projectId}`;
   return [
-    { icon: IconChartBar, title: "Overview", url: `${base}/overview` },
-    { icon: IconListDetails, title: "Events", url: `${base}/events` },
-    { icon: IconActivity, title: "Live Events", url: `${base}/live` },
-    { icon: IconSettings, title: "Settings", url: `${base}/settings` },
+    {
+      group: "Project",
+      icon: IconChartBar,
+      title: "Overview",
+      url: `${base}/overview`,
+    },
+    {
+      group: "Engagement",
+      icon: IconUsers,
+      title: "Players",
+      url: `${base}/players`,
+    },
+    {
+      group: "Engagement",
+      icon: IconDeviceGamepad2,
+      title: "Sessions",
+      url: `${base}/sessions`,
+    },
+    {
+      group: "Game",
+      icon: IconMap,
+      title: "Maps & Modes",
+      url: `${base}/maps`,
+    },
+    {
+      group: "Data",
+      icon: IconListDetails,
+      title: "Events",
+      url: `${base}/events`,
+    },
+    {
+      group: "Data",
+      icon: IconActivity,
+      title: "Live Events",
+      url: `${base}/live`,
+    },
+    {
+      group: "Project",
+      icon: IconSettings,
+      title: "Settings",
+      url: `${base}/settings`,
+    },
   ];
 };

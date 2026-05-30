@@ -12,6 +12,7 @@ export interface NavItem {
   url: string;
   icon?: Icon;
   external?: boolean;
+  group?: string;
 }
 
 export const orgNavMain: NavItem[] = [
