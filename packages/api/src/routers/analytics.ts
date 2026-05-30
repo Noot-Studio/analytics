@@ -49,6 +49,35 @@ const playersOutput = z.object({
   wau: z.coerce.number(),
 });
 
+const sessionsInput = z.object({
+  from: z.iso.date(),
+  projectId: z.string().min(1),
+  to: z.iso.date(),
+});
+
+const sessionsHistogramRow = z.object({
+  bucket: z.string(),
+  sessions: z.coerce.number(),
+  sort: z.coerce.number(),
+});
+
+const sessionsTrendRow = z.object({
+  avg_seconds: z.coerce.number(),
+  event_date: z.string(),
+});
+
+const sessionsHeatmapRow = z.object({
+  hour: z.coerce.number(),
+  sessions: z.coerce.number(),
+  weekday: z.coerce.number(),
+});
+
+const sessionsOutput = z.object({
+  heatmap: z.array(sessionsHeatmapRow),
+  histogram: z.array(sessionsHistogramRow),
+  trend: z.array(sessionsTrendRow),
+});
+
 async function assertProjectAccess(
   projectId: string,
   userId: string
@@ -169,6 +198,89 @@ export const analyticsRouter = {
       };
 
       return playersOutput.parse({ daily, mau: totals.mau, wau: totals.wau });
+    }),
+
+  // Session duration histogram, avg-duration trend, and time-of-day heatmap.
+  sessions: protectedProcedure
+    .input(sessionsInput)
+    .handler(async ({ context, input }) => {
+      await assertProjectAccess(input.projectId, context.session.user.id);
+
+      const ch = clickhouse();
+      const sessionsCte = `
+        WITH sessions AS (
+          SELECT
+            session_id,
+            event_date,
+            minMerge(started_at) AS started_at,
+            maxMerge(ended_at) AS ended_at,
+            dateDiff('second', started_at, ended_at) AS duration
+          FROM analytics.sessions_summary
+          WHERE project_id = {projectId:String}
+            AND event_date BETWEEN {from:Date} AND {to:Date}
+          GROUP BY session_id, event_date
+        )`;
+
+      const [histogramResult, trendResult, heatmapResult] = await Promise.all([
+        ch.query({
+          format: "JSON",
+          query: `${sessionsCte}
+            SELECT
+              multiIf(duration < 60, '0-1m',
+                      duration < 300, '1-5m',
+                      duration < 900, '5-15m',
+                      duration < 1800, '15-30m', '30m+') AS bucket,
+              multiIf(duration < 60, 0,
+                      duration < 300, 1,
+                      duration < 900, 2,
+                      duration < 1800, 3, 4)              AS sort,
+              toUInt64(count())                            AS sessions
+            FROM sessions
+            GROUP BY bucket, sort
+            ORDER BY sort
+          `,
+          query_params: input,
+        }),
+        ch.query({
+          format: "JSON",
+          query: `${sessionsCte}
+            SELECT
+              toString(event_date)        AS event_date,
+              toUInt64(round(avg(duration))) AS avg_seconds
+            FROM sessions
+            GROUP BY event_date
+            ORDER BY event_date
+          `,
+          query_params: input,
+        }),
+        ch.query({
+          format: "JSON",
+          query: `${sessionsCte}
+            SELECT
+              toUInt8(toDayOfWeek(started_at)) AS weekday,
+              toUInt8(toHour(started_at))      AS hour,
+              toUInt64(count())                AS sessions
+            FROM sessions
+            GROUP BY weekday, hour
+            ORDER BY weekday, hour
+          `,
+          query_params: input,
+        }),
+      ]);
+
+      const histogramJson =
+        await histogramResult.json<z.infer<typeof sessionsHistogramRow>>();
+      const histogram = z.array(sessionsHistogramRow).parse(histogramJson.data);
+
+      const trendJson =
+        await trendResult.json<z.infer<typeof sessionsTrendRow>>();
+      const trend = z.array(sessionsTrendRow).parse(trendJson.data);
+
+      const heatmapJson =
+        await heatmapResult.json<z.infer<typeof sessionsHeatmapRow>>();
+      const heatmap = z.array(sessionsHeatmapRow).parse(heatmapJson.data);
+
+      return sessionsOutput.parse({ heatmap, histogram, trend });
     }),
 
   // Aggregated event-type totals over a date window — backs the Events table.
