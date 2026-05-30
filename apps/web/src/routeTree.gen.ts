@@ -20,6 +20,7 @@ import { Route as DashboardProjectsIndexRouteImport } from './routes/dashboard/p
 import { Route as DashboardProjectsProjectIdRouteImport } from './routes/dashboard/projects/$projectId'
 import { Route as DashboardProjectsProjectIdIndexRouteImport } from './routes/dashboard/projects/$projectId/index'
 import { Route as DashboardProjectsProjectIdSettingsRouteImport } from './routes/dashboard/projects/$projectId/settings'
+import { Route as DashboardProjectsProjectIdPlayersRouteImport } from './routes/dashboard/projects/$projectId/players'
 import { Route as DashboardProjectsProjectIdOverviewRouteImport } from './routes/dashboard/projects/$projectId/overview'
 import { Route as DashboardProjectsProjectIdLiveRouteImport } from './routes/dashboard/projects/$projectId/live'
 import { Route as DashboardProjectsProjectIdEventsRouteImport } from './routes/dashboard/projects/$projectId/events'
@@ -82,6 +83,12 @@ const DashboardProjectsProjectIdSettingsRoute =
     path: '/settings',
     getParentRoute: () => DashboardProjectsProjectIdRoute,
   } as any)
+const DashboardProjectsProjectIdPlayersRoute =
+  DashboardProjectsProjectIdPlayersRouteImport.update({
+    id: '/players',
+    path: '/players',
+    getParentRoute: () => DashboardProjectsProjectIdRoute,
+  } as any)
 const DashboardProjectsProjectIdOverviewRoute =
   DashboardProjectsProjectIdOverviewRouteImport.update({
     id: '/overview',
@@ -114,6 +121,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/projects/$projectId/events': typeof DashboardProjectsProjectIdEventsRoute
   '/dashboard/projects/$projectId/live': typeof DashboardProjectsProjectIdLiveRoute
   '/dashboard/projects/$projectId/overview': typeof DashboardProjectsProjectIdOverviewRoute
+  '/dashboard/projects/$projectId/players': typeof DashboardProjectsProjectIdPlayersRoute
   '/dashboard/projects/$projectId/settings': typeof DashboardProjectsProjectIdSettingsRoute
   '/dashboard/projects/$projectId/': typeof DashboardProjectsProjectIdIndexRoute
 }
@@ -128,6 +136,7 @@ export interface FileRoutesByTo {
   '/dashboard/projects/$projectId/events': typeof DashboardProjectsProjectIdEventsRoute
   '/dashboard/projects/$projectId/live': typeof DashboardProjectsProjectIdLiveRoute
   '/dashboard/projects/$projectId/overview': typeof DashboardProjectsProjectIdOverviewRoute
+  '/dashboard/projects/$projectId/players': typeof DashboardProjectsProjectIdPlayersRoute
   '/dashboard/projects/$projectId/settings': typeof DashboardProjectsProjectIdSettingsRoute
   '/dashboard/projects/$projectId': typeof DashboardProjectsProjectIdIndexRoute
 }
@@ -145,6 +154,7 @@ export interface FileRoutesById {
   '/dashboard/projects/$projectId/events': typeof DashboardProjectsProjectIdEventsRoute
   '/dashboard/projects/$projectId/live': typeof DashboardProjectsProjectIdLiveRoute
   '/dashboard/projects/$projectId/overview': typeof DashboardProjectsProjectIdOverviewRoute
+  '/dashboard/projects/$projectId/players': typeof DashboardProjectsProjectIdPlayersRoute
   '/dashboard/projects/$projectId/settings': typeof DashboardProjectsProjectIdSettingsRoute
   '/dashboard/projects/$projectId/': typeof DashboardProjectsProjectIdIndexRoute
 }
@@ -163,6 +173,7 @@ export interface FileRouteTypes {
     | '/dashboard/projects/$projectId/events'
     | '/dashboard/projects/$projectId/live'
     | '/dashboard/projects/$projectId/overview'
+    | '/dashboard/projects/$projectId/players'
     | '/dashboard/projects/$projectId/settings'
     | '/dashboard/projects/$projectId/'
   fileRoutesByTo: FileRoutesByTo
@@ -177,6 +188,7 @@ export interface FileRouteTypes {
     | '/dashboard/projects/$projectId/events'
     | '/dashboard/projects/$projectId/live'
     | '/dashboard/projects/$projectId/overview'
+    | '/dashboard/projects/$projectId/players'
     | '/dashboard/projects/$projectId/settings'
     | '/dashboard/projects/$projectId'
   id:
@@ -193,6 +205,7 @@ export interface FileRouteTypes {
     | '/dashboard/projects/$projectId/events'
     | '/dashboard/projects/$projectId/live'
     | '/dashboard/projects/$projectId/overview'
+    | '/dashboard/projects/$projectId/players'
     | '/dashboard/projects/$projectId/settings'
     | '/dashboard/projects/$projectId/'
   fileRoutesById: FileRoutesById
@@ -283,6 +296,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardProjectsProjectIdSettingsRouteImport
       parentRoute: typeof DashboardProjectsProjectIdRoute
     }
+    '/dashboard/projects/$projectId/players': {
+      id: '/dashboard/projects/$projectId/players'
+      path: '/players'
+      fullPath: '/dashboard/projects/$projectId/players'
+      preLoaderRoute: typeof DashboardProjectsProjectIdPlayersRouteImport
+      parentRoute: typeof DashboardProjectsProjectIdRoute
+    }
     '/dashboard/projects/$projectId/overview': {
       id: '/dashboard/projects/$projectId/overview'
       path: '/overview'
@@ -311,6 +331,7 @@ interface DashboardProjectsProjectIdRouteChildren {
   DashboardProjectsProjectIdEventsRoute: typeof DashboardProjectsProjectIdEventsRoute
   DashboardProjectsProjectIdLiveRoute: typeof DashboardProjectsProjectIdLiveRoute
   DashboardProjectsProjectIdOverviewRoute: typeof DashboardProjectsProjectIdOverviewRoute
+  DashboardProjectsProjectIdPlayersRoute: typeof DashboardProjectsProjectIdPlayersRoute
   DashboardProjectsProjectIdSettingsRoute: typeof DashboardProjectsProjectIdSettingsRoute
   DashboardProjectsProjectIdIndexRoute: typeof DashboardProjectsProjectIdIndexRoute
 }
@@ -322,6 +343,8 @@ const DashboardProjectsProjectIdRouteChildren: DashboardProjectsProjectIdRouteCh
     DashboardProjectsProjectIdLiveRoute: DashboardProjectsProjectIdLiveRoute,
     DashboardProjectsProjectIdOverviewRoute:
       DashboardProjectsProjectIdOverviewRoute,
+    DashboardProjectsProjectIdPlayersRoute:
+      DashboardProjectsProjectIdPlayersRoute,
     DashboardProjectsProjectIdSettingsRoute:
       DashboardProjectsProjectIdSettingsRoute,
     DashboardProjectsProjectIdIndexRoute: DashboardProjectsProjectIdIndexRoute,
