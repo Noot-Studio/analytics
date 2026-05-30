@@ -25,6 +25,30 @@ const eventsRow = z.object({
   unique_players: z.coerce.number(),
 });
 
+const playersInput = z.object({
+  from: z.iso.date(),
+  projectId: z.string().min(1),
+  to: z.iso.date(),
+});
+
+const playersDailyRow = z.object({
+  dau: z.coerce.number(),
+  event_date: z.string(),
+  new_players: z.coerce.number(),
+  returning_players: z.coerce.number(),
+});
+
+const playersTotalsRow = z.object({
+  mau: z.coerce.number(),
+  wau: z.coerce.number(),
+});
+
+const playersOutput = z.object({
+  daily: z.array(playersDailyRow),
+  mau: z.coerce.number(),
+  wau: z.coerce.number(),
+});
+
 async function assertProjectAccess(
   projectId: string,
   userId: string
@@ -78,6 +102,73 @@ export const analyticsRouter = {
 
       const json = await result.json<z.infer<typeof dailyRow>>();
       return z.array(dailyRow).parse(json.data);
+    }),
+
+  // DAU + new-vs-returning daily series, plus trailing WAU/MAU.
+  players: protectedProcedure
+    .input(playersInput)
+    .handler(async ({ context, input }) => {
+      await assertProjectAccess(input.projectId, context.session.user.id);
+
+      const ch = clickhouse();
+
+      const [dailyResult, totalsResult] = await Promise.all([
+        ch.query({
+          format: "JSON",
+          query: `
+          WITH active AS (
+            SELECT
+              toDate(timestamp) AS event_date,
+              player_id
+            FROM analytics.events
+            WHERE project_id = {projectId:String}
+              AND toDate(timestamp) BETWEEN {from:Date} AND {to:Date}
+            GROUP BY event_date, player_id
+          ),
+          firsts AS (
+            SELECT player_id, minMerge(first_seen) AS first_seen
+            FROM analytics.player_first_seen
+            WHERE project_id = {projectId:String}
+            GROUP BY player_id
+          )
+          SELECT
+            a.event_date                                   AS event_date,
+            toUInt64(uniq(a.player_id))                    AS dau,
+            toUInt64(uniqIf(a.player_id, f.first_seen = a.event_date)) AS new_players,
+            toUInt64(uniqIf(a.player_id, f.first_seen < a.event_date)) AS returning_players
+          FROM active AS a
+          LEFT JOIN firsts AS f USING (player_id)
+          GROUP BY a.event_date
+          ORDER BY a.event_date
+        `,
+          query_params: input,
+        }),
+        ch.query({
+          format: "JSON",
+          query: `
+          SELECT
+            toUInt64(uniqIf(player_id, timestamp >= {to:Date} - INTERVAL 7 DAY))  AS wau,
+            toUInt64(uniqIf(player_id, timestamp >= {to:Date} - INTERVAL 30 DAY)) AS mau
+          FROM analytics.events
+          WHERE project_id = {projectId:String}
+            AND toDate(timestamp) BETWEEN ({to:Date} - INTERVAL 30 DAY) AND {to:Date}
+        `,
+          query_params: input,
+        }),
+      ]);
+
+      const dailyJson =
+        await dailyResult.json<z.infer<typeof playersDailyRow>>();
+      const daily = z.array(playersDailyRow).parse(dailyJson.data);
+
+      const totalsJson =
+        await totalsResult.json<z.infer<typeof playersTotalsRow>>();
+      const totals = z.array(playersTotalsRow).parse(totalsJson.data)[0] ?? {
+        mau: 0,
+        wau: 0,
+      };
+
+      return playersOutput.parse({ daily, mau: totals.mau, wau: totals.wau });
     }),
 
   // Aggregated event-type totals over a date window — backs the Events table.
