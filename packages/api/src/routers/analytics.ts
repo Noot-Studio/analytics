@@ -78,6 +78,30 @@ const sessionsOutput = z.object({
   trend: z.array(sessionsTrendRow),
 });
 
+const mapsInput = z.object({
+  from: z.iso.date(),
+  projectId: z.string().min(1),
+  to: z.iso.date(),
+});
+
+const mapsBreakdownRow = z.object({
+  avg_seconds: z.coerce.number(),
+  map: z.string(),
+  players: z.coerce.number(),
+  sessions: z.coerce.number(),
+});
+
+const mapsOverTimeRow = z.object({
+  event_date: z.string(),
+  map: z.string(),
+  sessions: z.coerce.number(),
+});
+
+const mapsOutput = z.object({
+  breakdown: z.array(mapsBreakdownRow),
+  overTime: z.array(mapsOverTimeRow),
+});
+
 async function assertProjectAccess(
   projectId: string,
   userId: string
@@ -281,6 +305,81 @@ export const analyticsRouter = {
       const heatmap = z.array(sessionsHeatmapRow).parse(heatmapJson.data);
 
       return sessionsOutput.parse({ heatmap, histogram, trend });
+    }),
+
+  // Per-map/mode breakdown derived from session_start events.
+  maps: protectedProcedure
+    .input(mapsInput)
+    .handler(async ({ context, input }) => {
+      await assertProjectAccess(input.projectId, context.session.user.id);
+
+      const ch = clickhouse();
+      const mapsCte = `
+        WITH session_maps AS (
+          SELECT
+            session_id,
+            argMin(JSONExtractString(properties, 'map'), timestamp) AS map,
+            any(player_id)        AS player_id,
+            min(toDate(timestamp)) AS event_date
+          FROM analytics.events
+          WHERE project_id = {projectId:String}
+            AND event_type = 'session_start'
+            AND toDate(timestamp) BETWEEN {from:Date} AND {to:Date}
+          GROUP BY session_id
+        ),
+        durations AS (
+          SELECT
+            session_id,
+            dateDiff('second', minMerge(started_at), maxMerge(ended_at)) AS duration
+          FROM analytics.sessions_summary
+          WHERE project_id = {projectId:String}
+            AND event_date BETWEEN {from:Date} AND {to:Date}
+          GROUP BY session_id
+        )`;
+
+      const [breakdownResult, overTimeResult] = await Promise.all([
+        ch.query({
+          format: "JSON",
+          query: `${mapsCte}
+            SELECT
+              m.map                            AS map,
+              toUInt64(uniq(m.session_id))     AS sessions,
+              toUInt64(uniq(m.player_id))      AS players,
+              toUInt64(round(avg(d.duration))) AS avg_seconds
+            FROM session_maps AS m
+            LEFT JOIN durations AS d USING (session_id)
+            WHERE m.map != ''
+            GROUP BY m.map
+            ORDER BY sessions DESC
+            LIMIT 50
+          `,
+          query_params: input,
+        }),
+        ch.query({
+          format: "JSON",
+          query: `${mapsCte}
+            SELECT
+              toString(event_date)         AS event_date,
+              map                          AS map,
+              toUInt64(uniq(session_id))   AS sessions
+            FROM session_maps
+            WHERE map != ''
+            GROUP BY event_date, map
+            ORDER BY event_date, sessions DESC
+          `,
+          query_params: input,
+        }),
+      ]);
+
+      const breakdownJson =
+        await breakdownResult.json<z.infer<typeof mapsBreakdownRow>>();
+      const breakdown = z.array(mapsBreakdownRow).parse(breakdownJson.data);
+
+      const overTimeJson =
+        await overTimeResult.json<z.infer<typeof mapsOverTimeRow>>();
+      const overTime = z.array(mapsOverTimeRow).parse(overTimeJson.data);
+
+      return mapsOutput.parse({ breakdown, overTime });
     }),
 
   // Aggregated event-type totals over a date window — backs the Events table.
