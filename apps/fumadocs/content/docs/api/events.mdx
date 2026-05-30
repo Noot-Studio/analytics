@@ -1,0 +1,179 @@
+---
+title: Ingest events
+description: Complete reference for POST /v1/events — send analytics events to s&box Analytics.
+icon: Send
+---
+
+Send a batch of analytics events for the Project the API key belongs to. This is the core endpoint of the Ingestion API.
+
+## Request
+
+|                  |                              |
+| ---------------- | ---------------------------- |
+| **Method**       | `POST`                       |
+| **Path**         | `/v1/events`                 |
+| **Auth**         | `x-api-key: pk_…` (required) |
+| **Content-Type** | `application/json`           |
+
+### Headers
+
+| Header         | Required | Description                              |
+| -------------- | -------- | ---------------------------------------- |
+| `x-api-key`    | Yes      | Your Project's publishable key (`pk_…`). |
+| `Content-Type` | Yes      | Must be `application/json`.              |
+
+### Body
+
+The body is a JSON object with a single `events` array. Each entry is one event.
+
+| Field    | Type  | Required | Constraints  |
+| -------- | ----- | -------- | ------------ |
+| `events` | array | Yes      | 1–500 items. |
+
+Each item in `events`:
+
+| Field        | Type             | Required | Constraints / default                                                                       |
+| ------------ | ---------------- | -------- | ------------------------------------------------------------------------------------------- |
+| `type`       | string           | Yes      | 1–128 characters. The event name, e.g. `level_completed`.                                   |
+| `session_id` | string           | Yes      | 1–128 characters. Groups events from the same play session.                                 |
+| `player_id`  | string           | No       | Up to 128 characters. Defaults to `""` (anonymous).                                         |
+| `properties` | object           | No       | Arbitrary key/value metadata. JSON-encoded size must be ≤ 16 KB per event.                  |
+| `timestamp`  | string \| number | No       | An ISO 8601 datetime (or anything `Date`-parseable). Defaults to the server's receive time. |
+
+### Example payload
+
+```json
+{
+  "events": [
+    {
+      "type": "level_completed",
+      "session_id": "sess_8f2a",
+      "player_id": "76561198000000000",
+      "timestamp": "2026-05-30T12:00:00.000Z",
+      "properties": {
+        "level": "facility_01",
+        "duration_seconds": 184,
+        "deaths": 2
+      }
+    },
+    {
+      "type": "item_purchased",
+      "session_id": "sess_8f2a",
+      "player_id": "76561198000000000",
+      "properties": { "item": "shotgun", "currency": "credits", "amount": 500 }
+    }
+  ]
+}
+```
+
+## Response
+
+On success the API returns **`202 Accepted`** — events are queued for asynchronous processing, not stored synchronously.
+
+```json
+{ "accepted": 2 }
+```
+
+| Field      | Type   | Description                                 |
+| ---------- | ------ | ------------------------------------------- |
+| `accepted` | number | How many events from the batch were queued. |
+
+For every non-2xx response, see [Errors & status codes](/docs/api/errors). In short:
+
+| Status | Meaning                                                     |
+| ------ | ----------------------------------------------------------- |
+| `202`  | Batch accepted.                                             |
+| `400`  | Invalid payload, or an event's `properties` exceeded 16 KB. |
+| `401`  | Missing, unknown, or revoked API key.                       |
+| `413`  | Request body exceeded 2 MB.                                 |
+| `500`  | Key lookup failed (transient server error).                 |
+| `502`  | Events could not be queued (transient server error).        |
+
+## Try it
+
+Open this request in Hoppscotch, set your `x-api-key` header, and send a batch.
+
+<Hoppscotch
+  runUrl="https://hoppscotch.suiram.dev/r/TclaAjOtRoA2"
+  title="Run POST /v1/events in Hoppscotch"
+/>
+
+## Usage examples
+
+### cURL
+
+```bash
+curl -X POST https://ingest.sbox-analytics.com/v1/events \
+  -H "x-api-key: pk_your_publishable_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "events": [
+      {
+        "type": "level_completed",
+        "session_id": "sess_8f2a",
+        "player_id": "76561198000000000",
+        "properties": { "level": "facility_01", "duration_seconds": 184 }
+      }
+    ]
+  }'
+```
+
+### JavaScript (fetch)
+
+```js
+await fetch("https://ingest.sbox-analytics.com/v1/events", {
+  method: "POST",
+  headers: {
+    "x-api-key": "pk_your_publishable_key",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    events: [
+      {
+        type: "level_completed",
+        session_id: "sess_8f2a",
+        player_id: "76561198000000000",
+        properties: { level: "facility_01", duration_seconds: 184 },
+      },
+    ],
+  }),
+});
+```
+
+### C# (s&box)
+
+```csharp
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
+
+var payload = new
+{
+    events = new[]
+    {
+        new
+        {
+            type = "level_completed",
+            session_id = "sess_8f2a",
+            player_id = "76561198000000000",
+            properties = new { level = "facility_01", duration_seconds = 184 }
+        }
+    }
+};
+
+using var http = new HttpClient();
+http.DefaultRequestHeaders.Add( "x-api-key", "pk_your_publishable_key" );
+
+var json = JsonSerializer.Serialize( payload );
+var content = new StringContent( json, Encoding.UTF8, "application/json" );
+
+var response = await http.PostAsync( "https://ingest.sbox-analytics.com/v1/events", content );
+// response.StatusCode == 202 Accepted on success
+```
+
+## Tips
+
+- **Batch your events.** Sending up to 500 events per request is far more efficient than one request per event. Buffer client-side and flush periodically.
+- **Reuse a `session_id`** for the duration of a play session so events can be stitched together.
+- **Keep `properties` small.** The 16 KB cap is per event; store identifiers and metrics, not blobs.
+- **Set `timestamp`** explicitly if you buffer events offline, so they aren't all attributed to flush time.

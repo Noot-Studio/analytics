@@ -1,4 +1,4 @@
-export const appName = "Tanstack Start";
+export const appName = "s&box Analytics";
 export const docsRoute = "/docs";
 export const docsImageRoute = "/og/docs";
 
