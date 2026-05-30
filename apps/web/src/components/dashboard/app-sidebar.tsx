@@ -47,11 +47,9 @@ export const AppSidebar = ({
         {projectId ? (
           <NavMain items={projectNav(projectId)} />
         ) : (
-          <>
-            <NavMain items={orgNavMain} />
-            <NavSecondary className="mt-auto" items={orgNavSecondary} />
-          </>
+          <NavMain items={orgNavMain} />
         )}
+        <NavSecondary className="mt-auto" items={orgNavSecondary} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser />

@@ -3,6 +3,7 @@ import { z } from "zod";
 
 export const env = createEnv({
   client: {
+    VITE_DOCS_URL: z.url(),
     VITE_SERVER_URL: z.url(),
   },
   clientPrefix: "VITE_",
