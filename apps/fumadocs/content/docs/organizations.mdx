@@ -1,0 +1,70 @@
+---
+title: Organizations
+description: The top-level workspace that owns your games, team members, and billing.
+icon: Building2
+---
+
+An **Organization** is the top-level container in s&box Analytics. Everything you do lives inside one: your games (Projects), your API keys, your teammates, and your subscription.
+
+## What an Organization is for
+
+An Organization represents a team or a studio. It exists to:
+
+- **Group your games together.** Every [Project](/docs/projects) belongs to exactly one Organization.
+- **Share access with teammates.** Members of an Organization can see and manage its Projects and API keys, according to their role.
+- **Own billing.** Your plan and usage are tracked at the Organization level.
+
+You can belong to more than one Organization (for example, a personal workspace and a studio you collaborate with). The Organization you are currently working in is your **active Organization** — Projects and keys you create are scoped to it.
+
+<Callout type="info">
+  Projects and API keys are always created inside your **active** Organization.
+  Switch your active Organization before creating a Project if you want it to
+  belong somewhere else.
+</Callout>
+
+## Creating an Organization
+
+1. Open the dashboard and click the **Organization switcher** in the top-left.
+2. Choose **Create organization**.
+3. Enter a **name** (for example, your studio name). A URL-friendly **slug** is derived from it automatically and must be unique.
+4. Confirm. The new Organization becomes your active workspace.
+
+The account that creates an Organization becomes its **owner**.
+
+## Managing an Organization
+
+### Members and roles
+
+Organizations are multi-user. Each member has a role that determines what they can do:
+
+| Role     | Capabilities                                                            |
+| -------- | ----------------------------------------------------------------------- |
+| `owner`  | Full control, including deleting the Organization and managing billing. |
+| `admin`  | Manage Projects, API keys, members, and invitations.                    |
+| `member` | Access Projects and API keys within the Organization.                   |
+
+To add a teammate, open **Organization settings → Members**, send an **invitation** by email, and choose their role. They join once they accept.
+
+### Switching the active Organization
+
+Use the Organization switcher to change which Organization you are working in. The active Organization determines where new Projects and keys are created and which data you see.
+
+### Renaming or deleting
+
+Owners and admins can rename an Organization from its settings. Deleting an Organization is performed by an owner and is **irreversible** — it cascades to every Project, API key, and the events associated with them.
+
+<Callout type="warn">
+  Deleting an Organization permanently removes all of its Projects and API keys.
+  Revoked keys cannot be restored and historical event data is lost.
+</Callout>
+
+## Next steps
+
+<Cards>
+  <Card title="Create a Project" href="/docs/projects">
+    Add a game to your Organization.
+  </Card>
+  <Card title="Generate API Keys" href="/docs/api-keys">
+    Create credentials for sending events.
+  </Card>
+</Cards>

@@ -1,0 +1,68 @@
+---
+title: Overview
+description: How to authenticate and talk to the s&box Analytics Ingestion API.
+icon: Plug
+---
+
+The **Ingestion API** is the public HTTP endpoint your game sends events to. It is the only API authenticated with an [API key](/docs/api-keys), and it does exactly one thing: accept batches of analytics events and queue them for processing.
+
+## Base URL
+
+| Environment       | Base URL                            |
+| ----------------- | ----------------------------------- |
+| Production        | `https://ingest.sbox-analytics.com` |
+| Local development | `http://localhost:8080`             |
+
+<Callout type="info">
+  All endpoints below are relative to the base URL. Replace the production host
+  with your own ingestion host if you self-host the platform.
+</Callout>
+
+## Authentication
+
+Every request to the Ingestion API must include your **publishable key** in the `x-api-key` header:
+
+```http
+x-api-key: pk_your_publishable_key
+```
+
+- The key identifies which [Project](/docs/projects) the events belong to — there is no separate project ID in the request.
+- A missing, unknown, or revoked key is rejected with [`401 invalid api key`](/docs/api/errors).
+- Use the **publishable** (`pk_`) key here, not the secret (`sk_`) key. See [API Keys](/docs/api-keys) for how to create one.
+
+```bash
+curl -X POST https://ingest.sbox-analytics.com/v1/events \
+  -H "x-api-key: pk_your_publishable_key" \
+  -H "Content-Type: application/json" \
+  -d '{ "events": [ { "type": "app_start", "session_id": "sess_123" } ] }'
+```
+
+## Content type
+
+Requests carry a JSON body and must set `Content-Type: application/json`. Responses are JSON, except for the health check which returns plain text.
+
+## Endpoints at a glance
+
+| Method | Path         | Auth        | Description                         |
+| ------ | ------------ | ----------- | ----------------------------------- |
+| `POST` | `/v1/events` | `x-api-key` | Ingest a batch of analytics events. |
+| `GET`  | `/healthz`   | None        | Liveness check. Returns `ok`.       |
+
+<Cards>
+  <Card title="Events reference" href="/docs/api/events">
+    Full request and response reference for POST /v1/events.
+  </Card>
+  <Card title="Errors & status codes" href="/docs/api/errors">
+    Every status code the API can return and what it means.
+  </Card>
+</Cards>
+
+## Limits
+
+| Limit                                          | Value |
+| ---------------------------------------------- | ----- |
+| Events per request                             | 1–500 |
+| Max request body size                          | 2 MB  |
+| Max `properties` size per event (JSON-encoded) | 16 KB |
+
+Exceeding a limit results in a `4xx` response — see [Errors & status codes](/docs/api/errors).

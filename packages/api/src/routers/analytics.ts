@@ -12,17 +12,17 @@ const dailyInput = z.object({
 });
 
 const dailyRow = z.object({
-  event_count: z.number(),
+  event_count: z.coerce.number(),
   event_date: z.string(),
   event_type: z.string(),
-  unique_players: z.number(),
-  unique_sessions: z.number(),
+  unique_players: z.coerce.number(),
+  unique_sessions: z.coerce.number(),
 });
 
 const eventsRow = z.object({
-  event_count: z.number(),
+  event_count: z.coerce.number(),
   event_type: z.string(),
-  unique_players: z.number(),
+  unique_players: z.coerce.number(),
 });
 
 async function assertProjectAccess(

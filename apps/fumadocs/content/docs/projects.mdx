@@ -1,0 +1,73 @@
+---
+title: Projects
+description: A single game — or one environment of it — that events are scoped to.
+icon: Folder
+---
+
+A **Project** represents one game inside an [Organization](/docs/organizations). Every event you send is scoped to a Project, and [API keys](/docs/api-keys) are issued per Project. If you ship more than one game, create one Project per game.
+
+## What a Project represents
+
+A Project is the unit your analytics are grouped by. It has:
+
+- A **name** — how the game appears in the dashboard.
+- A **slug** — a URL-friendly identifier, unique within the Organization. It is derived from the name if you don't provide one.
+- An **environment** — one of `Development`, `Staging`, or `Production`.
+
+Because the slug is unique per Organization, you can keep separate Projects for each environment of the same game (for example, `my-game-dev` and `my-game-prod`) so test traffic never pollutes your production numbers.
+
+<Callout type="info">
+  The environment is a label on the Project, set when you create it. To run a
+  game across multiple environments, create a Project per environment and give
+  each its own API key.
+</Callout>
+
+## Creating a Project
+
+A Project is created inside your **active Organization**, so make sure the right one is selected first.
+
+1. In the dashboard, open **Projects** and choose **New project**.
+2. Enter a **name** (1–100 characters).
+3. Optionally set a **slug** (1–64 characters). Leave it blank to generate one from the name. The slug must be unique within the Organization.
+4. Pick an **environment** — `Development` (default), `Staging`, or `Production`.
+5. Create the Project. You can now [generate an API key](/docs/api-keys) for it.
+
+<Callout type="warn">
+  Creating a Project with a slug that already exists in the Organization is
+  rejected. Choose a different name or slug.
+</Callout>
+
+## Managing a Project
+
+### Viewing
+
+Open a Project to see its details and the API keys attached to it, including each key's name, publishable key, and when it was last used.
+
+### Listing
+
+The **Projects** page lists every Project in the active Organization, most recent first, with its environment and active key count.
+
+### Deleting
+
+Deleting a Project is **irreversible** and cascades to all of its API keys.
+
+1. Open the Project's settings.
+2. Choose **Delete project** and confirm.
+
+<Callout type="warn">
+  Deleting a Project permanently revokes its API keys. Any game still sending
+  events with those keys will start receiving `401 invalid api key`.
+</Callout>
+
+Only members of the owning Organization can view, create, or delete its Projects.
+
+## Next steps
+
+<Cards>
+  <Card title="Generate API Keys" href="/docs/api-keys">
+    Create credentials for this Project.
+  </Card>
+  <Card title="Send events" href="/docs/api">
+    Start sending data to the Ingestion API.
+  </Card>
+</Cards>
