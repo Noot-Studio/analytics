@@ -37,6 +37,7 @@
     "db:generate": "turbo -F @sbox-analytics/db db:generate",
     "db:migrate": "turbo -F @sbox-analytics/db db:migrate",
     "db:reset": "turbo -F @sbox-analytics/db db:reset",
+    "db:seed": "turbo -F @sbox-analytics/db db:seed",
     "db:start": "turbo -F @sbox-analytics/db db:start",
     "db:watch": "turbo -F @sbox-analytics/db db:watch",
     "db:stop": "turbo -F @sbox-analytics/db db:stop",
