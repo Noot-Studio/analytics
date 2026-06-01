@@ -4,6 +4,11 @@ import { z } from "zod";
 
 import { clickhouse } from "../clickhouse";
 import { protectedProcedure } from "../index";
+import {
+  buildScenesQuery,
+  buildVoxelsQuery,
+  voxelCenter,
+} from "../spatial-query";
 
 const dailyInput = z.object({
   from: z.iso.date(),
@@ -262,6 +267,90 @@ const playerProfileOutput = z.object({
   lifetime: playerLifetimeRow,
   sessions: z.array(playerSessionRow),
   timeline: z.array(playerTimelineRow),
+});
+
+const spatialScenesInput = z.object({
+  from: z.iso.date(),
+  projectId: z.string().min(1),
+  to: z.iso.date(),
+});
+
+const spatialSceneRow = z.object({
+  eventCount: z.coerce.number(),
+  maxX: z.coerce.number(),
+  maxY: z.coerce.number(),
+  maxZ: z.coerce.number(),
+  minX: z.coerce.number(),
+  minY: z.coerce.number(),
+  minZ: z.coerce.number(),
+  scene: z.string(),
+});
+
+const spatialScenesOutput = z.object({
+  scenes: z.array(
+    z.object({
+      bounds: z.object({
+        maxX: z.number(),
+        maxY: z.number(),
+        maxZ: z.number(),
+        minX: z.number(),
+        minY: z.number(),
+        minZ: z.number(),
+      }),
+      eventCount: z.number(),
+      scene: z.string(),
+    })
+  ),
+});
+
+const voxelMetricInput = z.object({
+  agg: z.enum(["avg", "min", "max", "sum"]),
+  key: z.string().min(1),
+});
+
+const voxelBoundsInput = z.object({
+  maxX: z.number(),
+  maxY: z.number(),
+  maxZ: z.number(),
+  minX: z.number(),
+  minY: z.number(),
+  minZ: z.number(),
+});
+
+const MAX_VOXELS = 50_000;
+
+const spatialVoxelsInput = z.object({
+  bounds: voxelBoundsInput.optional(),
+  eventType: z.string().min(1).optional(),
+  from: z.iso.date(),
+  limit: z.number().int().positive().max(MAX_VOXELS).default(MAX_VOXELS),
+  metric: voxelMetricInput.optional(),
+  projectId: z.string().min(1),
+  scene: z.string().min(1),
+  to: z.iso.date(),
+  voxelSize: z.number().positive(),
+});
+
+const voxelRow = z.object({
+  count: z.coerce.number(),
+  gx: z.coerce.number(),
+  gy: z.coerce.number(),
+  gz: z.coerce.number(),
+  value: z.coerce.number().nullable(),
+});
+
+const spatialVoxelsOutput = z.object({
+  truncated: z.boolean(),
+  voxelSize: z.number(),
+  voxels: z.array(
+    z.object({
+      count: z.number(),
+      value: z.number().nullable(),
+      x: z.number(),
+      y: z.number(),
+      z: z.number(),
+    })
+  ),
 });
 
 export const analyticsRouter = {
@@ -910,4 +999,61 @@ export const analyticsRouter = {
         timeline: timelineJson.data,
       });
     }),
+  spatial: {
+    scenes: protectedProcedure
+      .input(spatialScenesInput)
+      .handler(async ({ context, input }) => {
+        await assertProjectAccess(input.projectId, context.session.user.id);
+        const { query, params } = buildScenesQuery(input);
+        const ch = clickhouse();
+        const result = await ch.query({
+          format: "JSON",
+          query,
+          query_params: params,
+        });
+        const json = await result.json<z.infer<typeof spatialSceneRow>>();
+        const rows = z.array(spatialSceneRow).parse(json.data);
+        return spatialScenesOutput.parse({
+          scenes: rows.map((r) => ({
+            bounds: {
+              maxX: r.maxX,
+              maxY: r.maxY,
+              maxZ: r.maxZ,
+              minX: r.minX,
+              minY: r.minY,
+              minZ: r.minZ,
+            },
+            eventCount: r.eventCount,
+            scene: r.scene,
+          })),
+        });
+      }),
+    voxels: protectedProcedure
+      .input(spatialVoxelsInput)
+      .handler(async ({ context, input }) => {
+        await assertProjectAccess(input.projectId, context.session.user.id);
+        const { query, params } = buildVoxelsQuery(input);
+        const ch = clickhouse();
+        const result = await ch.query({
+          format: "JSON",
+          query,
+          query_params: params,
+        });
+        const json = await result.json<z.infer<typeof voxelRow>>();
+        const rows = z.array(voxelRow).parse(json.data);
+        const truncated = rows.length > input.limit;
+        const voxels = rows.slice(0, input.limit).map((r) => ({
+          count: r.count,
+          value: r.value,
+          x: voxelCenter(r.gx, input.voxelSize),
+          y: voxelCenter(r.gy, input.voxelSize),
+          z: voxelCenter(r.gz, input.voxelSize),
+        }));
+        return spatialVoxelsOutput.parse({
+          truncated,
+          voxelSize: input.voxelSize,
+          voxels,
+        });
+      }),
+  },
 };
