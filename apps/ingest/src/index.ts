@@ -10,9 +10,9 @@ import { createKeyResolver, InvalidApiKeyError } from "./keys";
 import { createProducer } from "./producer";
 import {
   batchSchema,
-  formatTimestamp,
   MAX_BODY_BYTES,
   MAX_PROPERTIES_BYTES,
+  toClickHouseEvent,
 } from "./schema";
 import type { ClickHouseEvent } from "./schema";
 
@@ -65,14 +65,7 @@ app.post(
       if (properties.length > MAX_PROPERTIES_BYTES) {
         throw new HTTPException(400, { message: "properties too large" });
       }
-      records.push({
-        event_type: ev.type,
-        player_id: ev.player_id,
-        project_id: projectId,
-        properties,
-        session_id: ev.session_id,
-        timestamp: formatTimestamp(ev.timestamp ?? new Date()),
-      });
+      records.push(toClickHouseEvent(ev, projectId, properties));
     }
 
     try {
