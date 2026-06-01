@@ -102,6 +102,68 @@ const mapsOutput = z.object({
   overTime: z.array(mapsOverTimeRow),
 });
 
+const retentionInput = z.object({
+  from: z.iso.date(),
+  projectId: z.string().min(1),
+  to: z.iso.date(),
+});
+
+const retentionCohortRow = z.object({
+  cohort_date: z.string(),
+  d1: z.coerce.number(),
+  d30: z.coerce.number(),
+  d7: z.coerce.number(),
+  size: z.coerce.number(),
+});
+
+const retentionCurveRow = z.object({
+  day_offset: z.coerce.number(),
+  retained: z.coerce.number(),
+});
+
+const retentionOutput = z.object({
+  cohorts: z.array(retentionCohortRow),
+  curve: z.array(retentionCurveRow),
+});
+
+const MIN_FUNNEL_STEPS = 2;
+const MAX_FUNNEL_STEPS = 8;
+const DEFAULT_FUNNEL_WINDOW_SECONDS = 86_400;
+
+const funnelsInput = z.object({
+  from: z.iso.date(),
+  projectId: z.string().min(1),
+  steps: z.array(z.string().min(1)).min(MIN_FUNNEL_STEPS).max(MAX_FUNNEL_STEPS),
+  to: z.iso.date(),
+  windowSeconds: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(DEFAULT_FUNNEL_WINDOW_SECONDS),
+});
+
+const funnelsLevelRow = z.object({
+  level: z.coerce.number(),
+  players: z.coerce.number(),
+});
+
+const funnelsTrendRow = z.object({
+  completed: z.coerce.number(),
+  day: z.string(),
+  started: z.coerce.number(),
+});
+
+const funnelsStep = z.object({
+  event_type: z.string(),
+  reached: z.number(),
+  step: z.number(),
+});
+
+const funnelsOutput = z.object({
+  steps: z.array(funnelsStep),
+  trend: z.array(funnelsTrendRow),
+});
+
 async function assertProjectAccess(
   projectId: string,
   userId: string
@@ -380,6 +442,168 @@ export const analyticsRouter = {
       const overTime = z.array(mapsOverTimeRow).parse(overTimeJson.data);
 
       return mapsOutput.parse({ breakdown, overTime });
+    }),
+
+  // Cohort retention: day-1/7/30 per first-seen cohort plus a maturity-gated
+  // average retention curve. Cohort date comes from player_first_seen; return
+  // activity comes from raw events.
+  retention: protectedProcedure
+    .input(retentionInput)
+    .handler(async ({ context, input }) => {
+      await assertProjectAccess(input.projectId, context.session.user.id);
+
+      const ch = clickhouse();
+      const retentionCte = `
+        WITH cohorts AS (
+          SELECT player_id, minMerge(first_seen) AS cohort_date
+          FROM analytics.player_first_seen
+          WHERE project_id = {projectId:String}
+          GROUP BY player_id
+          HAVING cohort_date BETWEEN {from:Date} AND {to:Date}
+        ),
+        activity AS (
+          SELECT DISTINCT player_id, toDate(timestamp) AS active_date
+          FROM analytics.events
+          WHERE project_id = {projectId:String}
+            AND toDate(timestamp) BETWEEN {from:Date} AND addDays({to:Date}, 30)
+        ),
+        joined AS (
+          SELECT
+            c.cohort_date AS cohort_date,
+            c.player_id   AS player_id,
+            dateDiff('day', c.cohort_date, a.active_date) AS day_offset
+          FROM cohorts AS c
+          INNER JOIN activity AS a USING (player_id)
+          WHERE a.active_date >= c.cohort_date
+            AND dateDiff('day', c.cohort_date, a.active_date) <= 30
+        )
+      `;
+
+      const [cohortsResult, curveResult] = await Promise.all([
+        ch.query({
+          format: "JSON",
+          query: `${retentionCte}
+            SELECT
+              toString(cohort_date)                            AS cohort_date,
+              toUInt64(uniqExactIf(player_id, day_offset = 0))  AS size,
+              toUInt64(uniqExactIf(player_id, day_offset = 1))  AS d1,
+              toUInt64(uniqExactIf(player_id, day_offset = 7))  AS d7,
+              toUInt64(uniqExactIf(player_id, day_offset = 30)) AS d30
+            FROM joined
+            GROUP BY cohort_date
+            ORDER BY cohort_date
+          `,
+          query_params: input,
+        }),
+        ch.query({
+          format: "JSON",
+          query: `${retentionCte}
+            SELECT
+              day_offset,
+              toUInt64(uniqExact(player_id)) AS retained
+            FROM joined
+            WHERE cohort_date <= {to:Date} - 30
+            GROUP BY day_offset
+            ORDER BY day_offset
+          `,
+          query_params: input,
+        }),
+      ]);
+
+      const cohortsJson =
+        await cohortsResult.json<z.infer<typeof retentionCohortRow>>();
+      const cohorts = z.array(retentionCohortRow).parse(cohortsJson.data);
+      const curveJson =
+        await curveResult.json<z.infer<typeof retentionCurveRow>>();
+      const curve = z.array(retentionCurveRow).parse(curveJson.data);
+
+      return retentionOutput.parse({ cohorts, curve });
+    }),
+
+  // Ad-hoc funnel over user-defined ordered event steps. windowFunnel returns
+  // the furthest consecutive step each player reached; per-step counts and a
+  // first-touch conversion trend are derived from that.
+  funnels: protectedProcedure
+    .input(funnelsInput)
+    .handler(async ({ context, input }) => {
+      await assertProjectAccess(input.projectId, context.session.user.id);
+
+      const ch = clickhouse();
+      const conditions = input.steps
+        .map((_step, index) => `event_type = {s${index}:String}`)
+        .join(", ");
+      const stepParams = Object.fromEntries(
+        input.steps.map((value, index) => [`s${index}`, value])
+      );
+      const params = {
+        from: input.from,
+        projectId: input.projectId,
+        steps: input.steps,
+        to: input.to,
+        window: input.windowSeconds,
+        ...stepParams,
+      };
+
+      const levelsCte = `
+        WITH levels AS (
+          SELECT
+            player_id,
+            toDate(min(timestamp)) AS first_day,
+            windowFunnel({window:UInt32})(timestamp, ${conditions}) AS level
+          FROM analytics.events
+          WHERE project_id = {projectId:String}
+            AND toDate(timestamp) BETWEEN {from:Date} AND {to:Date}
+            AND event_type IN {steps:Array(String)}
+          GROUP BY player_id
+        )
+      `;
+
+      const [levelsResult, trendResult] = await Promise.all([
+        ch.query({
+          format: "JSON",
+          query: `${levelsCte}
+            SELECT level, toUInt64(count()) AS players
+            FROM levels
+            WHERE level > 0
+            GROUP BY level
+            ORDER BY level
+          `,
+          query_params: params,
+        }),
+        ch.query({
+          format: "JSON",
+          query: `${levelsCte}
+            SELECT
+              toString(first_day)                            AS day,
+              toUInt64(count())                              AS started,
+              toUInt64(countIf(level >= {fullLevel:UInt8}))  AS completed
+            FROM levels
+            WHERE level > 0
+            GROUP BY first_day
+            ORDER BY first_day
+          `,
+          query_params: { ...params, fullLevel: input.steps.length },
+        }),
+      ]);
+
+      const levelsJson =
+        await levelsResult.json<z.infer<typeof funnelsLevelRow>>();
+      const levelCounts = z.array(funnelsLevelRow).parse(levelsJson.data);
+      const trendJson =
+        await trendResult.json<z.infer<typeof funnelsTrendRow>>();
+      const trend = z.array(funnelsTrendRow).parse(trendJson.data);
+
+      // Players reaching step i (0-indexed) are those whose funnel level is at
+      // least i + 1, since windowFunnel uses 1-indexed levels.
+      const steps = input.steps.map((eventType, index) => {
+        const minLevel = index + 1;
+        const reached = levelCounts
+          .filter((row) => row.level >= minLevel)
+          .reduce((sum, row) => sum + row.players, 0);
+        return { event_type: eventType, reached, step: index };
+      });
+
+      return funnelsOutput.parse({ steps, trend });
     }),
 
   // Aggregated event-type totals over a date window — backs the Events table.

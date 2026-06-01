@@ -2,10 +2,12 @@ import {
   IconActivity,
   IconChartBar,
   IconDeviceGamepad2,
+  IconFilter,
   IconListDetails,
   IconMap,
   IconSettings,
   IconUsers,
+  IconUsersGroup,
 } from "@tabler/icons-react";
 
 import type { NavItem } from "@/components/dashboard/nav-config";
@@ -32,10 +34,22 @@ export const projectNav = (projectId: string): NavItem[] => {
       url: `${base}/sessions`,
     },
     {
+      group: "Engagement",
+      icon: IconUsersGroup,
+      title: "Retention",
+      url: `${base}/retention`,
+    },
+    {
       group: "Game",
       icon: IconMap,
       title: "Maps & Modes",
       url: `${base}/maps`,
+    },
+    {
+      group: "Game",
+      icon: IconFilter,
+      title: "Funnels",
+      url: `${base}/funnels`,
     },
     {
       group: "Data",
