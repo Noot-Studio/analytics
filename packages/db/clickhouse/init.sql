@@ -7,6 +7,10 @@ CREATE TABLE IF NOT EXISTS analytics.events
     session_id   String,
     player_id    String,
     properties   String,
+    scene        LowCardinality(String) DEFAULT '',
+    pos_x        Nullable(Float32),
+    pos_y        Nullable(Float32),
+    pos_z        Nullable(Float32),
     ingested_at  DateTime64(3, 'UTC') DEFAULT now64(3)
 )
 ENGINE = MergeTree
@@ -22,7 +26,11 @@ CREATE TABLE IF NOT EXISTS analytics.events_queue
     timestamp   DateTime64(3, 'UTC'),
     session_id  String,
     player_id   String,
-    properties  String
+    properties  String,
+    scene       LowCardinality(String) DEFAULT '',
+    pos_x       Nullable(Float32),
+    pos_y       Nullable(Float32),
+    pos_z       Nullable(Float32)
 )
 ENGINE = Kafka
 SETTINGS
@@ -43,7 +51,11 @@ SELECT
     timestamp,
     session_id,
     player_id,
-    properties
+    properties,
+    scene,
+    pos_x,
+    pos_y,
+    pos_z
 FROM analytics.events_queue
 WHERE length(_error) = 0;
 
