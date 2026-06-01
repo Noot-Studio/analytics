@@ -12,6 +12,11 @@ export interface MockEvent {
   player_id: string;
   /** JSON-encoded event properties. */
   properties: string;
+  /** Scene/map for spatial events; "" for non-spatial events. */
+  scene: string;
+  pos_x: number | null;
+  pos_y: number | null;
+  pos_z: number | null;
 }
 
 export interface GenerateEventsOptions {
@@ -65,14 +70,45 @@ const makeEvent = (
   ctx: EventContext,
   eventType: string,
   at: Date,
-  properties: Record<string, unknown>
+  properties: Record<string, unknown>,
+  spatial?: { scene: string; x: number; y: number; z: number }
 ): MockEvent => ({
   event_type: eventType,
   player_id: ctx.playerId,
+  pos_x: spatial?.x ?? null,
+  pos_y: spatial?.y ?? null,
+  pos_z: spatial?.z ?? null,
   project_id: ctx.projectId,
   properties: JSON.stringify({ map: ctx.map, ...properties }),
+  scene: spatial?.scene ?? "",
   session_id: ctx.sessionId,
   timestamp: formatTimestamp(at),
+});
+
+// Fixed kill zones so seeded death heatmaps are visibly non-uniform.
+const DEATH_HOTSPOTS = [
+  { x: 600, y: -400 },
+  { x: -900, y: 200 },
+  { x: 0, y: 800 },
+] as const;
+
+// A death clustered around one of the hotspots (engine-space coordinates).
+const deathPosition = (rng: Rng, scene: string) => {
+  const hotspot = rng.pick(DEATH_HOTSPOTS);
+  return {
+    scene,
+    x: hotspot.x + rng.int(-120, 120),
+    y: hotspot.y + rng.int(-120, 120),
+    z: rng.int(0, 80),
+  };
+};
+
+// A free-roam sample spread across the playable area.
+const roamPosition = (rng: Rng, scene: string) => ({
+  scene,
+  x: rng.int(-1500, 1500),
+  y: rng.int(-1500, 1500),
+  z: rng.int(0, 300),
 });
 
 // One play session → a burst of correlated events sharing a session id.
@@ -103,10 +139,30 @@ const generateSession = (
   for (let i = 1; i <= sampleCount; i += 1) {
     const offset = Math.floor((durationSeconds * i) / (sampleCount + 1));
     events.push(
-      makeEvent(ctx, "fps_sample", at(offset), {
-        fps: rng.int(45, 240),
-        platform: ctx.platform,
-      })
+      makeEvent(
+        ctx,
+        "fps_sample",
+        at(offset),
+        {
+          fps: rng.int(45, 240),
+          platform: ctx.platform,
+        },
+        roamPosition(rng, ctx.map)
+      )
+    );
+  }
+
+  // Player deaths clustered around kill zones — powers the spatial death heatmap.
+  const deathCount = rng.int(0, 3);
+  for (let i = 0; i < deathCount; i += 1) {
+    events.push(
+      makeEvent(
+        ctx,
+        "player_death",
+        at(rng.int(10, durationSeconds)),
+        { weapon: rng.pick(["rifle", "shotgun", "pistol", "melee"]) },
+        deathPosition(rng, ctx.map)
+      )
     );
   }
 
