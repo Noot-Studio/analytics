@@ -1,4 +1,5 @@
 import {
+  Icon3dCubeSphere,
   IconActivity,
   IconChartBar,
   IconDeviceGamepad2,
@@ -44,6 +45,12 @@ export const projectNav = (projectId: string): NavItem[] => {
       icon: IconMap,
       title: "Maps & Modes",
       url: `${base}/maps`,
+    },
+    {
+      group: "Game",
+      icon: Icon3dCubeSphere,
+      title: "Spatial",
+      url: `${base}/spatial`,
     },
     {
       group: "Game",
