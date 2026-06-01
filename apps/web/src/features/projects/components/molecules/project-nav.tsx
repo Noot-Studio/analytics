@@ -47,6 +47,12 @@ export const projectNav = (projectId: string): NavItem[] => {
     },
     {
       group: "Game",
+      icon: IconActivity,
+      title: "Performance",
+      url: `${base}/performance`,
+    },
+    {
+      group: "Game",
       icon: IconFilter,
       title: "Funnels",
       url: `${base}/funnels`,
