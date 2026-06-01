@@ -1,0 +1,47 @@
+---
+title: Sessions analytics
+description: What the Sessions dashboard shows and how session duration is calculated from your events.
+---
+
+## Overview
+
+The **Sessions** view shows how long players spend in your game and when they tend to play.
+
+| Chart                          | What it shows                                                                         |
+| ------------------------------ | ------------------------------------------------------------------------------------- |
+| **Session duration histogram** | Distribution of sessions bucketed into 0–1 min, 1–5 min, 5–15 min, 15–30 min, 30 min+ |
+| **Avg duration trend**         | Daily average session length (in seconds) over the selected window                    |
+| **Activity heatmap**           | Hour × weekday grid — how many sessions started at each hour of each day of the week  |
+
+## What powers this view
+
+Session duration is derived automatically from event timestamps. No dedicated `session_end` event is required — the platform records the earliest and latest timestamp observed for each `session_id` and computes `max - min`.
+
+```json title="Minimal events that populate Sessions"
+[
+  {
+    "type": "session_start",
+    "player_id": "steam_76561198000000000",
+    "session_id": "sess_abc123",
+    "timestamp": "2025-06-01T12:00:00.000Z"
+  },
+  {
+    "type": "player_moved",
+    "player_id": "steam_76561198000000000",
+    "session_id": "sess_abc123",
+    "timestamp": "2025-06-01T12:14:37.000Z"
+  }
+]
+```
+
+The above two events produce a session duration of ~14 minutes and 37 seconds.
+
+## Activity heatmap
+
+The heatmap is based on the **start time** of each session (the earliest event timestamp for that `session_id`). The hour axis uses UTC. If your players are concentrated in a specific timezone, consider offsetting timestamps server-side or noting the UTC offset in your documentation.
+
+## Tips
+
+- **Reuse the same `session_id` for the entire play session.** If a player's session spans multiple network calls or reconnects, keep the same ID so the duration calculation spans the full playtime.
+- **Send more events for finer accuracy.** Duration is `max timestamp - min timestamp` within the session. If a player stays in the game but sends no events after the first minute, the session will appear shorter than it actually is. Heartbeat or position events emitted every 30–60 seconds improve accuracy significantly.
+- **Send a final event on disconnect.** A `session_end` or `player_disconnect` event sent when the player leaves ensures the max timestamp reflects the true end of the session, not just the last gameplay event.

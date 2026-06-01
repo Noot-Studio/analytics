@@ -1,0 +1,57 @@
+---
+title: Maps & Modes analytics
+description: What the Maps dashboard shows and the session_start event contract that powers it.
+---
+
+## Overview
+
+The **Maps & Modes** view breaks down which maps your players are spending time on.
+
+| Chart / table                | What it shows                                                         |
+| ---------------------------- | --------------------------------------------------------------------- |
+| **Sessions per map**         | Bar chart of total sessions per map, sorted by popularity             |
+| **Map breakdown table**      | Per-map: total sessions, unique players, and average session duration |
+| **Map popularity over time** | Daily session counts for the top 5 maps as a multi-line chart         |
+
+## What powers this view
+
+This view is driven exclusively by `session_start` events that include a `map` property inside the `properties` JSON object. Sessions without a matching `session_start` event are not counted.
+
+```json title="session_start event with map property"
+{
+  "type": "session_start",
+  "player_id": "steam_76561198000000000",
+  "session_id": "sess_abc123",
+  "timestamp": "2025-06-01T12:00:00.000Z",
+  "properties": {
+    "map": "dm_canyon"
+  }
+}
+```
+
+The value of `map` is a free-form string — it appears exactly as sent in all charts and tables. Use consistent casing and naming across your game to avoid `dm_canyon` and `DM_Canyon` appearing as separate maps.
+
+## Modes
+
+If your game has multiple modes on the same map, you can encode both in the `map` property or add a separate `mode` key:
+
+```json title="Map and mode together"
+{
+  "type": "session_start",
+  "properties": {
+    "map": "dm_canyon",
+    "mode": "deathmatch"
+  }
+}
+```
+
+Currently only the `map` key is used by the dashboard. The `mode` field is stored in `properties` and can be queried from the raw **Events** view.
+
+## Empty state
+
+If no `session_start` events with a `map` property have been received for a project, the Maps & Modes view shows an empty state prompting you to add the property. No data is lost — events sent without a `map` value are still ingested and visible in the **Events** view.
+
+## Tips
+
+- **Send `session_start` as the first event of every session.** The map is read from the earliest `session_start` event for each `session_id`. If you send it late or not at all, the session will not appear in the map breakdown.
+- **Use stable map identifiers.** Changing a map's string name (e.g. renaming `canyon` to `dm_canyon` in a game update) will split historical and new sessions into separate rows in the breakdown.
