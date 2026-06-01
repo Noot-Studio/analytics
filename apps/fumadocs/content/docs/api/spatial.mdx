@@ -1,0 +1,59 @@
+---
+title: Spatial events
+description: Emit 3D positions and render volumetric heatmaps of player behavior.
+icon: Box
+---
+
+Any event may carry an optional `position` (`{ x, y, z }`) and a `scene` name. Events
+that include `position` are **spatial events** — they can be aggregated into a 3D voxel
+grid and rendered as a volumetric heatmap, either in the s&box scene (via the C# SDK) or
+in the dashboard. Events without `position` are unaffected.
+
+Coordinates are always interpreted within a `scene`, so data from different maps is never
+mixed in one heatmap.
+
+## Emitting a spatial event
+
+Spatial events ride the existing [`POST /v1/events`](/docs/api/events) batch — there is no
+separate endpoint. Add `position` and `scene` to any event.
+
+| Field      | Type                    | Required | Notes                                |
+| ---------- | ----------------------- | -------- | ------------------------------------ |
+| `position` | `{ x, y, z }` (numbers) | No       | Presence marks the event as spatial. |
+| `scene`    | string (≤ 128 chars)    | No       | Map/scene the coordinates belong to. |
+
+```json
+{
+  "events": [
+    {
+      "type": "player_death",
+      "session_id": "sess_abc123",
+      "scene": "dm_arena",
+      "position": { "x": 128.0, "y": -64.5, "z": 32.0 },
+      "properties": { "fps": 58 }
+    }
+  ]
+}
+```
+
+## Querying voxels
+
+The dashboard and the engine both consume the same `spatial.voxels` payload, so a heatmap
+looks identical wherever it is rendered.
+
+- **Input**: `projectId`, `scene`, optional `eventType`, `voxelSize` (world units per cube
+  edge), `from` / `to`, an optional `metric` (`{ key, agg }` with `agg ∈ avg | min | max |
+sum`, e.g. average `fps`), optional `bounds`, and an optional `limit` (max 50000).
+- **Output**: `voxels[]` of `{ x, y, z, count, value }` where `x/y/z` is the cell center,
+  `count` is event density, and `value` is the aggregated metric (or `null` in density
+  mode). A `truncated` flag is set when the limit is hit — the hottest cells are kept.
+
+Call `spatial.scenes` first to list scenes that contain spatial data along with their
+coordinate bounds, so you can frame the heatmap.
+
+## Use cases
+
+- **Death heatmaps** — emit `player_death` with `position`; render density to find kill zones.
+- **Movement density** — sample `player_move` positions to see where players walk most.
+- **Performance hotspots** — emit an `fps_sample` event carrying `position` and an `fps`
+  property, then query with `metric: { key: "fps", agg: "avg" }` to find where frame rate drops.

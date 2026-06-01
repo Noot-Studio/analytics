@@ -32,13 +32,15 @@ The body is a JSON object with a single `events` array. Each entry is one event.
 
 Each item in `events`:
 
-| Field        | Type             | Required | Constraints / default                                                                       |
-| ------------ | ---------------- | -------- | ------------------------------------------------------------------------------------------- |
-| `type`       | string           | Yes      | 1–128 characters. The event name, e.g. `level_completed`.                                   |
-| `session_id` | string           | Yes      | 1–128 characters. Groups events from the same play session.                                 |
-| `player_id`  | string           | No       | Up to 128 characters. Defaults to `""` (anonymous).                                         |
-| `properties` | object           | No       | Arbitrary key/value metadata. JSON-encoded size must be ≤ 16 KB per event.                  |
-| `timestamp`  | string \| number | No       | An ISO 8601 datetime (or anything `Date`-parseable). Defaults to the server's receive time. |
+| Field        | Type             | Required | Constraints / default                                                                                  |
+| ------------ | ---------------- | -------- | ------------------------------------------------------------------------------------------------------ |
+| `type`       | string           | Yes      | 1–128 characters. The event name, e.g. `level_completed`.                                              |
+| `session_id` | string           | Yes      | 1–128 characters. Groups events from the same play session.                                            |
+| `player_id`  | string           | No       | Up to 128 characters. Defaults to `""` (anonymous).                                                    |
+| `properties` | object           | No       | Arbitrary key/value metadata. JSON-encoded size must be ≤ 16 KB per event.                             |
+| `timestamp`  | string \| number | No       | An ISO 8601 datetime (or anything `Date`-parseable). Defaults to the server's receive time.            |
+| `scene`      | string           | No       | Up to 128 characters. The map/scene for spatial events. Defaults to `""`.                              |
+| `position`   | object           | No       | `{ x, y, z }` world coordinates. Marks the event as spatial — see [Spatial events](/docs/api/spatial). |
 
 ### Example payload
 
