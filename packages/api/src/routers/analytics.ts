@@ -757,9 +757,9 @@ export const analyticsRouter = {
             query: `
               SELECT
                 toDate(timestamp) AS event_date,
-                round(quantile(0.5)(JSONExtractFloat64(properties, 'fps')), 1) AS p50,
-                round(quantile(0.95)(JSONExtractFloat64(properties, 'fps')), 1) AS p95,
-                round(quantile(0.99)(JSONExtractFloat64(properties, 'fps')), 1) AS p99
+                round(quantile(0.5)(JSONExtractFloat(properties, 'fps')), 1) AS p50,
+                round(quantile(0.95)(JSONExtractFloat(properties, 'fps')), 1) AS p95,
+                round(quantile(0.99)(JSONExtractFloat(properties, 'fps')), 1) AS p99
               FROM analytics.events
               WHERE project_id = {projectId:String}
                 AND event_type = 'fps_sample'
@@ -788,7 +788,7 @@ export const analyticsRouter = {
           ch.query({
             format: "JSON",
             query: `
-              WITH JSONExtractFloat64(properties, 'ms') AS ms
+              WITH JSONExtractFloat(properties, 'ms') AS ms
               SELECT
                 multiIf(ms < 100, '<100ms', ms < 250, '100-250ms', ms < 500, '250-500ms', ms < 1000, '500ms-1s', ms < 2000, '1-2s', ms < 5000, '2-5s', '5s+') AS bucket,
                 multiIf(ms < 100, 0, ms < 250, 1, ms < 500, 2, ms < 1000, 3, ms < 2000, 4, ms < 5000, 5, 6) AS bucket_index,
@@ -807,8 +807,8 @@ export const analyticsRouter = {
             query: `
               SELECT
                 JSONExtractString(properties, 'map') AS map,
-                round(avgIf(JSONExtractFloat64(properties, 'fps'), event_type = 'fps_sample'), 1) AS avg_fps,
-                round(quantileIf(0.95)(JSONExtractFloat64(properties, 'fps'), event_type = 'fps_sample'), 1) AS p95_fps,
+                round(avgIf(JSONExtractFloat(properties, 'fps'), event_type = 'fps_sample'), 1) AS avg_fps,
+                round(quantileIf(0.95)(JSONExtractFloat(properties, 'fps'), event_type = 'fps_sample'), 1) AS p95_fps,
                 countIf(event_type = 'crash') AS crashes
               FROM analytics.events
               WHERE project_id = {projectId:String}

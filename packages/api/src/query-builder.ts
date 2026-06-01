@@ -68,7 +68,7 @@ export const buildPropertyAccessor = (
 ): string => {
   const paramName = getPropertyParamName(property, propertyParams);
   if (valueType === "number") {
-    return `JSONExtractFloat64(properties, {${paramName}:String})`;
+    return `JSONExtractFloat(properties, {${paramName}:String})`;
   }
   return `JSONExtractString(properties, {${paramName}:String})`;
 };
@@ -198,28 +198,28 @@ export const buildAggregation = (
         throw new Error("aggregateProperty required for avg");
       }
       const paramName = getPropertyParamName(aggregateProperty, propertyParams);
-      return `avg(JSONExtractFloat64(properties, {${paramName}:String})) AS value`;
+      return `avg(JSONExtractFloat(properties, {${paramName}:String})) AS value`;
     }
     case "sum": {
       if (!aggregateProperty) {
         throw new Error("aggregateProperty required for sum");
       }
       const paramName = getPropertyParamName(aggregateProperty, propertyParams);
-      return `sum(JSONExtractFloat64(properties, {${paramName}:String})) AS value`;
+      return `sum(JSONExtractFloat(properties, {${paramName}:String})) AS value`;
     }
     case "min": {
       if (!aggregateProperty) {
         throw new Error("aggregateProperty required for min");
       }
       const paramName = getPropertyParamName(aggregateProperty, propertyParams);
-      return `min(JSONExtractFloat64(properties, {${paramName}:String})) AS value`;
+      return `min(JSONExtractFloat(properties, {${paramName}:String})) AS value`;
     }
     case "max": {
       if (!aggregateProperty) {
         throw new Error("aggregateProperty required for max");
       }
       const paramName = getPropertyParamName(aggregateProperty, propertyParams);
-      return `max(JSONExtractFloat64(properties, {${paramName}:String})) AS value`;
+      return `max(JSONExtractFloat(properties, {${paramName}:String})) AS value`;
     }
     default: {
       throw new Error(`Unsupported aggregation: ${aggregation}`);
