@@ -190,6 +190,80 @@ async function assertProjectAccess(
   }
 }
 
+const performanceInput = z.object({
+  from: z.iso.date(),
+  projectId: z.string().min(1),
+  to: z.iso.date(),
+});
+
+const performanceFpsRow = z.object({
+  event_date: z.string(),
+  p50: z.coerce.number(),
+  p95: z.coerce.number(),
+  p99: z.coerce.number(),
+});
+
+const performanceCrashRow = z.object({
+  crash_rate: z.coerce.number(),
+  crashes: z.coerce.number(),
+  event_date: z.string(),
+  sessions: z.coerce.number(),
+});
+
+const performanceLoadBucketRow = z.object({
+  bucket: z.string(),
+  count: z.coerce.number(),
+});
+
+const performanceMapRow = z.object({
+  avg_fps: z.coerce.number(),
+  crashes: z.coerce.number(),
+  map: z.string(),
+  p95_fps: z.coerce.number(),
+});
+
+const performanceOutput = z.object({
+  byMap: z.array(performanceMapRow),
+  crashes: z.array(performanceCrashRow),
+  fps: z.array(performanceFpsRow),
+  loadHistogram: z.array(performanceLoadBucketRow),
+});
+
+const playerProfileInput = z.object({
+  playerId: z.string().min(1),
+  projectId: z.string().min(1),
+});
+
+const playerLifetimeRow = z.object({
+  active_days: z.coerce.number(),
+  first_seen: z.string(),
+  last_seen: z.string(),
+  total_events: z.coerce.number(),
+  total_sessions: z.coerce.number(),
+});
+
+const playerSessionRow = z.object({
+  duration_seconds: z.coerce.number(),
+  ended_at: z.string(),
+  event_count: z.coerce.number(),
+  map: z.string(),
+  session_id: z.string(),
+  started_at: z.string(),
+});
+
+const playerTimelineRow = z.object({
+  event_type: z.string(),
+  properties: z.string(),
+  session_id: z.string(),
+  timestamp: z.string(),
+});
+
+const playerProfileOutput = z.object({
+  lifetime: playerLifetimeRow,
+  sessions: z.array(playerSessionRow),
+  timeline: z.array(playerTimelineRow),
+});
+
 export const analyticsRouter = {
   // Daily rollup powered by the AggregatingMergeTree in ClickHouse.
   daily: protectedProcedure
@@ -668,5 +742,172 @@ export const analyticsRouter = {
         properties: string;
       }>();
       return json.data;
+    }),
+
+  performance: protectedProcedure
+    .input(performanceInput)
+    .handler(async ({ context, input }) => {
+      await assertProjectAccess(input.projectId, context.session.user.id);
+
+      const ch = clickhouse();
+      const [fpsResult, crashResult, loadResult, byMapResult] =
+        await Promise.all([
+          ch.query({
+            format: "JSON",
+            query: `
+              SELECT
+                toDate(timestamp) AS event_date,
+                round(quantile(0.5)(JSONExtractFloat64(properties, 'fps')), 1) AS p50,
+                round(quantile(0.95)(JSONExtractFloat64(properties, 'fps')), 1) AS p95,
+                round(quantile(0.99)(JSONExtractFloat64(properties, 'fps')), 1) AS p99
+              FROM analytics.events
+              WHERE project_id = {projectId:String}
+                AND event_type = 'fps_sample'
+                AND toDate(timestamp) BETWEEN {from:Date} AND {to:Date}
+              GROUP BY event_date
+              ORDER BY event_date
+            `,
+            query_params: input,
+          }),
+          ch.query({
+            format: "JSON",
+            query: `
+              SELECT
+                toDate(timestamp) AS event_date,
+                countIf(event_type = 'crash') AS crashes,
+                uniq(session_id) AS sessions,
+                round(countIf(event_type = 'crash') / uniq(session_id), 4) AS crash_rate
+              FROM analytics.events
+              WHERE project_id = {projectId:String}
+                AND toDate(timestamp) BETWEEN {from:Date} AND {to:Date}
+              GROUP BY event_date
+              ORDER BY event_date
+            `,
+            query_params: input,
+          }),
+          ch.query({
+            format: "JSON",
+            query: `
+              WITH JSONExtractFloat64(properties, 'ms') AS ms
+              SELECT
+                multiIf(ms < 100, '<100ms', ms < 250, '100-250ms', ms < 500, '250-500ms', ms < 1000, '500ms-1s', ms < 2000, '1-2s', ms < 5000, '2-5s', '5s+') AS bucket,
+                multiIf(ms < 100, 0, ms < 250, 1, ms < 500, 2, ms < 1000, 3, ms < 2000, 4, ms < 5000, 5, 6) AS bucket_index,
+                count() AS count
+              FROM analytics.events
+              WHERE project_id = {projectId:String}
+                AND event_type = 'load_complete'
+                AND toDate(timestamp) BETWEEN {from:Date} AND {to:Date}
+              GROUP BY bucket, bucket_index
+              ORDER BY bucket_index
+            `,
+            query_params: input,
+          }),
+          ch.query({
+            format: "JSON",
+            query: `
+              SELECT
+                JSONExtractString(properties, 'map') AS map,
+                round(avgIf(JSONExtractFloat64(properties, 'fps'), event_type = 'fps_sample'), 1) AS avg_fps,
+                round(quantileIf(0.95)(JSONExtractFloat64(properties, 'fps'), event_type = 'fps_sample'), 1) AS p95_fps,
+                countIf(event_type = 'crash') AS crashes
+              FROM analytics.events
+              WHERE project_id = {projectId:String}
+                AND event_type IN ('fps_sample', 'crash')
+                AND toDate(timestamp) BETWEEN {from:Date} AND {to:Date}
+              GROUP BY map
+              HAVING map != ''
+              ORDER BY avg_fps DESC
+              LIMIT 50
+            `,
+            query_params: input,
+          }),
+        ]);
+
+      const [fpsJson, crashJson, loadJson, byMapJson] = await Promise.all([
+        fpsResult.json<z.infer<typeof performanceFpsRow>>(),
+        crashResult.json<z.infer<typeof performanceCrashRow>>(),
+        loadResult.json<z.infer<typeof performanceLoadBucketRow>>(),
+        byMapResult.json<z.infer<typeof performanceMapRow>>(),
+      ]);
+
+      return performanceOutput.parse({
+        byMap: byMapJson.data,
+        crashes: crashJson.data,
+        fps: fpsJson.data,
+        loadHistogram: loadJson.data,
+      });
+    }),
+
+  playerProfile: protectedProcedure
+    .input(playerProfileInput)
+    .handler(async ({ context, input }) => {
+      await assertProjectAccess(input.projectId, context.session.user.id);
+
+      const ch = clickhouse();
+      const [lifetimeResult, sessionsResult, timelineResult] =
+        await Promise.all([
+          ch.query({
+            format: "JSON",
+            query: `
+              SELECT
+                toString(min(timestamp)) AS first_seen,
+                toString(max(timestamp)) AS last_seen,
+                count() AS total_events,
+                uniq(session_id) AS total_sessions,
+                uniq(toDate(timestamp)) AS active_days
+              FROM analytics.events
+              WHERE project_id = {projectId:String}
+                AND player_id = {playerId:String}
+            `,
+            query_params: input,
+          }),
+          ch.query({
+            format: "JSON",
+            query: `
+              SELECT
+                session_id,
+                toString(min(timestamp)) AS started_at,
+                toString(max(timestamp)) AS ended_at,
+                dateDiff('second', min(timestamp), max(timestamp)) AS duration_seconds,
+                count() AS event_count,
+                argMin(JSONExtractString(properties, 'map'), timestamp) AS map
+              FROM analytics.events
+              WHERE project_id = {projectId:String}
+                AND player_id = {playerId:String}
+              GROUP BY session_id
+              ORDER BY started_at DESC
+              LIMIT 50
+            `,
+            query_params: input,
+          }),
+          ch.query({
+            format: "JSON",
+            query: `
+              SELECT
+                event_type,
+                toString(timestamp) AS timestamp,
+                session_id,
+                properties
+              FROM analytics.events
+              WHERE project_id = {projectId:String}
+                AND player_id = {playerId:String}
+              ORDER BY timestamp DESC
+              LIMIT 100
+            `,
+            query_params: input,
+          }),
+        ]);
+
+      const [lifetimeJson, sessionsJson, timelineJson] = await Promise.all([
+        lifetimeResult.json<z.infer<typeof playerLifetimeRow>>(),
+        sessionsResult.json<z.infer<typeof playerSessionRow>>(),
+        timelineResult.json<z.infer<typeof playerTimelineRow>>(),
+      ]);
+
+      return playerProfileOutput.parse({
+        lifetime: lifetimeJson.data[0],
+        sessions: sessionsJson.data,
+        timeline: timelineJson.data,
+      });
     }),
 };
