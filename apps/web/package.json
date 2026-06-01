@@ -19,6 +19,8 @@
     "@orpc/client": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/tanstack-query": "^1.13.14",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
     "@sbox-analytics/api": "workspace:*",
     "@sbox-analytics/env": "workspace:*",
     "@sbox-analytics/ui": "workspace:*",
@@ -39,6 +41,7 @@
     "recharts": "^3.8.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",
+    "three": "^0.184.0",
     "zod": "catalog:"
   },
   "devDependencies": {
@@ -50,6 +53,7 @@
     "@types/node": "^22.13.14",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "@types/three": "^0.184.1",
     "@vitejs/plugin-react": "^6.0.1",
     "postcss": "^8.5.10",
     "tailwindcss": "^4.2.2",
