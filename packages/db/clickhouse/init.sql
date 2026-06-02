@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS analytics.events_queue
     session_id  String,
     player_id   String,
     properties  String,
-    scene       LowCardinality(String) DEFAULT '',
+    scene       LowCardinality(String),
     pos_x       Nullable(Float32),
     pos_y       Nullable(Float32),
     pos_z       Nullable(Float32)

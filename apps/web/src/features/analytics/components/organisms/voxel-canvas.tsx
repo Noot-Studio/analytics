@@ -1,7 +1,10 @@
-import { OrbitControls, Grid } from "@react-three/drei";
-import { Canvas } from "@react-three/fiber";
+import type { OrbitControls } from "@react-three/drei";
+import { useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
+import type { ComponentRef } from "react";
 import * as THREE from "three";
+
+type OrbitControlsRef = ComponentRef<typeof OrbitControls>;
 
 interface Voxel {
   x: number;
@@ -23,8 +26,13 @@ const RED = new THREE.Color(0xef_44_44);
 const lerp = (a: THREE.Color, b: THREE.Color, t: number): THREE.Color =>
   new THREE.Color().lerpColors(a, b, t);
 
-const VoxelInstances = ({ voxels, voxelSize, useMetric }: VoxelCanvasProps) => {
+export const VoxelInstances = ({
+  voxels,
+  voxelSize,
+  useMetric,
+}: VoxelCanvasProps) => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
+  const invalidate = useThree((state) => state.invalidate);
 
   useEffect(() => {
     const mesh = meshRef.current;
@@ -42,13 +50,14 @@ const VoxelInstances = ({ voxels, voxelSize, useMetric }: VoxelCanvasProps) => {
 
     for (let i = 0; i < voxels.length; i += 1) {
       const v = voxels[i];
+      // Reset to a pure scale matrix each iteration, else .scale() compounds
+      matrix.makeScale(voxelSize, voxelSize, voxelSize);
       // Engine Z maps to Three Y so heatmap stands upright
       matrix.setPosition(
         v.x + voxelSize / 2,
         v.z + voxelSize / 2,
         v.y + voxelSize / 2
       );
-      matrix.scale(new THREE.Vector3(voxelSize, voxelSize, voxelSize));
       mesh.setMatrixAt(i, matrix);
 
       const t = intensities[i] / maxIntensity;
@@ -60,7 +69,9 @@ const VoxelInstances = ({ voxels, voxelSize, useMetric }: VoxelCanvasProps) => {
     if (mesh.instanceColor) {
       mesh.instanceColor.needsUpdate = true;
     }
-  }, [voxels, voxelSize, useMetric]);
+    // frameloop="demand": force a render after buffers change
+    invalidate();
+  }, [voxels, voxelSize, useMetric, invalidate]);
 
   if (voxels.length === 0) {
     return null;
@@ -69,33 +80,51 @@ const VoxelInstances = ({ voxels, voxelSize, useMetric }: VoxelCanvasProps) => {
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, voxels.length]}>
       <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial vertexColors />
+      <meshBasicMaterial depthWrite={false} opacity={0.55} transparent />
     </instancedMesh>
   );
 };
 
-const VoxelCanvas = ({ voxels, voxelSize, useMetric }: VoxelCanvasProps) => (
-  <Canvas
-    camera={{ far: 10_000, fov: 60, near: 0.1, position: [200, 200, 200] }}
-    frameloop="demand"
-  >
-    <ambientLight intensity={0.6} />
-    <directionalLight intensity={1} position={[100, 200, 100]} />
-    <OrbitControls makeDefault />
-    <Grid
-      args={[1000, 1000]}
-      cellColor="#6b7280"
-      sectionColor="#374151"
-      fadeDistance={2000}
-      infiniteGrid
-    />
-    <axesHelper args={[100]} />
-    <VoxelInstances
-      voxels={voxels}
-      voxelSize={voxelSize}
-      useMetric={useMetric}
-    />
-  </Canvas>
-);
+export const SceneCamera = ({
+  voxels,
+  voxelSize,
+  controlsRef,
+}: VoxelCanvasProps & {
+  controlsRef: React.RefObject<OrbitControlsRef | null>;
+}) => {
+  const camera = useThree((state) => state.camera);
+  const invalidate = useThree((state) => state.invalidate);
 
-export default VoxelCanvas;
+  useEffect(() => {
+    if (voxels.length === 0) {
+      return;
+    }
+
+    const box = new THREE.Box3();
+    const point = new THREE.Vector3();
+    for (const v of voxels) {
+      // Match VoxelInstances coord mapping (engine Z -> Three Y)
+      point.set(v.x + voxelSize / 2, v.z + voxelSize / 2, v.y + voxelSize / 2);
+      box.expandByPoint(point);
+    }
+
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const radius = Math.max(size.x, size.y, size.z, voxelSize);
+    const dist = radius * 1.5 + voxelSize * 4;
+
+    camera.position.set(center.x + dist, center.y + dist, center.z + dist);
+    camera.near = Math.max(0.1, dist / 1000);
+    camera.far = dist * 20 + 1000;
+    camera.updateProjectionMatrix();
+
+    const controls = controlsRef.current;
+    if (controls) {
+      controls.target.copy(center);
+      controls.update();
+    }
+    invalidate();
+  }, [voxels, voxelSize, camera, invalidate, controlsRef]);
+
+  return null;
+};
