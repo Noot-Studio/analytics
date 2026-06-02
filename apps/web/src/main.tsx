@@ -15,6 +15,10 @@ const router = createRouter({
   context: { orpc, queryClient },
   defaultPendingComponent: () => <Loader />,
   defaultPreload: "intent",
+  // React Query owns caching; the router shouldn't keep a second, separate copy
+  // of loader results. Setting this to 0 makes every preload defer to the query
+  // cache's own freshness (staleTime), so there is one source of truth.
+  defaultPreloadStaleTime: 0,
   routeTree,
   scrollRestoration: true,
 });

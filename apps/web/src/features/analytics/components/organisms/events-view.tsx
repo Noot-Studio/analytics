@@ -1,92 +1,132 @@
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@sbox-analytics/ui/components/empty";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@sbox-analytics/ui/components/select";
 import { useQuery } from "@tanstack/react-query";
-import { ChartNoAxesColumn } from "lucide-react";
-import { useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
+import { useMemo } from "react";
 
-import { TableSkeleton } from "@/components/table-skeleton";
+import { DataTable } from "@/components/data-table/data-table";
+import { DataTableAdvancedToolbar } from "@/components/data-table/data-table-advanced-toolbar";
+import { DataTableFilterList } from "@/components/data-table/data-table-filter-list";
+import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
+import { useDataTable } from "@/hooks/use-data-table";
+import { useQueryState } from "@/hooks/use-query-state";
+import { getFiltersStateParser, getSortingStateParser } from "@/lib/parsers";
+import { parseAsInteger } from "@/lib/query-params";
 import { orpc } from "@/utils/orpc";
 
-import { isoDaysAgo } from "../../lib/date-window";
+import { toApiFilters } from "../../lib/api-filters";
+import { useAnalyticsFilters } from "../../lib/use-analytics-filters";
+import { RelativeTime } from "../atoms/relative-time";
 import { EventsTable } from "../molecules/events-table";
+import { TimeRangeFilter } from "../molecules/time-range-filter";
 
-const WINDOWS = [
-  { days: 7, label: "Last 7 days", value: "7" },
-  { days: 30, label: "Last 30 days", value: "30" },
-  { days: 90, label: "Last 90 days", value: "90" },
+interface RecentEvent {
+  event_type: string;
+  timestamp: string;
+  session_id: string;
+  player_id: string;
+  properties: string;
+}
+
+const recentColumns: ColumnDef<RecentEvent, unknown>[] = [
+  {
+    accessorKey: "event_type",
+    enableColumnFilter: true,
+    header: "Event",
+    id: "event_type",
+    meta: { label: "Event type", variant: "select" },
+  },
+  {
+    accessorKey: "player_id",
+    enableColumnFilter: true,
+    header: "Player",
+    id: "player_id",
+    meta: { label: "Player", variant: "text" },
+  },
+  {
+    accessorKey: "session_id",
+    enableColumnFilter: true,
+    header: "Session",
+    id: "session_id",
+    meta: { label: "Session", variant: "text" },
+  },
+  {
+    accessorKey: "timestamp",
+    cell: ({ row }) => <RelativeTime date={row.original.timestamp} />,
+    header: "Time",
+    id: "timestamp",
+  },
 ];
 
-export const EventsView = ({ projectId }: { projectId: string }) => {
-  const [windowValue, setWindowValue] = useState("30");
-  const days = WINDOWS.find((entry) => entry.value === windowValue)?.days ?? 30;
+const RECENT_COLUMN_IDS = ["event_type", "player_id", "session_id"];
 
-  const query = useQuery(
-    orpc.insights.breakdown.queryOptions({
-      input: { from: isoDaysAgo(days), projectId, to: isoDaysAgo(0) },
+// Module-level parser: stable reference prevents useMemo invalidation on every render.
+const tableFiltersParser = getFiltersStateParser<RecentEvent>(
+  RECENT_COLUMN_IDS
+).withDefault([]);
+
+export const EventsView = ({ projectId }: { projectId: string }) => {
+  const { from, to } = useAnalyticsFilters();
+  // The breakdown rollup is keyed by day; raw events use full datetime bounds.
+  const fromDate = from.slice(0, 10);
+  const toDate = to.slice(0, 10);
+
+  const [page] = useQueryState("page", parseAsInteger.withDefault(1));
+  const [perPage] = useQueryState("perPage", parseAsInteger.withDefault(10));
+  const [sorting] = useQueryState(
+    "sort",
+    getSortingStateParser<RecentEvent>().withDefault([])
+  );
+  const sortEntry = sorting[0] ?? null;
+
+  const [tableFilters] = useQueryState("tableFilters", tableFiltersParser);
+
+  const apiFilters = useMemo(() => toApiFilters(tableFilters), [tableFilters]);
+
+  const recent = useQuery(
+    orpc.insights.recent.queryOptions({
+      input: {
+        filters: apiFilters.length > 0 ? apiFilters : undefined,
+        from,
+        page,
+        perPage,
+        projectId,
+        sortBy: sortEntry?.id,
+        sortDesc: sortEntry?.desc ?? false,
+        to,
+      },
     })
   );
 
-  const rows = query.data ?? [];
+  const recentRows = recent.data?.rows ?? [];
+  const total = recent.data?.total ?? 0;
+  const pageCount = perPage > 0 ? Math.ceil(total / perPage) : -1;
+
+  const { table } = useDataTable({
+    columns: recentColumns,
+    data: recentRows,
+    pageCount,
+    queryKeys: { filters: "tableFilters" },
+  });
 
   return (
     <div className="flex flex-col gap-6 p-4 lg:p-6">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="font-semibold text-2xl">Events</h1>
-          <p className="text-muted-foreground">Event totals by type.</p>
+          <h2 className="font-semibold text-lg">Events</h2>
+          <p className="text-muted-foreground text-sm">
+            Event totals by type and the raw event stream.
+          </p>
         </div>
-        <Select
-          onValueChange={(value) => {
-            if (value) {
-              setWindowValue(value);
-            }
-          }}
-          value={windowValue}
-        >
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {WINDOWS.map((entry) => (
-              <SelectItem key={entry.value} value={entry.value}>
-                {entry.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <TimeRangeFilter />
       </div>
 
-      {query.isLoading ? <TableSkeleton rows={8} /> : null}
-      {query.isError ? (
-        <div className="text-destructive">Failed to load events.</div>
-      ) : null}
-      {!query.isLoading && !query.isError && rows.length === 0 ? (
-        <Empty>
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <ChartNoAxesColumn />
-            </EmptyMedia>
-            <EmptyTitle>No events in this window</EmptyTitle>
-            <EmptyDescription>
-              Try a wider time range, or connect your s&box SDK to start sending
-              events.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      ) : null}
-      {rows.length > 0 ? <EventsTable rows={rows} /> : null}
+      <EventsTable from={fromDate} projectId={projectId} to={toDate} />
+
+      <DataTable table={table}>
+        <DataTableAdvancedToolbar table={table}>
+          <DataTableFilterList table={table} />
+          <DataTableSortList table={table} />
+        </DataTableAdvancedToolbar>
+      </DataTable>
     </div>
   );
 };
