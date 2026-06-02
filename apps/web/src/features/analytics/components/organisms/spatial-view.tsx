@@ -22,7 +22,9 @@ import { orpc } from "@/utils/orpc";
 
 import { isoDaysAgo } from "../../lib/date-window";
 
-const VoxelCanvas = lazy(() => import("./voxel-canvas"));
+const SpatialScene = lazy(() => import("./spatial-scene"));
+
+type RenderMode = "voxels" | "fog" | "surface";
 
 const SPATIAL_WINDOW_DAYS = 30;
 const DEFAULT_VOXEL_SIZE = 32;
@@ -37,6 +39,7 @@ export const SpatialView = ({ projectId }: { projectId: string }) => {
 
   const [activeScene, setActiveScene] = useState<string | undefined>();
   const [voxelSize, setVoxelSize] = useState(DEFAULT_VOXEL_SIZE);
+  const [renderMode, setRenderMode] = useState<RenderMode>("voxels");
 
   const scenesQuery = useQuery(
     orpc.insights.spatial.scenes.queryOptions({
@@ -47,9 +50,11 @@ export const SpatialView = ({ projectId }: { projectId: string }) => {
   const scenes = scenesQuery.data?.scenes ?? [];
 
   const resolvedScene = activeScene ?? scenes[0]?.scene;
+  const isVoxelsEnabled = !!resolvedScene;
 
   const voxelsQuery = useQuery(
     orpc.insights.spatial.voxels.queryOptions({
+      enabled: isVoxelsEnabled,
       input: {
         from,
         projectId,
@@ -59,8 +64,6 @@ export const SpatialView = ({ projectId }: { projectId: string }) => {
       },
     })
   );
-
-  const isVoxelsEnabled = !!resolvedScene;
 
   if (scenesQuery.isLoading) {
     return (
@@ -155,6 +158,23 @@ export const SpatialView = ({ projectId }: { projectId: string }) => {
             aria-label="Voxel size"
           />
         </div>
+
+        <div className="grid gap-1.5">
+          <Label htmlFor="render-mode">Render</Label>
+          <Select
+            onValueChange={(value) => setRenderMode(value as RenderMode)}
+            value={renderMode}
+          >
+            <SelectTrigger className="w-40" id="render-mode">
+              <SelectValue placeholder="Render mode" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="voxels">Voxels</SelectItem>
+              <SelectItem value="fog">Fog volume</SelectItem>
+              <SelectItem value="surface">Isosurface</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {truncated && (
@@ -189,10 +209,11 @@ export const SpatialView = ({ projectId }: { projectId: string }) => {
               />
             }
           >
-            <VoxelCanvas
-              voxels={voxels}
-              voxelSize={voxelSize}
+            <SpatialScene
+              renderMode={renderMode}
               useMetric={false}
+              voxelSize={voxelSize}
+              voxels={voxels}
             />
           </Suspense>
         </div>
