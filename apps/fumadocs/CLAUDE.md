@@ -1,1 +1,1 @@
-apps/fumadocs/AGENTS.md
+AGENTS.md
