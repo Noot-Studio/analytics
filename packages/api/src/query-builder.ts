@@ -8,8 +8,11 @@ export const filterOperator = z.enum([
   "lt",
   "lte",
   "contains",
+  "not_contains",
   "starts_with",
   "in",
+  "is_empty",
+  "is_not_empty",
 ]);
 
 export const filterSchema = z.object({
@@ -61,11 +64,32 @@ const getPropertyParamName = (
   return paramName;
 };
 
+/**
+ * Real top-level columns on `analytics.events`. Filters targeting these
+ * reference the column directly; everything else is read out of the JSON
+ * `properties` blob via JSONExtract. The set doubles as an allowlist — only
+ * these exact identifiers are ever interpolated as raw SQL column names.
+ */
+const KNOWN_COLUMNS = new Set([
+  "project_id",
+  "event_type",
+  "timestamp",
+  "session_id",
+  "player_id",
+  "scene",
+  "pos_x",
+  "pos_y",
+  "pos_z",
+]);
+
 export const buildPropertyAccessor = (
   property: string,
   valueType: "string" | "number",
   propertyParams: Map<string, string>
 ): string => {
+  if (KNOWN_COLUMNS.has(property)) {
+    return property;
+  }
   const paramName = getPropertyParamName(property, propertyParams);
   if (valueType === "number") {
     return `JSONExtractFloat(properties, {${paramName}:String})`;
@@ -80,67 +104,55 @@ export const getValueType = (value: unknown): "string" | "number" => {
   return "string";
 };
 
+/** Operators that compare the accessor against a single bound value. */
+const BINARY_OPERATORS = {
+  eq: "=",
+  gt: ">",
+  gte: ">=",
+  lt: "<",
+  lte: "<=",
+  neq: "!=",
+} as const;
+
 export const buildFilterCondition = (
   filter: Filter,
   index: number,
-  propertyParams: Map<string, string>
+  propertyParams: Map<string, string>,
+  options?: { accessor?: string; valueType?: "string" | "number" }
 ): { condition: string; paramName: string; paramValue: unknown } => {
-  const valueType = getValueType(
-    Array.isArray(filter.value) ? filter.value[0] : filter.value
-  );
-  const accessor = buildPropertyAccessor(
-    filter.property,
-    valueType,
-    propertyParams
-  );
+  const valueType =
+    options?.valueType ??
+    getValueType(Array.isArray(filter.value) ? filter.value[0] : filter.value);
+  const accessor =
+    options?.accessor ??
+    buildPropertyAccessor(filter.property, valueType, propertyParams);
   const paramName = `filter_${index}_value`;
 
+  const binarySymbol =
+    BINARY_OPERATORS[filter.operator as keyof typeof BINARY_OPERATORS];
+  if (binarySymbol) {
+    // Only equality respects the string/number distinction; ordering is numeric.
+    const isEquality = filter.operator === "eq" || filter.operator === "neq";
+    const paramType =
+      isEquality && valueType === "string" ? "String" : "Float64";
+    return {
+      condition: `${accessor} ${binarySymbol} {${paramName}:${paramType}}`,
+      paramName,
+      paramValue: filter.value,
+    };
+  }
+
   switch (filter.operator) {
-    case "eq": {
-      return {
-        condition: `${accessor} = {${paramName}:${valueType === "number" ? "Float64" : "String"}}`,
-        paramName,
-        paramValue: filter.value,
-      };
-    }
-    case "neq": {
-      return {
-        condition: `${accessor} != {${paramName}:${valueType === "number" ? "Float64" : "String"}}`,
-        paramName,
-        paramValue: filter.value,
-      };
-    }
-    case "gt": {
-      return {
-        condition: `${accessor} > {${paramName}:Float64}`,
-        paramName,
-        paramValue: filter.value,
-      };
-    }
-    case "gte": {
-      return {
-        condition: `${accessor} >= {${paramName}:Float64}`,
-        paramName,
-        paramValue: filter.value,
-      };
-    }
-    case "lt": {
-      return {
-        condition: `${accessor} < {${paramName}:Float64}`,
-        paramName,
-        paramValue: filter.value,
-      };
-    }
-    case "lte": {
-      return {
-        condition: `${accessor} <= {${paramName}:Float64}`,
-        paramName,
-        paramValue: filter.value,
-      };
-    }
     case "contains": {
       return {
         condition: `${accessor} LIKE {${paramName}:String}`,
+        paramName,
+        paramValue: `%${filter.value}%`,
+      };
+    }
+    case "not_contains": {
+      return {
+        condition: `${accessor} NOT LIKE {${paramName}:String}`,
         paramName,
         paramValue: `%${filter.value}%`,
       };
@@ -170,6 +182,20 @@ export const buildFilterCondition = (
         condition: `${accessor} IN (${placeholders})`,
         paramName,
         paramValue: params,
+      };
+    }
+    case "is_empty": {
+      return {
+        condition: `empty(${accessor})`,
+        paramName,
+        paramValue: {},
+      };
+    }
+    case "is_not_empty": {
+      return {
+        condition: `notEmpty(${accessor})`,
+        paramName,
+        paramValue: {},
       };
     }
     default: {
@@ -250,6 +276,111 @@ export const buildTimeBucket = (
       throw new Error(`Unsupported granularity: ${granularity}`);
     }
   }
+};
+
+/**
+ * Translate a list of advanced filters into ClickHouse WHERE fragments, binding
+ * every value into `params`. Reusable by hand-written procedures (e.g. the raw
+ * events table) that need the same operator semantics as {@link buildQuery}.
+ *
+ * @param startIndex offsets generated param names so they never collide with a
+ *   procedure's own params.
+ */
+export const applyFilters = (
+  filters: Filter[] | undefined,
+  params: Record<string, unknown>,
+  startIndex = 0
+): string[] => {
+  const conditions: string[] = [];
+  if (!filters?.length) {
+    return conditions;
+  }
+  const propertyParams = new Map<string, string>();
+  for (let i = 0; i < filters.length; i += 1) {
+    const filter = filters[i];
+    if (!filter) {
+      continue;
+    }
+    const { condition, paramName, paramValue } = buildFilterCondition(
+      filter,
+      startIndex + i,
+      propertyParams
+    );
+    conditions.push(condition);
+    if (
+      typeof paramValue === "object" &&
+      paramValue !== null &&
+      !Array.isArray(paramValue)
+    ) {
+      Object.assign(params, paramValue);
+    } else {
+      params[paramName] = paramValue;
+    }
+  }
+  for (const [property, paramName] of propertyParams) {
+    params[paramName] = property;
+  }
+  return conditions;
+};
+
+export interface ColumnFilterDef {
+  /** Exact SQL expression (or SELECT alias) the filter compares against. */
+  expr: string;
+  /** Value type — drives the bound param's ClickHouse type and operator set. */
+  type: "string" | "number";
+}
+
+/**
+ * Combine UI-derived filters into a single SQL condition (suitable for WHERE or
+ * HAVING) against an explicit column allowlist, joined by `joinOperator`. Unlike
+ * {@link applyFilters}, each column maps to an exact SQL expression/alias and a
+ * fixed value type, so aggregate aliases (`avg_fps`, `event_count`, …) can be
+ * filtered directly. Filters whose `property` is not in `columns` are dropped.
+ * Returns `null` when nothing usable remains. Values bind into `params`.
+ */
+export const buildColumnFilters = (
+  filters: Filter[] | undefined,
+  columns: Record<string, ColumnFilterDef>,
+  params: Record<string, unknown>,
+  joinOperator: "and" | "or" = "and",
+  startIndex = 0
+): string | null => {
+  if (!filters?.length) {
+    return null;
+  }
+  const propertyParams = new Map<string, string>();
+  const conditions: string[] = [];
+  for (let i = 0; i < filters.length; i += 1) {
+    const filter = filters[i];
+    if (!filter) {
+      continue;
+    }
+    const column = columns[filter.property];
+    if (!column) {
+      continue;
+    }
+    const { condition, paramName, paramValue } = buildFilterCondition(
+      filter,
+      startIndex + i,
+      propertyParams,
+      { accessor: column.expr, valueType: column.type }
+    );
+    conditions.push(condition);
+    if (
+      typeof paramValue === "object" &&
+      paramValue !== null &&
+      !Array.isArray(paramValue)
+    ) {
+      Object.assign(params, paramValue);
+    } else {
+      params[paramName] = paramValue;
+    }
+  }
+  if (conditions.length === 0) {
+    return null;
+  }
+  const glue = joinOperator === "or" ? " OR " : " AND ";
+  return `(${conditions.join(glue)})`;
 };
 
 export const buildQuery = (config: QueryConfig): QueryResult => {
