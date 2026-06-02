@@ -7,6 +7,7 @@ import {
   createRootRouteWithContext,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import { NuqsAdapter } from "nuqs/adapters/tanstack-router";
 
 import { ThemeProvider } from "@/components/theme-provider";
 import type { orpc } from "@/utils/orpc";
@@ -17,6 +18,23 @@ export interface RouterAppContext {
   orpc: typeof orpc;
   queryClient: QueryClient;
 }
+
+const RootComponent = () => (
+  <NuqsAdapter>
+    <HeadContent />
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="dark"
+      disableTransitionOnChange
+      storageKey="vite-ui-theme"
+    >
+      <Outlet />
+      <Toaster richColors />
+    </ThemeProvider>
+    <TanStackRouterDevtools position="bottom-left" />
+    <ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
+  </NuqsAdapter>
+);
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   component: RootComponent,
@@ -38,22 +56,3 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
     ],
   }),
 });
-
-function RootComponent() {
-  return (
-    <>
-      <HeadContent />
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="dark"
-        disableTransitionOnChange
-        storageKey="vite-ui-theme"
-      >
-        <Outlet />
-        <Toaster richColors />
-      </ThemeProvider>
-      <TanStackRouterDevtools position="bottom-left" />
-      <ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
-    </>
-  );
-}

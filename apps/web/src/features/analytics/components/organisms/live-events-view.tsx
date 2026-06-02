@@ -16,19 +16,18 @@ import { orpc } from "@/utils/orpc";
 import { LiveEventsTable } from "../molecules/live-events-table";
 
 const POLL_INTERVAL_MS = 5000;
-const LIVE_EVENT_LIMIT = 50;
 
 export const LiveEventsView = ({ projectId }: { projectId: string }) => {
   const [paused, setPaused] = useState(false);
 
   const query = useQuery({
     ...orpc.insights.recent.queryOptions({
-      input: { limit: LIVE_EVENT_LIMIT, projectId },
+      input: { perPage: 50, projectId },
     }),
     refetchInterval: paused ? false : POLL_INTERVAL_MS,
   });
 
-  const rows = query.data ?? [];
+  const rows = query.data?.rows ?? [];
 
   return (
     <div className="flex flex-col gap-6 p-4 lg:p-6">

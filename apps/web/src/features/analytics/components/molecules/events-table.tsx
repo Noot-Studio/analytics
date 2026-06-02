@@ -1,12 +1,27 @@
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@sbox-analytics/ui/components/table";
-import { useState } from "react";
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@sbox-analytics/ui/components/empty";
+import { useQuery } from "@tanstack/react-query";
+import type { ColumnDef } from "@tanstack/react-table";
+import { ChartNoAxesColumn } from "lucide-react";
+import { useMemo } from "react";
+
+import { DataTable } from "@/components/data-table/data-table";
+import { DataTableAdvancedToolbar } from "@/components/data-table/data-table-advanced-toolbar";
+import { DataTableFilterList } from "@/components/data-table/data-table-filter-list";
+import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
+import { TableSkeleton } from "@/components/table-skeleton";
+import { useDataTable } from "@/hooks/use-data-table";
+import { useQueryState } from "@/hooks/use-query-state";
+import { getFiltersStateParser, getSortingStateParser } from "@/lib/parsers";
+import { parseAsStringEnum } from "@/lib/query-params";
+import { orpc } from "@/utils/orpc";
+
+import { toApiFilters } from "../../lib/api-filters";
 
 export interface EventRow {
   event_type: string;
@@ -14,78 +29,128 @@ export interface EventRow {
   unique_players: number;
 }
 
-type SortKey = "event_type" | "event_count" | "unique_players";
+const COLUMN_IDS = ["event_type", "event_count", "unique_players"] as const;
 
-export const EventsTable = ({ rows }: { rows: EventRow[] }) => {
-  const [sortKey, setSortKey] = useState<SortKey>("event_count");
-  const [descending, setDescending] = useState(true);
+const columns: ColumnDef<EventRow>[] = [
+  {
+    accessorKey: "event_type",
+    enableColumnFilter: true,
+    header: "Event",
+    id: "event_type",
+    meta: { label: "Event", variant: "text" },
+  },
+  {
+    accessorKey: "event_count",
+    enableColumnFilter: true,
+    header: "Count",
+    id: "event_count",
+    meta: { label: "Count", variant: "number" },
+  },
+  {
+    accessorKey: "unique_players",
+    enableColumnFilter: true,
+    header: "Unique players",
+    id: "unique_players",
+    meta: { label: "Unique players", variant: "number" },
+  },
+];
 
-  const sorted = [...rows].toSorted((a, b) => {
-    const result =
-      sortKey === "event_type"
-        ? a.event_type.localeCompare(b.event_type)
-        : a[sortKey] - b[sortKey];
-    return descending ? -result : result;
+// Module-level parsers: stable references prevent useMemo invalidation on every render.
+const filtersParser = getFiltersStateParser<EventRow>([
+  ...COLUMN_IDS,
+]).withDefault([]);
+const joinOperatorParser = parseAsStringEnum([
+  "and",
+  "or",
+] as const).withDefault("and");
+
+export const EventsTable = ({
+  from,
+  projectId,
+  to,
+}: {
+  from: string;
+  projectId: string;
+  to: string;
+}) => {
+  const [breakdownSort] = useQueryState(
+    "breakdownSort",
+    getSortingStateParser<EventRow>().withDefault([])
+  );
+  const sortEntry = breakdownSort[0] ?? null;
+
+  const [breakdownFilters] = useQueryState("breakdownFilters", filtersParser);
+  const [joinOperator] = useQueryState(
+    "breakdownJoinOperator",
+    joinOperatorParser
+  );
+
+  const apiFilters = useMemo(
+    () => toApiFilters(breakdownFilters),
+    [breakdownFilters]
+  );
+
+  const { data, isLoading } = useQuery(
+    orpc.insights.breakdown.queryOptions({
+      input: {
+        filters: apiFilters.length > 0 ? apiFilters : undefined,
+        from,
+        joinOperator,
+        projectId,
+        sortBy: sortEntry?.id as
+          | "event_type"
+          | "event_count"
+          | "unique_players"
+          | undefined,
+        sortDesc: sortEntry?.desc ?? true,
+        to,
+      },
+    })
+  );
+
+  const rows = data ?? [];
+
+  const { table } = useDataTable({
+    columns,
+    data: rows,
+    pageCount: -1,
+    queryKeys: {
+      filters: "breakdownFilters",
+      joinOperator: "breakdownJoinOperator",
+      page: "breakdownPage",
+      perPage: "breakdownPerPage",
+      sort: "breakdownSort",
+    },
   });
 
-  const toggleSort = (key: SortKey) => {
-    if (key === sortKey) {
-      setDescending((value) => !value);
-    } else {
-      setSortKey(key);
-      setDescending(true);
-    }
-  };
+  if (isLoading) {
+    return <TableSkeleton rows={6} />;
+  }
 
-  const headerLabel = (key: SortKey, label: string) =>
-    key === sortKey ? `${label} ${descending ? "↓" : "↑"}` : label;
+  // Only short-circuit to the empty state when no filter is narrowing the set —
+  // otherwise a filter that matches nothing would hide the toolbar used to clear it.
+  if (apiFilters.length === 0 && rows.length === 0) {
+    return (
+      <Empty>
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <ChartNoAxesColumn />
+          </EmptyMedia>
+          <EmptyTitle>No events in this window</EmptyTitle>
+          <EmptyDescription>
+            Send events from your game to see them here.
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    );
+  }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>
-            <button
-              type="button"
-              className="inline-flex cursor-pointer select-none items-center gap-1 hover:text-foreground"
-              onClick={() => toggleSort("event_type")}
-            >
-              {headerLabel("event_type", "Event")}
-            </button>
-          </TableHead>
-          <TableHead className="text-right">
-            <button
-              type="button"
-              className="inline-flex cursor-pointer select-none items-center gap-1 hover:text-foreground"
-              onClick={() => toggleSort("event_count")}
-            >
-              {headerLabel("event_count", "Count")}
-            </button>
-          </TableHead>
-          <TableHead className="text-right">
-            <button
-              type="button"
-              className="inline-flex cursor-pointer select-none items-center gap-1 hover:text-foreground"
-              onClick={() => toggleSort("unique_players")}
-            >
-              {headerLabel("unique_players", "Unique players")}
-            </button>
-          </TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {sorted.map((row) => (
-          <TableRow key={row.event_type}>
-            <TableCell className="font-medium">{row.event_type}</TableCell>
-            <TableCell className="text-right tabular-nums">
-              {row.event_count.toLocaleString()}
-            </TableCell>
-            <TableCell className="text-right tabular-nums">
-              {row.unique_players.toLocaleString()}
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <DataTable table={table}>
+      <DataTableAdvancedToolbar table={table}>
+        <DataTableFilterList table={table} />
+        <DataTableSortList table={table} />
+      </DataTableAdvancedToolbar>
+    </DataTable>
   );
 };

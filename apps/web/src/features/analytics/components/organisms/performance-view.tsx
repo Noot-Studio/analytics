@@ -7,7 +7,9 @@ import {
 } from "@sbox-analytics/ui/components/empty";
 import { Skeleton } from "@sbox-analytics/ui/components/skeleton";
 import { useQuery } from "@tanstack/react-query";
+import type { ColumnDef } from "@tanstack/react-table";
 import { Activity } from "lucide-react";
+import { useMemo } from "react";
 import {
   Bar,
   BarChart,
@@ -20,22 +22,125 @@ import {
   YAxis,
 } from "recharts";
 
+import { DataTable } from "@/components/data-table/data-table";
+import { DataTableAdvancedToolbar } from "@/components/data-table/data-table-advanced-toolbar";
+import { DataTableFilterList } from "@/components/data-table/data-table-filter-list";
+import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
+import { useDataTable } from "@/hooks/use-data-table";
+import { useQueryState } from "@/hooks/use-query-state";
+import { getFiltersStateParser, getSortingStateParser } from "@/lib/parsers";
+import { parseAsStringEnum } from "@/lib/query-params";
 import { orpc } from "@/utils/orpc";
 
-import { isoDaysAgo } from "../../lib/date-window";
+import { toApiFilters } from "../../lib/api-filters";
+import { useAnalyticsFilters } from "../../lib/use-analytics-filters";
 import { MetricCard } from "../molecules/metric-card";
+import { TimeRangeFilter } from "../molecules/time-range-filter";
 
-const PERF_WINDOW_DAYS = 30;
 const PERCENT = 100;
 const CRASH_RATE_PRECISION = 2;
 
+interface PerformanceMapRow {
+  map: string;
+  avg_fps: number;
+  p95_fps: number;
+  crashes: number;
+}
+
+const mapColumns: ColumnDef<PerformanceMapRow, unknown>[] = [
+  {
+    accessorKey: "map",
+    enableColumnFilter: true,
+    header: "Map",
+    meta: { label: "Map", variant: "text" },
+  },
+  {
+    accessorKey: "avg_fps",
+    enableColumnFilter: true,
+    header: "Avg FPS",
+    meta: { label: "Avg FPS", variant: "number" },
+  },
+  {
+    accessorKey: "p95_fps",
+    enableColumnFilter: true,
+    header: "p95 FPS",
+    meta: { label: "p95 FPS", variant: "number" },
+  },
+  {
+    accessorKey: "crashes",
+    enableColumnFilter: true,
+    header: "Crashes",
+    meta: { label: "Crashes", variant: "number" },
+  },
+];
+
+const mapFiltersParser = getFiltersStateParser<PerformanceMapRow>([
+  "map",
+  "avg_fps",
+  "p95_fps",
+  "crashes",
+]).withDefault([]);
+const mapJoinOperatorParser = parseAsStringEnum([
+  "and",
+  "or",
+] as const).withDefault("and");
+
+const PerformanceByMapTable = ({ rows }: { rows: PerformanceMapRow[] }) => {
+  const { table } = useDataTable({
+    columns: mapColumns,
+    data: rows,
+    pageCount: -1,
+    queryKeys: {
+      filters: "mapFilters",
+      joinOperator: "mapJoinOperator",
+      page: "mapPage",
+      perPage: "mapPerPage",
+      sort: "mapSort",
+    },
+  });
+  return (
+    <div className="rounded-lg border border-border p-4">
+      <h2 className="mb-4 font-medium text-sm">Performance by map</h2>
+      <DataTable table={table}>
+        <DataTableAdvancedToolbar table={table}>
+          <DataTableFilterList table={table} />
+          <DataTableSortList table={table} />
+        </DataTableAdvancedToolbar>
+      </DataTable>
+    </div>
+  );
+};
+
 export const PerformanceView = ({ projectId }: { projectId: string }) => {
+  const { from, to } = useAnalyticsFilters();
+  const [mapSort] = useQueryState(
+    "mapSort",
+    getSortingStateParser<PerformanceMapRow>().withDefault([])
+  );
+  const mapSortEntry = mapSort[0] ?? null;
+
+  const [mapFilters] = useQueryState("mapFilters", mapFiltersParser);
+  const [mapJoinOperator] = useQueryState(
+    "mapJoinOperator",
+    mapJoinOperatorParser
+  );
+  const apiMapFilters = useMemo(() => toApiFilters(mapFilters), [mapFilters]);
+
   const query = useQuery(
     orpc.insights.performance.queryOptions({
       input: {
-        from: isoDaysAgo(PERF_WINDOW_DAYS),
+        from: from.slice(0, 10),
+        mapFilters: apiMapFilters.length > 0 ? apiMapFilters : undefined,
+        mapJoinOperator,
+        mapSortBy: mapSortEntry?.id as
+          | "map"
+          | "avg_fps"
+          | "p95_fps"
+          | "crashes"
+          | undefined,
+        mapSortDesc: mapSortEntry?.desc ?? false,
         projectId,
-        to: isoDaysAgo(0),
+        to: to.slice(0, 10),
       },
     })
   );
@@ -74,9 +179,9 @@ export const PerformanceView = ({ projectId }: { projectId: string }) => {
   if (!hasData) {
     return (
       <div className="flex flex-col gap-6 p-4 lg:p-6">
-        <div>
+        <div className="flex items-center justify-between gap-4">
           <h1 className="font-semibold text-2xl">Performance</h1>
-          <p className="text-muted-foreground">Last {PERF_WINDOW_DAYS} days.</p>
+          <TimeRangeFilter />
         </div>
         <Empty>
           <EmptyHeader>
@@ -105,9 +210,9 @@ export const PerformanceView = ({ projectId }: { projectId: string }) => {
 
   return (
     <div className="flex flex-col gap-6 p-4 lg:p-6">
-      <div>
+      <div className="flex items-center justify-between gap-4">
         <h1 className="font-semibold text-2xl">Performance</h1>
-        <p className="text-muted-foreground">Last {PERF_WINDOW_DAYS} days.</p>
+        <TimeRangeFilter />
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -184,36 +289,8 @@ export const PerformanceView = ({ projectId }: { projectId: string }) => {
         </ResponsiveContainer>
       </div>
 
-      {data.byMap.length > 0 ? (
-        <div className="rounded-lg border border-border p-4">
-          <h2 className="mb-4 font-medium text-sm">Performance by map</h2>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-muted-foreground">
-                <th className="py-2">Map</th>
-                <th className="py-2 text-right">Avg FPS</th>
-                <th className="py-2 text-right">p95 FPS</th>
-                <th className="py-2 text-right">Crashes</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.byMap.map((row) => (
-                <tr className="border-b" key={row.map}>
-                  <td className="py-2">{row.map}</td>
-                  <td className="py-2 text-right tabular-nums">
-                    {row.avg_fps.toLocaleString()}
-                  </td>
-                  <td className="py-2 text-right tabular-nums">
-                    {row.p95_fps.toLocaleString()}
-                  </td>
-                  <td className="py-2 text-right tabular-nums">
-                    {row.crashes.toLocaleString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {data.byMap.length > 0 || apiMapFilters.length > 0 ? (
+        <PerformanceByMapTable rows={data.byMap} />
       ) : null}
     </div>
   );

@@ -8,10 +8,21 @@ import {
 import { Skeleton } from "@sbox-analytics/ui/components/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowLeft, UserSearch } from "lucide-react";
+import { useMemo } from "react";
 
+import { DataTable } from "@/components/data-table/data-table";
+import { DataTableAdvancedToolbar } from "@/components/data-table/data-table-advanced-toolbar";
+import { DataTableFilterList } from "@/components/data-table/data-table-filter-list";
+import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
+import { useDataTable } from "@/hooks/use-data-table";
+import { useQueryState } from "@/hooks/use-query-state";
+import { getFiltersStateParser, getSortingStateParser } from "@/lib/parsers";
+import { parseAsInteger, parseAsStringEnum } from "@/lib/query-params";
 import { orpc } from "@/utils/orpc";
 
+import { toApiFilters } from "../../lib/api-filters";
 import { MetricCard } from "../molecules/metric-card";
 
 const SECONDS_PER_MINUTE = 60;
@@ -26,6 +37,61 @@ const formatDuration = (seconds: number) => {
 
 const formatTimestamp = (value: string) => value.slice(0, TIMESTAMP_LENGTH);
 
+interface SessionRow {
+  duration_seconds: number;
+  ended_at: string;
+  event_count: number;
+  map: string;
+  session_id: string;
+  started_at: string;
+}
+
+const sessionColumns: ColumnDef<SessionRow, unknown>[] = [
+  {
+    accessorKey: "started_at",
+    cell: ({ row }) => formatTimestamp(row.original.started_at),
+    enableColumnFilter: true,
+    header: "Started",
+    id: "started_at",
+    meta: { label: "Started", variant: "text" },
+  },
+  {
+    accessorKey: "map",
+    cell: ({ row }) => row.original.map || "—",
+    enableColumnFilter: true,
+    header: "Map",
+    id: "map",
+    meta: { label: "Map", variant: "text" },
+  },
+  {
+    accessorKey: "duration_seconds",
+    cell: ({ row }) => formatDuration(row.original.duration_seconds),
+    enableColumnFilter: true,
+    header: "Duration",
+    id: "duration_seconds",
+    meta: { label: "Duration", variant: "number" },
+  },
+  {
+    accessorKey: "event_count",
+    cell: ({ row }) => row.original.event_count.toLocaleString(),
+    enableColumnFilter: true,
+    header: "Events",
+    id: "event_count",
+    meta: { label: "Events", variant: "number" },
+  },
+];
+
+const sessionFiltersParser = getFiltersStateParser<SessionRow>([
+  "started_at",
+  "map",
+  "duration_seconds",
+  "event_count",
+]).withDefault([]);
+const sessionJoinOperatorParser = parseAsStringEnum([
+  "and",
+  "or",
+] as const).withDefault("and");
+
 export const PlayerProfileView = ({
   playerId,
   projectId,
@@ -33,11 +99,69 @@ export const PlayerProfileView = ({
   playerId: string;
   projectId: string;
 }) => {
+  const [sessionsPage] = useQueryState(
+    "sessionsPage",
+    parseAsInteger.withDefault(1)
+  );
+  const [sessionsPerPage] = useQueryState(
+    "sessionsPerPage",
+    parseAsInteger.withDefault(10)
+  );
+  const [sessionsSort] = useQueryState(
+    "sessionsSort",
+    getSortingStateParser<SessionRow>().withDefault([])
+  );
+  const [sessionsFilters] = useQueryState(
+    "sessionsFilters",
+    sessionFiltersParser
+  );
+  const [sessionsJoinOperator] = useQueryState(
+    "sessionsJoinOperator",
+    sessionJoinOperatorParser
+  );
+  const sessionsSortEntry = sessionsSort[0] ?? null;
+
+  const apiSessionsFilters = useMemo(
+    () => toApiFilters(sessionsFilters),
+    [sessionsFilters]
+  );
+
   const query = useQuery(
     orpc.insights.playerProfile.queryOptions({
-      input: { playerId, projectId },
+      input: {
+        playerId,
+        projectId,
+        sessionsFilters:
+          apiSessionsFilters.length > 0 ? apiSessionsFilters : undefined,
+        sessionsJoinOperator,
+        sessionsPage,
+        sessionsPerPage,
+        sessionsSortBy: sessionsSortEntry?.id as
+          | "started_at"
+          | "duration_seconds"
+          | "event_count"
+          | undefined,
+        sessionsSortDesc: sessionsSortEntry?.desc ?? true,
+      },
     })
   );
+
+  const sessionsTotal = query.data?.sessionsTotal ?? 0;
+  const sessionsPageCount = Math.ceil(sessionsTotal / sessionsPerPage);
+  const sessions = query.data?.sessions ?? [];
+
+  const { table } = useDataTable({
+    columns: sessionColumns,
+    data: sessions,
+    pageCount: sessionsPageCount,
+    queryKeys: {
+      filters: "sessionsFilters",
+      joinOperator: "sessionsJoinOperator",
+      page: "sessionsPage",
+      perPage: "sessionsPerPage",
+      sort: "sessionsSort",
+    },
+  });
 
   const playersHref = `/dashboard/projects/${projectId}/players`;
 
@@ -67,6 +191,7 @@ export const PlayerProfileView = ({
       total_sessions: 0,
     },
     sessions: [],
+    sessionsTotal: 0,
     timeline: [],
   };
 
@@ -128,32 +253,12 @@ export const PlayerProfileView = ({
 
       <div className="rounded-lg border border-border p-4">
         <h2 className="mb-4 font-medium text-sm">Session history</h2>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b text-left text-muted-foreground">
-              <th className="py-2">Started</th>
-              <th className="py-2">Map</th>
-              <th className="py-2 text-right">Duration</th>
-              <th className="py-2 text-right">Events</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.sessions.map((row) => (
-              <tr className="border-b" key={row.session_id}>
-                <td className="py-2 tabular-nums">
-                  {formatTimestamp(row.started_at)}
-                </td>
-                <td className="py-2">{row.map || "—"}</td>
-                <td className="py-2 text-right tabular-nums">
-                  {formatDuration(row.duration_seconds)}
-                </td>
-                <td className="py-2 text-right tabular-nums">
-                  {row.event_count.toLocaleString()}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable table={table}>
+          <DataTableAdvancedToolbar table={table}>
+            <DataTableFilterList table={table} />
+            <DataTableSortList table={table} />
+          </DataTableAdvancedToolbar>
+        </DataTable>
       </div>
 
       <div className="rounded-lg border border-border p-4">

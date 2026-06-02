@@ -5,8 +5,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@sbox-analytics/ui/components/empty";
-import { Skeleton } from "@sbox-analytics/ui/components/skeleton";
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { Database } from "lucide-react";
 import {
   Area,
@@ -19,50 +18,24 @@ import {
 
 import { orpc } from "@/utils/orpc";
 
-import { isoDaysAgo } from "../../lib/date-window";
+import { useAnalyticsFilters } from "../../lib/use-analytics-filters";
 import { MetricCard } from "../molecules/metric-card";
-
-const OVERVIEW_WINDOW_DAYS = 30;
+import { TimeRangeFilter } from "../molecules/time-range-filter";
 
 export const OverviewView = ({ projectId }: { projectId: string }) => {
-  const query = useQuery(
+  const { from, to } = useAnalyticsFilters();
+  // The route loader has already warmed this exact query, so useSuspenseQuery
+  // resolves from cache on mount — no client-side loading branch. The loading
+  // skeleton lives in the route's pendingComponent, errors in its errorComponent.
+  const { data: rows } = useSuspenseQuery(
     orpc.insights.daily.queryOptions({
       input: {
-        from: isoDaysAgo(OVERVIEW_WINDOW_DAYS),
+        from: from.slice(0, 10),
         projectId,
-        to: isoDaysAgo(0),
+        to: to.slice(0, 10),
       },
     })
   );
-
-  if (query.isLoading) {
-    const cardKeys = Array.from({ length: 3 }, (_, index) => `card-${index}`);
-
-    return (
-      <div className="flex flex-col gap-6 p-4 lg:p-6">
-        <div className="flex flex-col gap-2">
-          <Skeleton className="h-7 w-40" />
-          <Skeleton className="h-4 w-28" />
-        </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          {cardKeys.map((key) => (
-            <Skeleton className="h-24 w-full" key={key} />
-          ))}
-        </div>
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
-  }
-
-  if (query.isError) {
-    return (
-      <div className="p-4 text-destructive lg:p-6">
-        Failed to load analytics.
-      </div>
-    );
-  }
-
-  const rows = query.data ?? [];
 
   const totalEvents = rows.reduce((sum, row) => sum + row.event_count, 0);
   const uniquePlayers = rows.reduce((sum, row) => sum + row.unique_players, 0);
@@ -92,11 +65,9 @@ export const OverviewView = ({ projectId }: { projectId: string }) => {
 
   return (
     <div className="flex flex-col gap-6 p-4 lg:p-6">
-      <div>
+      <div className="flex items-center justify-between gap-4">
         <h1 className="font-semibold text-2xl">Overview</h1>
-        <p className="text-muted-foreground">
-          Last {OVERVIEW_WINDOW_DAYS} days.
-        </p>
+        <TimeRangeFilter />
       </div>
 
       {rows.length === 0 ? (
