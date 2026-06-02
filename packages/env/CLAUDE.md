@@ -1,1 +1,1 @@
-packages/env/AGENTS.md
+AGENTS.md

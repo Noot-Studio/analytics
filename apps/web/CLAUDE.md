@@ -1,1 +1,1 @@
-apps/web/AGENTS.md
+AGENTS.md

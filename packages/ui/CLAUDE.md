@@ -1,1 +1,1 @@
-packages/ui/AGENTS.md
+AGENTS.md

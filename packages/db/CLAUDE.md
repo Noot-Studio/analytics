@@ -1,1 +1,1 @@
-packages/db/AGENTS.md
+AGENTS.md

@@ -1,1 +1,1 @@
-apps/ingest/AGENTS.md
+AGENTS.md
