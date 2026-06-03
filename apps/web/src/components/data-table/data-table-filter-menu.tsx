@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@sbox-analytics/ui/components/select";
+import { Separator } from "@sbox-analytics/ui/components/separator";
 import { cn } from "@sbox-analytics/ui/lib/utils";
 import type { Column, Table } from "@tanstack/react-table";
 import {
@@ -30,6 +31,7 @@ import {
   CalendarIcon,
   Check,
   ListFilter,
+  Plus,
   Text,
   X,
 } from "lucide-react";
@@ -186,6 +188,14 @@ export function DataTableFilterMenu<TData>({
     debouncedSetFilters([]);
   }, [debouncedSetFilters]);
 
+  const onAddFilter = React.useCallback(() => {
+    setSelectedColumn(null);
+    setInputValue("");
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+    });
+  }, []);
+
   React.useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (
@@ -265,9 +275,25 @@ export function DataTableFilterMenu<TData>({
           {filters.length > 0 ? null : "Filter"}
         </PopoverTrigger>
         <PopoverContent
-          className="w-full max-w-(--radix-popover-content-available-width) p-0"
+          className="flex w-full max-w-(--radix-popover-content-available-width) flex-col gap-0 overflow-hidden p-0"
           {...props}
         >
+          <div className="flex items-center justify-between px-4 py-3">
+            <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+              Filter
+            </h4>
+            {filters.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="-my-1 h-auto px-1.5 py-1 font-normal text-muted-foreground"
+                onClick={onFiltersReset}
+              >
+                Clear
+              </Button>
+            )}
+          </div>
+          <Separator />
           <Command loop className="[&_[cmdk-input-wrapper]_svg]:hidden">
             <CommandInput
               ref={inputRef}
@@ -321,6 +347,13 @@ export function DataTableFilterMenu<TData>({
               )}
             </CommandList>
           </Command>
+          <Separator />
+          <div className="bg-muted/30 px-2 py-1.5">
+            <Button size="sm" variant="link" onClick={onAddFilter}>
+              <Plus />
+              Add filter
+            </Button>
+          </div>
         </PopoverContent>
       </Popover>
     </div>

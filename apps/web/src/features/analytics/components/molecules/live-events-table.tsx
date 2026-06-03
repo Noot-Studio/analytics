@@ -48,6 +48,7 @@ const columns: ColumnDef<LiveEventRow>[] = [
       <DataTableColumnHeader column={column} label="Time" />
     ),
     id: "timestamp",
+    meta: { label: "Time", variant: "date" },
   },
   {
     accessorKey: "event_type",
