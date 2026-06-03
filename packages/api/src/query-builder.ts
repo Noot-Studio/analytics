@@ -39,8 +39,8 @@ export const queryConfigSchema = z.object({
   limit: z.number().int().min(1).max(1000).default(100),
   projectId: z.string().min(1),
   timeRange: z.object({
-    from: z.string().datetime(),
-    to: z.string().datetime(),
+    from: z.iso.datetime(),
+    to: z.iso.datetime(),
   }),
 });
 
