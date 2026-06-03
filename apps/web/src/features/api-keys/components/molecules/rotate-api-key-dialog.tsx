@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@sbox-analytics/ui/components/dialog";
+import { DotmSquare4 } from "@sbox-analytics/ui/components/dotm-square-4";
 
 import { SecretReveal } from "../atoms/secret-reveal";
 
@@ -77,7 +78,11 @@ export function RotateApiKeyDialog({
               type="button"
               variant="destructive"
             >
-              {isPending ? "Rotating…" : "Rotate"}
+              {isPending ? (
+                <DotmSquare4 ariaLabel="Rotating" dotSize={2} size={18} />
+              ) : (
+                "Rotate"
+              )}
             </Button>
           </DialogFooter>
         )}

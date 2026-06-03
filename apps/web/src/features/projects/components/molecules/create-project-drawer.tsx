@@ -1,4 +1,5 @@
 import { Button } from "@sbox-analytics/ui/components/button";
+import { DotmSquare4 } from "@sbox-analytics/ui/components/dotm-square-4";
 import {
   Drawer,
   DrawerClose,
@@ -102,7 +103,11 @@ export const CreateProjectDrawer = ({
               </Select>
             </div>
             <Button disabled={isPending || !name.trim()} type="submit">
-              {isPending ? "Creating..." : "Create"}
+              {isPending ? (
+                <DotmSquare4 ariaLabel="Creating" dotSize={2} size={18} />
+              ) : (
+                "Create"
+              )}
             </Button>
           </div>
         </form>
