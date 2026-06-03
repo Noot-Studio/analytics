@@ -15,7 +15,9 @@ import { orpc } from "@/utils/orpc";
 
 import { toApiFilters } from "../../lib/api-filters";
 import { useAnalyticsFilters } from "../../lib/use-analytics-filters";
+import { PlayerLink } from "../atoms/player-link";
 import { RelativeTime } from "../atoms/relative-time";
+import { SessionLink } from "../atoms/session-link";
 import { EventsTable } from "../molecules/events-table";
 import { TimeRangeFilter } from "../molecules/time-range-filter";
 
@@ -39,6 +41,7 @@ const recentColumns: ColumnDef<RecentEvent, unknown>[] = [
   },
   {
     accessorKey: "player_id",
+    cell: ({ row }) => <PlayerLink playerId={row.original.player_id} />,
     enableColumnFilter: true,
     header: ({ column }) => (
       <DataTableColumnHeader column={column} label="Player" />
@@ -48,6 +51,7 @@ const recentColumns: ColumnDef<RecentEvent, unknown>[] = [
   },
   {
     accessorKey: "session_id",
+    cell: ({ row }) => <SessionLink sessionId={row.original.session_id} />,
     enableColumnFilter: true,
     header: ({ column }) => (
       <DataTableColumnHeader column={column} label="Session" />

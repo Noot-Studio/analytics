@@ -20,6 +20,9 @@ import { filterRows } from "@/lib/client-filter";
 import { getFiltersStateParser } from "@/lib/parsers";
 import { parseAsStringEnum } from "@/lib/query-params";
 
+import { PlayerLink } from "../atoms/player-link";
+import { SessionLink } from "../atoms/session-link";
+
 export interface LiveEventRow {
   event_type: string;
   timestamp: string;
@@ -64,9 +67,7 @@ const columns: ColumnDef<LiveEventRow>[] = [
   },
   {
     accessorKey: "player_id",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground">{row.original.player_id}</span>
-    ),
+    cell: ({ row }) => <PlayerLink playerId={row.original.player_id} />,
     enableColumnFilter: true,
     header: ({ column }) => (
       <DataTableColumnHeader column={column} label="Player" />
@@ -76,9 +77,7 @@ const columns: ColumnDef<LiveEventRow>[] = [
   },
   {
     accessorKey: "session_id",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground">{row.original.session_id}</span>
-    ),
+    cell: ({ row }) => <SessionLink sessionId={row.original.session_id} />,
     enableColumnFilter: true,
     header: ({ column }) => (
       <DataTableColumnHeader column={column} label="Session" />

@@ -18,6 +18,7 @@ import {
   ChartViewOptions,
   useChartVisibility,
 } from "../molecules/chart-view-options";
+import { SessionsListTable } from "../molecules/sessions-list-table";
 import { TimeRangeFilter } from "../molecules/time-range-filter";
 
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -150,6 +151,11 @@ export const SessionsView = ({ projectId }: { projectId: string }) => {
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="rounded-lg border border-border p-4">
+        <h2 className="mb-4 font-medium text-sm">All sessions</h2>
+        <SessionsListTable from={from} projectId={projectId} to={to} />
       </div>
     </div>
   );

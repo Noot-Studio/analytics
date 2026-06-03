@@ -1,3 +1,4 @@
+import { Badge } from "@sbox-analytics/ui/components/badge";
 import {
   Empty,
   EmptyDescription,
@@ -24,6 +25,7 @@ import { parseAsInteger, parseAsStringEnum } from "@/lib/query-params";
 import { orpc } from "@/utils/orpc";
 
 import { toApiFilters } from "../../lib/api-filters";
+import { SessionLink } from "../atoms/session-link";
 import { MetricCard } from "../molecules/metric-card";
 
 const SECONDS_PER_MINUTE = 60;
@@ -50,7 +52,11 @@ interface SessionRow {
 const sessionColumns: ColumnDef<SessionRow, unknown>[] = [
   {
     accessorKey: "started_at",
-    cell: ({ row }) => formatTimestamp(row.original.started_at),
+    cell: ({ row }) => (
+      <SessionLink sessionId={row.original.session_id}>
+        {formatTimestamp(row.original.started_at)}
+      </SessionLink>
+    ),
     enableColumnFilter: true,
     header: ({ column }) => (
       <DataTableColumnHeader column={column} label="Started" />
@@ -199,6 +205,12 @@ export const PlayerProfileView = ({
       total_events: 0,
       total_sessions: 0,
     },
+    retention: {
+      cohort_date: "",
+      retained_d1: 0,
+      retained_d30: 0,
+      retained_d7: 0,
+    },
     sessions: [],
     sessionsTotal: 0,
     timeline: [],
@@ -249,6 +261,34 @@ export const PlayerProfileView = ({
         <MetricCard label="Total events" value={data.lifetime.total_events} />
         <MetricCard label="Sessions" value={data.lifetime.total_sessions} />
         <MetricCard label="Active days" value={data.lifetime.active_days} />
+      </div>
+
+      <div className="rounded-lg border border-border p-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 className="font-medium text-sm">Retention</h2>
+          {data.retention.cohort_date ? (
+            <span className="text-muted-foreground text-xs">
+              Cohort {formatTimestamp(data.retention.cohort_date)}
+            </span>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Badge
+            variant={data.retention.retained_d1 > 0 ? "default" : "outline"}
+          >
+            Day 1
+          </Badge>
+          <Badge
+            variant={data.retention.retained_d7 > 0 ? "default" : "outline"}
+          >
+            Day 7
+          </Badge>
+          <Badge
+            variant={data.retention.retained_d30 > 0 ? "default" : "outline"}
+          >
+            Day 30
+          </Badge>
+        </div>
       </div>
 
       <div className="rounded-lg border border-border p-4">
