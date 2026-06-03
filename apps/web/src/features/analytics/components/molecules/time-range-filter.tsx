@@ -62,7 +62,13 @@ export const TimeRangeFilter = ({ className }: { className?: string }) => {
     <div className={cn("flex items-center gap-2", className)}>
       <Select onValueChange={onSelectPreset} value={range}>
         <SelectTrigger className="w-44" size="sm">
-          <SelectValue />
+          <SelectValue>
+            {(value) =>
+              value === CUSTOM_VALUE
+                ? "Custom range"
+                : TIME_PRESET_LABELS[value as TimePreset]
+            }
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           {TIME_PRESETS.map((preset) => (
