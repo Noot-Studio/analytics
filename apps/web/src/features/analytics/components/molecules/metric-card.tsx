@@ -1,45 +1,64 @@
 import { CountUpNumber } from "@sbox-analytics/ui/components/count-up-number";
 import {
   Stat,
-  StatDescription,
   StatLabel,
+  StatTrend,
   StatValue,
 } from "@sbox-analytics/ui/components/stat";
+import { ArrowDown, ArrowUp, Minus } from "lucide-react";
+
+type TrendDirection = "up" | "down" | "neutral";
+
+export interface MetricTrend {
+  direction: TrendDirection;
+  label: string;
+}
 
 interface MetricCardProps {
   label: string;
   value?: number | string;
   format?: (value: number) => string;
-  comingSoon?: boolean;
+  trend?: MetricTrend;
 }
+
+const TREND_ICON: Record<TrendDirection, typeof ArrowUp> = {
+  down: ArrowDown,
+  neutral: Minus,
+  up: ArrowUp,
+};
+
+const EMPTY_VALUE = "—";
 
 const MetricValue = ({
   value,
   format,
-  comingSoon,
-}: Pick<MetricCardProps, "value" | "format" | "comingSoon">) => {
-  if (comingSoon) {
-    return "Coming soon";
-  }
+}: Pick<MetricCardProps, "value" | "format">) => {
   if (typeof value === "number") {
     return <CountUpNumber format={format} value={value} />;
   }
-  return value;
+  return value ?? EMPTY_VALUE;
 };
 
 export const MetricCard = ({
   label,
   value,
   format,
-  comingSoon = false,
-}: MetricCardProps) => (
-  <Stat>
-    <StatLabel>{label}</StatLabel>
-    <StatValue>
-      <MetricValue comingSoon={comingSoon} format={format} value={value} />
-    </StatValue>
-    {comingSoon ? (
-      <StatDescription>Not enough data yet to compute this.</StatDescription>
-    ) : null}
-  </Stat>
-);
+  trend,
+}: MetricCardProps) => {
+  const TrendIcon = trend ? TREND_ICON[trend.direction] : null;
+
+  return (
+    <Stat>
+      <StatLabel>{label}</StatLabel>
+      <StatValue>
+        <MetricValue format={format} value={value} />
+      </StatValue>
+      {trend && TrendIcon ? (
+        <StatTrend trend={trend.direction}>
+          <TrendIcon />
+          {trend.label}
+        </StatTrend>
+      ) : null}
+    </Stat>
+  );
+};
