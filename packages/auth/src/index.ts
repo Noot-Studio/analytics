@@ -11,6 +11,7 @@ export function createAuth() {
 
   return betterAuth({
     advanced: {
+      cookiePrefix: "sbox",
       defaultCookieAttributes: {
         httpOnly: true,
         sameSite: "none",
