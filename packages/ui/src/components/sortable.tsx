@@ -319,7 +319,6 @@ const SortableContentContext = React.createContext<boolean>(false);
 
 interface SortableContentProps extends React.ComponentProps<"div"> {
   strategy?: SortableContextProps["strategy"];
-  render?: React.ReactElement<Record<string, unknown>>;
   children: React.ReactNode;
   asChild?: boolean;
   withoutSlot?: boolean;

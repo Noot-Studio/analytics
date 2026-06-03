@@ -35,6 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@sbox-analytics/ui/components/select";
+import { Separator } from "@sbox-analytics/ui/components/separator";
 import { cn } from "@sbox-analytics/ui/lib/utils";
 import type { Column, ColumnMeta, Table } from "@tanstack/react-table";
 import {
@@ -257,71 +258,66 @@ export function DataTableFilterList<TData>({
       <PopoverContent
         aria-describedby={descriptionId}
         aria-labelledby={labelId}
-        className="flex w-full max-w-(--radix-popover-content-available-width) flex-col p-0 sm:min-w-[440px]"
+        className="flex w-full max-w-(--radix-popover-content-available-width) flex-col gap-0 overflow-hidden p-0 sm:min-w-[440px]"
         {...props}
       >
+        <div className="flex items-center justify-between px-4 py-3">
+          <h4
+            id={labelId}
+            className="font-medium text-muted-foreground text-xs uppercase tracking-wide"
+          >
+            Filter
+          </h4>
+          {filters.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="-my-1 h-auto px-1.5 py-1 font-normal text-muted-foreground"
+              onClick={onFiltersReset}
+            >
+              Clear
+            </Button>
+          )}
+        </div>
+        <Separator />
         <p id={descriptionId} className="sr-only">
           {filters.length > 0
             ? "Modify filters to refine your rows."
             : "Add filters to refine your rows."}
         </p>
         {filters.length > 0 ? (
-          <div className="flex flex-col gap-3 p-4">
-            <h4 id={labelId} className="sr-only">
-              Filters
-            </h4>
-            <ul className="flex max-h-[300px] flex-col gap-2 overflow-y-auto">
-              {filters.map((filter, index) => (
-                <DataTableFilterItem<TData>
-                  key={filter.filterId}
-                  filter={filter}
-                  index={index}
-                  filterItemId={`${id}-filter-${filter.filterId}`}
-                  joinOperator={joinOperator}
-                  setJoinOperator={setJoinOperator}
-                  columns={columns}
-                  onFilterUpdate={onFilterUpdate}
-                  onFilterRemove={onFilterRemove}
-                />
-              ))}
-            </ul>
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="link"
-                ref={addButtonRef}
-                onClick={onFilterAdd}
-              >
-                <Plus />
-                Add filter
-              </Button>
-              <Button size="sm" variant="ghost" onClick={onFiltersReset}>
-                Clear all
-              </Button>
-            </div>
-          </div>
+          <ul className="flex max-h-[300px] flex-col gap-2 overflow-y-auto p-3">
+            {filters.map((filter, index) => (
+              <DataTableFilterItem<TData>
+                key={filter.filterId}
+                filter={filter}
+                index={index}
+                filterItemId={`${id}-filter-${filter.filterId}`}
+                joinOperator={joinOperator}
+                setJoinOperator={setJoinOperator}
+                columns={columns}
+                onFilterUpdate={onFilterUpdate}
+                onFilterRemove={onFilterRemove}
+              />
+            ))}
+          </ul>
         ) : (
-          <div className="flex flex-col gap-3 p-4">
-            <div className="flex flex-col gap-1">
-              <h4 id={labelId} className="font-medium text-sm leading-none">
-                No filters applied
-              </h4>
-              <p className="text-muted-foreground text-sm">
-                Add filters to refine your rows.
-              </p>
-            </div>
-            <Button
-              className="self-start"
-              size="sm"
-              variant="link"
-              ref={addButtonRef}
-              onClick={onFilterAdd}
-            >
-              <Plus />
-              Add filter
-            </Button>
-          </div>
+          <p className="px-4 py-4 text-muted-foreground text-sm">
+            No filters applied — all rows shown.
+          </p>
         )}
+        <Separator />
+        <div className="bg-muted/30 px-2 py-1.5">
+          <Button
+            size="sm"
+            variant="link"
+            ref={addButtonRef}
+            onClick={onFilterAdd}
+          >
+            <Plus />
+            Add filter
+          </Button>
+        </div>
       </PopoverContent>
     </Popover>
   );
