@@ -1,3 +1,4 @@
+import { Bar, Line } from "@sbox-analytics/ui/components/chart-series";
 import {
   Empty,
   EmptyDescription,
@@ -18,9 +19,7 @@ import { IconFilter } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import {
-  Bar,
   BarChart,
-  Line,
   LineChart,
   ResponsiveContainer,
   Tooltip,

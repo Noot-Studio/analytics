@@ -1,3 +1,4 @@
+import { Area, Bar } from "@sbox-analytics/ui/components/chart-series";
 import {
   Empty,
   EmptyDescription,
@@ -9,9 +10,7 @@ import { Skeleton } from "@sbox-analytics/ui/components/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { Users } from "lucide-react";
 import {
-  Area,
   AreaChart,
-  Bar,
   BarChart,
   Legend,
   ResponsiveContainer,
@@ -86,14 +85,8 @@ export const PlayersView = ({ projectId }: { projectId: string }) => {
       <PlayersHeader />
 
       <div className="grid gap-4 md:grid-cols-2">
-        <MetricCard
-          label="WAU (last 7 days)"
-          value={data.wau.toLocaleString()}
-        />
-        <MetricCard
-          label="MAU (last 30 days)"
-          value={data.mau.toLocaleString()}
-        />
+        <MetricCard label="WAU (last 7 days)" value={data.wau} />
+        <MetricCard label="MAU (last 30 days)" value={data.mau} />
       </div>
 
       {data.daily.length === 0 ? (

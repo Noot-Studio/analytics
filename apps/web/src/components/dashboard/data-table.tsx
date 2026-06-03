@@ -6,6 +6,7 @@ import {
   ChartTooltipContent,
 } from "@sbox-analytics/ui/components/chart";
 import type { ChartConfig } from "@sbox-analytics/ui/components/chart";
+import { Area } from "@sbox-analytics/ui/components/chart-series";
 import { Checkbox } from "@sbox-analytics/ui/components/checkbox";
 import {
   Drawer,
@@ -49,7 +50,7 @@ import {
 } from "@tabler/icons-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import * as React from "react";
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
+import { AreaChart, CartesianGrid, XAxis } from "recharts";
 import { z } from "zod";
 
 import dataJson from "@/components/dashboard/data.json";

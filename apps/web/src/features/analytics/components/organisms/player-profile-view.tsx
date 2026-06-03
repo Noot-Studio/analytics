@@ -246,18 +246,9 @@ export const PlayerProfileView = ({
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <MetricCard
-          label="Total events"
-          value={data.lifetime.total_events.toLocaleString()}
-        />
-        <MetricCard
-          label="Sessions"
-          value={data.lifetime.total_sessions.toLocaleString()}
-        />
-        <MetricCard
-          label="Active days"
-          value={data.lifetime.active_days.toLocaleString()}
-        />
+        <MetricCard label="Total events" value={data.lifetime.total_events} />
+        <MetricCard label="Sessions" value={data.lifetime.total_sessions} />
+        <MetricCard label="Active days" value={data.lifetime.active_days} />
       </div>
 
       <div className="rounded-lg border border-border p-4">
