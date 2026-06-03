@@ -110,8 +110,14 @@ const sessionsOutput = z.object({
 });
 
 const mapsInput = z.object({
+  filters: z.array(filterSchema).max(10).optional(),
   from: z.iso.date(),
+  joinOperator: z.enum(["and", "or"]).default("and"),
+  page: z.number().int().min(1).default(1),
+  perPage: z.number().int().min(1).max(100).default(10),
   projectId: z.string().min(1),
+  sortBy: z.enum(["map", "sessions", "players", "avg_seconds"]).optional(),
+  sortDesc: z.boolean().default(true),
   to: z.iso.date(),
 });
 
@@ -122,6 +128,15 @@ const mapsBreakdownRow = z.object({
   sessions: z.coerce.number(),
 });
 
+// Filterable/sortable columns for the per-map table. `map` is the GROUP BY key;
+// the rest are aggregate aliases — all referenced via HAVING / ORDER BY.
+const MAPS_TABLE_FILTER_COLUMNS: Record<string, ColumnFilterDef> = {
+  avg_seconds: { expr: "avg_seconds", type: "number" },
+  map: { expr: "map", type: "string" },
+  players: { expr: "players", type: "number" },
+  sessions: { expr: "sessions", type: "number" },
+};
+
 const mapsOverTimeRow = z.object({
   event_date: z.string(),
   map: z.string(),
@@ -129,16 +144,30 @@ const mapsOverTimeRow = z.object({
 });
 
 const mapsOutput = z.object({
+  // Top-N maps by sessions, unaffected by table paging — drives the charts.
   breakdown: z.array(mapsBreakdownRow),
   overTime: z.array(mapsOverTimeRow),
+  // Server-side filtered/sorted/paginated rows for the data-table.
+  table: z.object({
+    rows: z.array(mapsBreakdownRow),
+    total: z.coerce.number(),
+  }),
 });
 
 const retentionInput = z.object({
+  filters: z.array(filterSchema).max(10).optional(),
   from: z.iso.date(),
+  joinOperator: z.enum(["and", "or"]).default("and"),
+  page: z.number().int().min(1).default(1),
+  perPage: z.number().int().min(1).max(100).default(10),
   projectId: z.string().min(1),
+  sortBy: z.enum(["cohort_date", "size", "d1", "d7", "d30"]).optional(),
+  sortDesc: z.boolean().default(true),
   to: z.iso.date(),
 });
 
+// d1/d7/d30 are whole-percent retention rates (not raw counts), so the cohort
+// table sorts/filters on the same numbers it displays.
 const retentionCohortRow = z.object({
   cohort_date: z.string(),
   d1: z.coerce.number(),
@@ -147,14 +176,27 @@ const retentionCohortRow = z.object({
   size: z.coerce.number(),
 });
 
+// Cohort table columns: cohort_date is the GROUP BY key, the rest are aggregate
+// aliases — all referenced via HAVING / ORDER BY.
+const RETENTION_COHORT_FILTER_COLUMNS: Record<string, ColumnFilterDef> = {
+  cohort_date: { expr: "cohort_date", type: "string" },
+  d1: { expr: "d1", type: "number" },
+  d30: { expr: "d30", type: "number" },
+  d7: { expr: "d7", type: "number" },
+  size: { expr: "size", type: "number" },
+};
+
 const retentionCurveRow = z.object({
   day_offset: z.coerce.number(),
   retained: z.coerce.number(),
 });
 
 const retentionOutput = z.object({
-  cohorts: z.array(retentionCohortRow),
   curve: z.array(retentionCurveRow),
+  table: z.object({
+    rows: z.array(retentionCohortRow),
+    total: z.coerce.number(),
+  }),
 });
 
 const MIN_FUNNEL_STEPS = 2;
@@ -619,10 +661,65 @@ export const analyticsRouter = {
           GROUP BY session_id
         )`;
 
-      const [breakdownResult, overTimeResult] = await Promise.all([
-        ch.query({
-          format: "JSON",
-          query: `${mapsCte}
+      const MAPS_SORT_COLS = {
+        avg_seconds: "avg_seconds",
+        map: "map",
+        players: "players",
+        sessions: "sessions",
+      } as const;
+      const tableSortCol = input.sortBy
+        ? (MAPS_SORT_COLS[input.sortBy] ?? "sessions")
+        : "sessions";
+      const tableSortDir = input.sortDesc ? "DESC" : "ASC";
+      const tableOffset = (input.page - 1) * input.perPage;
+
+      // Aggregate-alias filters apply via HAVING, mirrored into the count query
+      // so pagination reflects the filtered total. Each query binds into its own
+      // param object so the generated filter param names never collide.
+      const tableParams: Record<string, unknown> = {
+        from: input.from,
+        offset: tableOffset,
+        perPage: input.perPage,
+        projectId: input.projectId,
+        to: input.to,
+      };
+      const tableFilter = buildColumnFilters(
+        input.filters,
+        MAPS_TABLE_FILTER_COLUMNS,
+        tableParams,
+        input.joinOperator
+      );
+      const tableHaving = tableFilter ? `HAVING ${tableFilter}` : "";
+
+      const countParams: Record<string, unknown> = {
+        from: input.from,
+        projectId: input.projectId,
+        to: input.to,
+      };
+      const countFilter = buildColumnFilters(
+        input.filters,
+        MAPS_TABLE_FILTER_COLUMNS,
+        countParams,
+        input.joinOperator
+      );
+      const countHaving = countFilter ? `HAVING ${countFilter}` : "";
+
+      const tableSelect = `
+        SELECT
+          m.map                            AS map,
+          toUInt64(uniq(m.session_id))     AS sessions,
+          toUInt64(uniq(m.player_id))      AS players,
+          toUInt64(round(avg(d.duration))) AS avg_seconds
+        FROM session_maps AS m
+        LEFT JOIN durations AS d USING (session_id)
+        WHERE m.map != ''
+        GROUP BY m.map`;
+
+      const [breakdownResult, overTimeResult, tableResult, tableCountResult] =
+        await Promise.all([
+          ch.query({
+            format: "JSON",
+            query: `${mapsCte}
             SELECT
               m.map                            AS map,
               toUInt64(uniq(m.session_id))     AS sessions,
@@ -635,11 +732,11 @@ export const analyticsRouter = {
             ORDER BY sessions DESC
             LIMIT 50
           `,
-          query_params: input,
-        }),
-        ch.query({
-          format: "JSON",
-          query: `${mapsCte}
+            query_params: input,
+          }),
+          ch.query({
+            format: "JSON",
+            query: `${mapsCte}
             SELECT
               toString(event_date)         AS event_date,
               map                          AS map,
@@ -649,9 +746,30 @@ export const analyticsRouter = {
             GROUP BY event_date, map
             ORDER BY event_date, sessions DESC
           `,
-          query_params: input,
-        }),
-      ]);
+            query_params: input,
+          }),
+          ch.query({
+            format: "JSON",
+            query: `${mapsCte}
+            ${tableSelect}
+            ${tableHaving}
+            ORDER BY ${tableSortCol} ${tableSortDir}
+            LIMIT {perPage:UInt32} OFFSET {offset:UInt32}
+          `,
+            query_params: tableParams,
+          }),
+          ch.query({
+            format: "JSON",
+            query: `
+            SELECT count() AS total FROM (
+              ${mapsCte}
+              ${tableSelect}
+              ${countHaving}
+            )
+          `,
+            query_params: countParams,
+          }),
+        ]);
 
       const breakdownJson =
         await breakdownResult.json<z.infer<typeof mapsBreakdownRow>>();
@@ -661,7 +779,17 @@ export const analyticsRouter = {
         await overTimeResult.json<z.infer<typeof mapsOverTimeRow>>();
       const overTime = z.array(mapsOverTimeRow).parse(overTimeJson.data);
 
-      return mapsOutput.parse({ breakdown, overTime });
+      const tableJson =
+        await tableResult.json<z.infer<typeof mapsBreakdownRow>>();
+      const tableRows = z.array(mapsBreakdownRow).parse(tableJson.data);
+      const tableCountJson = await tableCountResult.json<{ total: string }>();
+      const tableTotal = Number(tableCountJson.data[0]?.total ?? 0);
+
+      return mapsOutput.parse({
+        breakdown,
+        overTime,
+        table: { rows: tableRows, total: tableTotal },
+      });
     }),
 
   // Cohort retention: day-1/7/30 per first-seen cohort plus a maturity-gated
@@ -699,21 +827,81 @@ export const analyticsRouter = {
         )
       `;
 
-      const [cohortsResult, curveResult] = await Promise.all([
+      const RETENTION_SORT_COLS = {
+        cohort_date: "cohort_date",
+        d1: "d1",
+        d30: "d30",
+        d7: "d7",
+        size: "size",
+      } as const;
+      const tableSortCol = input.sortBy
+        ? (RETENTION_SORT_COLS[input.sortBy] ?? "cohort_date")
+        : "cohort_date";
+      const tableSortDir = input.sortDesc ? "DESC" : "ASC";
+      const tableOffset = (input.page - 1) * input.perPage;
+
+      // d1/d7/d30 are emitted as whole-percent retention rates so the table
+      // sorts/filters on the same numbers it displays. nullIf guards the
+      // empty-cohort divide.
+      const cohortSelect = `
+        SELECT
+          toString(cohort_date)                            AS cohort_date,
+          toUInt64(uniqExactIf(player_id, day_offset = 0)) AS size,
+          ifNull(round(uniqExactIf(player_id, day_offset = 1)  / nullIf(uniqExactIf(player_id, day_offset = 0), 0) * 100), 0) AS d1,
+          ifNull(round(uniqExactIf(player_id, day_offset = 7)  / nullIf(uniqExactIf(player_id, day_offset = 0), 0) * 100), 0) AS d7,
+          ifNull(round(uniqExactIf(player_id, day_offset = 30) / nullIf(uniqExactIf(player_id, day_offset = 0), 0) * 100), 0) AS d30
+        FROM joined
+        GROUP BY cohort_date`;
+
+      const tableParams: Record<string, unknown> = {
+        from: input.from,
+        offset: tableOffset,
+        perPage: input.perPage,
+        projectId: input.projectId,
+        to: input.to,
+      };
+      const tableFilter = buildColumnFilters(
+        input.filters,
+        RETENTION_COHORT_FILTER_COLUMNS,
+        tableParams,
+        input.joinOperator
+      );
+      const tableHaving = tableFilter ? `HAVING ${tableFilter}` : "";
+
+      const countParams: Record<string, unknown> = {
+        from: input.from,
+        projectId: input.projectId,
+        to: input.to,
+      };
+      const countFilter = buildColumnFilters(
+        input.filters,
+        RETENTION_COHORT_FILTER_COLUMNS,
+        countParams,
+        input.joinOperator
+      );
+      const countHaving = countFilter ? `HAVING ${countFilter}` : "";
+
+      const [tableResult, tableCountResult, curveResult] = await Promise.all([
         ch.query({
           format: "JSON",
           query: `${retentionCte}
-            SELECT
-              toString(cohort_date)                            AS cohort_date,
-              toUInt64(uniqExactIf(player_id, day_offset = 0))  AS size,
-              toUInt64(uniqExactIf(player_id, day_offset = 1))  AS d1,
-              toUInt64(uniqExactIf(player_id, day_offset = 7))  AS d7,
-              toUInt64(uniqExactIf(player_id, day_offset = 30)) AS d30
-            FROM joined
-            GROUP BY cohort_date
-            ORDER BY cohort_date
+            ${cohortSelect}
+            ${tableHaving}
+            ORDER BY ${tableSortCol} ${tableSortDir}
+            LIMIT {perPage:UInt32} OFFSET {offset:UInt32}
           `,
-          query_params: input,
+          query_params: tableParams,
+        }),
+        ch.query({
+          format: "JSON",
+          query: `
+            SELECT count() AS total FROM (
+              ${retentionCte}
+              ${cohortSelect}
+              ${countHaving}
+            )
+          `,
+          query_params: countParams,
         }),
         ch.query({
           format: "JSON",
@@ -730,14 +918,19 @@ export const analyticsRouter = {
         }),
       ]);
 
-      const cohortsJson =
-        await cohortsResult.json<z.infer<typeof retentionCohortRow>>();
-      const cohorts = z.array(retentionCohortRow).parse(cohortsJson.data);
+      const tableJson =
+        await tableResult.json<z.infer<typeof retentionCohortRow>>();
+      const tableRows = z.array(retentionCohortRow).parse(tableJson.data);
+      const tableCountJson = await tableCountResult.json<{ total: string }>();
+      const tableTotal = Number(tableCountJson.data[0]?.total ?? 0);
       const curveJson =
         await curveResult.json<z.infer<typeof retentionCurveRow>>();
       const curve = z.array(retentionCurveRow).parse(curveJson.data);
 
-      return retentionOutput.parse({ cohorts, curve });
+      return retentionOutput.parse({
+        curve,
+        table: { rows: tableRows, total: tableTotal },
+      });
     }),
 
   // Ad-hoc funnel over user-defined ordered event steps. windowFunnel returns

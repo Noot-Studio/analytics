@@ -30,10 +30,10 @@ import {
 
 import { orpc } from "@/utils/orpc";
 
-import { isoDaysAgo } from "../../lib/date-window";
+import { useAnalyticsFilters } from "../../lib/use-analytics-filters";
 import { FunnelBuilder } from "../molecules/funnel-builder";
+import { TimeRangeFilter } from "../molecules/time-range-filter";
 
-const FUNNEL_WINDOW_DAYS = 30;
 const MIN_FUNNEL_STEPS = 2;
 const PERCENT = 100;
 const CHART_HEIGHT = 240;
@@ -44,7 +44,8 @@ const pct = (value: number, total: number): number =>
 
 export const FunnelsView = ({ projectId }: { projectId: string }) => {
   const [steps, setSteps] = useState<string[]>([]);
-  const window = { from: isoDaysAgo(FUNNEL_WINDOW_DAYS), to: isoDaysAgo(0) };
+  const { from, to } = useAnalyticsFilters();
+  const window = { from: from.slice(0, 10), to: to.slice(0, 10) };
 
   const typesQuery = useQuery(
     orpc.insights.breakdown.queryOptions({
@@ -69,12 +70,15 @@ export const FunnelsView = ({ projectId }: { projectId: string }) => {
 
   return (
     <div className="flex flex-col gap-6 p-4 lg:p-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="font-semibold text-2xl">Funnels</h1>
-        <p className="text-muted-foreground text-sm">
-          Build a step sequence to see where players drop off, over the last{" "}
-          {FUNNEL_WINDOW_DAYS} days.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <h1 className="font-semibold text-2xl">Funnels</h1>
+          <p className="text-muted-foreground text-sm">
+            Build a step sequence to see where players drop off over the
+            selected range.
+          </p>
+        </div>
+        <TimeRangeFilter />
       </div>
 
       <FunnelBuilder
