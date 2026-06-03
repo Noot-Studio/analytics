@@ -1,9 +1,9 @@
-import { Loader2 } from "lucide-react";
+import { DotmSquare4 } from "@sbox-analytics/ui/components/dotm-square-4";
 
 export default function Loader() {
   return (
-    <div className="flex h-full items-center justify-center pt-8">
-      <Loader2 className="animate-spin" />
+    <div className="flex min-h-svh items-center justify-center">
+      <DotmSquare4 />
     </div>
   );
 }

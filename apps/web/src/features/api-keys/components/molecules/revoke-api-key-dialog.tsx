@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@sbox-analytics/ui/components/dialog";
+import { DotmSquare4 } from "@sbox-analytics/ui/components/dotm-square-4";
 
 interface RevokeApiKeyDialogProps {
   keyName: string;
@@ -49,7 +50,11 @@ export function RevokeApiKeyDialog({
             type="button"
             variant="destructive"
           >
-            {isPending ? "Revoking…" : "Revoke"}
+            {isPending ? (
+              <DotmSquare4 ariaLabel="Revoking" dotSize={2} size={18} />
+            ) : (
+              "Revoke"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@sbox-analytics/ui/components/dialog";
+import { DotmSquare4 } from "@sbox-analytics/ui/components/dotm-square-4";
 import { Input } from "@sbox-analytics/ui/components/input";
 import { Label } from "@sbox-analytics/ui/components/label";
 import { useState } from "react";
@@ -99,7 +100,11 @@ export function CreateApiKeyDialog({
                 Cancel
               </Button>
               <Button disabled={isPending || !name.trim()} type="submit">
-                {isPending ? "Creating…" : "Create"}
+                {isPending ? (
+                  <DotmSquare4 ariaLabel="Creating" dotSize={2} size={18} />
+                ) : (
+                  "Create"
+                )}
               </Button>
             </DialogFooter>
           </form>

@@ -1,4 +1,5 @@
 import { Button } from "@sbox-analytics/ui/components/button";
+import { DotmSquare4 } from "@sbox-analytics/ui/components/dotm-square-4";
 import {
   Field,
   FieldGroup,
@@ -122,7 +123,11 @@ export const OrgForm = ({
                 type="submit"
                 disabled={!canSubmit || isSubmitting || isLoading}
               >
-                {isSubmitting || isLoading ? "Creating..." : submitLabel}
+                {isSubmitting || isLoading ? (
+                  <DotmSquare4 ariaLabel="Creating" dotSize={2} size={18} />
+                ) : (
+                  submitLabel
+                )}
               </Button>
             </Field>
           )}

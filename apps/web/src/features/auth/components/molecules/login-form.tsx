@@ -1,5 +1,6 @@
 import { env } from "@sbox-analytics/env/web";
 import { Button } from "@sbox-analytics/ui/components/button";
+import { DotmSquare4 } from "@sbox-analytics/ui/components/dotm-square-4";
 import {
   Field,
   FieldDescription,
@@ -40,12 +41,8 @@ const startSteamSignIn = () => {
   window.location.href = url.toString();
 };
 
-const getSubmitLabel = (isSubmitting: boolean, isSignUp: boolean) => {
-  if (isSubmitting) {
-    return "Submitting...";
-  }
-  return isSignUp ? "Create account" : "Sign in";
-};
+const getSubmitLabel = (isSignUp: boolean) =>
+  isSignUp ? "Create account" : "Sign in";
 
 export const LoginForm = ({
   className,
@@ -201,7 +198,11 @@ export const LoginForm = ({
             {({ canSubmit, isSubmitting }) => (
               <Field>
                 <Button type="submit" disabled={!canSubmit || isSubmitting}>
-                  {getSubmitLabel(isSubmitting, isSignUp)}
+                  {isSubmitting ? (
+                    <DotmSquare4 ariaLabel="Submitting" dotSize={2} size={18} />
+                  ) : (
+                    getSubmitLabel(isSignUp)
+                  )}
                 </Button>
               </Field>
             )}
