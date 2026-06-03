@@ -1,3 +1,4 @@
+import { Bar, Line } from "@sbox-analytics/ui/components/chart-series";
 import {
   Empty,
   EmptyDescription,
@@ -11,10 +12,8 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { Map as MapIcon } from "lucide-react";
 import { useMemo } from "react";
 import {
-  Bar,
   BarChart,
   Legend,
-  Line,
   LineChart,
   ResponsiveContainer,
   Tooltip,

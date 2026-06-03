@@ -1,3 +1,4 @@
+import { Line } from "@sbox-analytics/ui/components/chart-series";
 import {
   Empty,
   EmptyDescription,
@@ -11,7 +12,6 @@ import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMemo } from "react";
 import {
-  Line,
   LineChart,
   ResponsiveContainer,
   Tooltip,
@@ -45,6 +45,8 @@ const CURVE_SERIES = [{ key: "retention", label: "Retention" }];
 
 const pct = (value: number, total: number): number =>
   total > 0 ? Math.round((value / total) * PERCENT) : 0;
+
+const formatPercent = (value: number): string => `${Math.round(value)}%`;
 
 interface CohortRow {
   cohort_date: string;
@@ -244,16 +246,19 @@ export const RetentionView = ({ projectId }: { projectId: string }) => {
 
       <div className="grid gap-4 md:grid-cols-3">
         <MetricCard
+          format={formatPercent}
           label="Day-1 retention"
-          value={`${pct(retainedAt(1), base)}%`}
+          value={pct(retainedAt(1), base)}
         />
         <MetricCard
+          format={formatPercent}
           label="Day-7 retention"
-          value={`${pct(retainedAt(7), base)}%`}
+          value={pct(retainedAt(7), base)}
         />
         <MetricCard
+          format={formatPercent}
           label="Day-30 retention"
-          value={`${pct(retainedAt(30), base)}%`}
+          value={pct(retainedAt(30), base)}
         />
       </div>
 

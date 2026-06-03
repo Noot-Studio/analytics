@@ -12,6 +12,7 @@ import {
   ChartTooltipContent,
 } from "@sbox-analytics/ui/components/chart";
 import type { ChartConfig } from "@sbox-analytics/ui/components/chart";
+import { Area } from "@sbox-analytics/ui/components/chart-series";
 import {
   Select,
   SelectContent,
@@ -25,7 +26,7 @@ import {
 } from "@sbox-analytics/ui/components/toggle-group";
 import { useIsMobile } from "@sbox-analytics/ui/hooks/use-mobile";
 import * as React from "react";
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
+import { AreaChart, CartesianGrid, XAxis } from "recharts";
 
 const chartData = [
   { date: "2024-04-01", desktop: 222, mobile: 150 },

@@ -1,3 +1,4 @@
+import { Area } from "@sbox-analytics/ui/components/chart-series";
 import {
   Empty,
   EmptyDescription,
@@ -8,7 +9,6 @@ import {
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Database } from "lucide-react";
 import {
-  Area,
   AreaChart,
   ResponsiveContainer,
   Tooltip,
@@ -93,15 +93,9 @@ export const OverviewView = ({ projectId }: { projectId: string }) => {
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-3">
-        <MetricCard label="Total Events" value={totalEvents.toLocaleString()} />
-        <MetricCard
-          label="Unique Players (sum/day)"
-          value={uniquePlayers.toLocaleString()}
-        />
-        <MetricCard
-          label="Sessions (sum/day)"
-          value={sessions.toLocaleString()}
-        />
+        <MetricCard label="Total Events" value={totalEvents} />
+        <MetricCard label="Unique Players (sum/day)" value={uniquePlayers} />
+        <MetricCard label="Sessions (sum/day)" value={sessions} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">

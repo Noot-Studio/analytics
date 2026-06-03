@@ -1,9 +1,8 @@
+import { Bar, Line } from "@sbox-analytics/ui/components/chart-series";
 import { Skeleton } from "@sbox-analytics/ui/components/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Bar,
   BarChart,
-  Line,
   LineChart,
   ResponsiveContainer,
   Tooltip,

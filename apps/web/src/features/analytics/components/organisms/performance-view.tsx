@@ -1,3 +1,4 @@
+import { Bar, Line } from "@sbox-analytics/ui/components/chart-series";
 import {
   Empty,
   EmptyDescription,
@@ -11,10 +12,8 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { Activity } from "lucide-react";
 import { useMemo } from "react";
 import {
-  Bar,
   BarChart,
   Legend,
-  Line,
   LineChart,
   ResponsiveContainer,
   Tooltip,
@@ -44,6 +43,9 @@ import { TimeRangeFilter } from "../molecules/time-range-filter";
 
 const PERCENT = 100;
 const CRASH_RATE_PRECISION = 2;
+
+const formatCrashRate = (value: number): string =>
+  `${value.toFixed(CRASH_RATE_PRECISION)}%`;
 
 const FPS_SERIES = [
   { key: "p50", label: "p50" },
@@ -347,15 +349,16 @@ export const PerformanceView = ({ projectId }: { projectId: string }) => {
       <div className="grid gap-4 md:grid-cols-3">
         <MetricCard
           label="FPS p50 (latest day)"
-          value={latestFps ? latestFps.p50.toLocaleString() : "—"}
+          value={latestFps ? latestFps.p50 : "—"}
         />
         <MetricCard
           label="FPS p95 (latest day)"
-          value={latestFps ? latestFps.p95.toLocaleString() : "—"}
+          value={latestFps ? latestFps.p95 : "—"}
         />
         <MetricCard
+          format={formatCrashRate}
           label="Crash rate (per session)"
-          value={`${crashRate.toFixed(CRASH_RATE_PRECISION)}%`}
+          value={crashRate}
         />
       </div>
 
