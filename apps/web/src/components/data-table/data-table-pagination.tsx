@@ -26,6 +26,12 @@ export function DataTablePagination<TData>({
   className,
   ...props
 }: DataTablePaginationProps<TData>) {
+  // getPageCount() returns -1 when the count is unknown (manual pagination with
+  // no server total) and 0 when empty. Clamp to at least one page so the label
+  // never reads "of -1" / "of 0".
+  const pageCount = Math.max(table.getPageCount(), 1);
+  const { pageIndex } = table.getState().pagination;
+  const isLastPage = pageIndex >= pageCount - 1;
   return (
     <div
       className={cn(
@@ -60,8 +66,7 @@ export function DataTablePagination<TData>({
           </Select>
         </div>
         <div className="flex items-center justify-center font-medium text-sm">
-          Page {table.getState().pagination.pageIndex + 1} of{" "}
-          {table.getPageCount()}
+          Page {pageIndex + 1} of {pageCount}
         </div>
         <div className="flex items-center space-x-2">
           <Button
@@ -90,7 +95,7 @@ export function DataTablePagination<TData>({
             size="icon"
             className="size-8"
             onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
+            disabled={!table.getCanNextPage() || isLastPage}
           >
             <ChevronRight />
           </Button>
@@ -99,8 +104,8 @@ export function DataTablePagination<TData>({
             variant="outline"
             size="icon"
             className="hidden size-8 lg:flex"
-            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-            disabled={!table.getCanNextPage()}
+            onClick={() => table.setPageIndex(pageCount - 1)}
+            disabled={!table.getCanNextPage() || isLastPage}
           >
             <ChevronsRight />
           </Button>
