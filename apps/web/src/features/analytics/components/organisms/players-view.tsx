@@ -22,18 +22,25 @@ import {
 
 import { orpc } from "@/utils/orpc";
 
-import { isoDaysAgo } from "../../lib/date-window";
+import { useAnalyticsFilters } from "../../lib/use-analytics-filters";
 import { MetricCard } from "../molecules/metric-card";
+import { TimeRangeFilter } from "../molecules/time-range-filter";
 
-const PLAYERS_WINDOW_DAYS = 30;
+const PlayersHeader = () => (
+  <div className="flex items-center justify-between gap-4">
+    <h1 className="font-semibold text-2xl">Players</h1>
+    <TimeRangeFilter />
+  </div>
+);
 
 export const PlayersView = ({ projectId }: { projectId: string }) => {
+  const { from, to } = useAnalyticsFilters();
   const query = useQuery(
     orpc.insights.players.queryOptions({
       input: {
-        from: isoDaysAgo(PLAYERS_WINDOW_DAYS),
+        from: from.slice(0, 10),
         projectId,
-        to: isoDaysAgo(0),
+        to: to.slice(0, 10),
       },
     })
   );
@@ -42,10 +49,7 @@ export const PlayersView = ({ projectId }: { projectId: string }) => {
     const cardKeys = Array.from({ length: 2 }, (_, index) => `card-${index}`);
     return (
       <div className="flex flex-col gap-6 p-4 lg:p-6">
-        <div className="flex flex-col gap-2">
-          <Skeleton className="h-7 w-40" />
-          <Skeleton className="h-4 w-28" />
-        </div>
+        <PlayersHeader />
         <div className="grid gap-4 md:grid-cols-2">
           {cardKeys.map((key) => (
             <Skeleton className="h-24 w-full" key={key} />
@@ -67,12 +71,7 @@ export const PlayersView = ({ projectId }: { projectId: string }) => {
 
   return (
     <div className="flex flex-col gap-6 p-4 lg:p-6">
-      <div>
-        <h1 className="font-semibold text-2xl">Players</h1>
-        <p className="text-muted-foreground">
-          Last {PLAYERS_WINDOW_DAYS} days.
-        </p>
-      </div>
+      <PlayersHeader />
 
       <div className="grid gap-4 md:grid-cols-2">
         <MetricCard

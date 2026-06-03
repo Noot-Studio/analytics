@@ -5,6 +5,8 @@ import { ProjectSettingsView } from "@/features/projects/components/organisms/pr
 export const Route = createFileRoute("/dashboard/projects/$projectId/settings")(
   {
     component: SettingsPage,
+    // Passthrough so the API-keys data-table's page/sort/filter params persist.
+    validateSearch: (search: Record<string, unknown>) => search,
   }
 );
 

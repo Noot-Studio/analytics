@@ -20,22 +20,30 @@ import { Suspense, lazy, useState } from "react";
 
 import { orpc } from "@/utils/orpc";
 
-import { isoDaysAgo } from "../../lib/date-window";
+import { useAnalyticsFilters } from "../../lib/use-analytics-filters";
+import { TimeRangeFilter } from "../molecules/time-range-filter";
 
 const SpatialScene = lazy(() => import("./spatial-scene"));
 
 type RenderMode = "voxels" | "fog" | "surface";
 
-const SPATIAL_WINDOW_DAYS = 30;
 const DEFAULT_VOXEL_SIZE = 32;
 const MIN_VOXEL_SIZE = 8;
 const MAX_VOXEL_SIZE = 256;
 const VOXEL_SIZE_STEP = 8;
 const CANVAS_HEIGHT = 600;
 
+const SpatialHeader = () => (
+  <div className="flex items-center justify-between gap-4">
+    <h1 className="font-semibold text-2xl">Spatial Events</h1>
+    <TimeRangeFilter />
+  </div>
+);
+
 export const SpatialView = ({ projectId }: { projectId: string }) => {
-  const from = isoDaysAgo(SPATIAL_WINDOW_DAYS);
-  const to = isoDaysAgo(0);
+  const { from: fromIso, to: toIso } = useAnalyticsFilters();
+  const from = fromIso.slice(0, 10);
+  const to = toIso.slice(0, 10);
 
   const [activeScene, setActiveScene] = useState<string | undefined>();
   const [voxelSize, setVoxelSize] = useState(DEFAULT_VOXEL_SIZE);
@@ -68,7 +76,7 @@ export const SpatialView = ({ projectId }: { projectId: string }) => {
   if (scenesQuery.isLoading) {
     return (
       <div className="flex flex-col gap-6 p-4 lg:p-6">
-        <Skeleton className="h-7 w-48" />
+        <SpatialHeader />
         <Skeleton className="h-10 w-64" />
         <Skeleton style={{ height: `${CANVAS_HEIGHT}px` }} className="w-full" />
       </div>
@@ -86,12 +94,7 @@ export const SpatialView = ({ projectId }: { projectId: string }) => {
   if (scenes.length === 0) {
     return (
       <div className="flex flex-col gap-6 p-4 lg:p-6">
-        <div>
-          <h1 className="font-semibold text-2xl">Spatial Events</h1>
-          <p className="text-muted-foreground">
-            Last {SPATIAL_WINDOW_DAYS} days.
-          </p>
-        </div>
+        <SpatialHeader />
         <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
@@ -113,12 +116,7 @@ export const SpatialView = ({ projectId }: { projectId: string }) => {
 
   return (
     <div className="flex flex-col gap-6 p-4 lg:p-6">
-      <div>
-        <h1 className="font-semibold text-2xl">Spatial Events</h1>
-        <p className="text-muted-foreground">
-          Last {SPATIAL_WINDOW_DAYS} days.
-        </p>
-      </div>
+      <SpatialHeader />
 
       <div className="flex flex-wrap items-end gap-4">
         <div className="grid gap-1.5">

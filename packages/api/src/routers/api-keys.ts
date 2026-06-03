@@ -5,6 +5,11 @@ import prisma from "@sbox-analytics/db";
 import { z } from "zod";
 
 import { protectedProcedure } from "../index";
+import { buildPrismaWhere } from "../prisma-filters";
+import { filterSchema } from "../query-builder";
+
+// Columns the data-table may filter on; anything else is dropped server-side.
+const API_KEY_FILTER_COLUMNS = new Set(["name"]);
 
 function hashSecret(secret: string): string {
   return createHash("sha256").update(secret).digest("hex");
@@ -69,23 +74,47 @@ export const apiKeysRouter = {
   list: protectedProcedure
     .input(
       z.object({
+        filters: z.array(filterSchema).max(10).optional(),
+        joinOperator: z.enum(["and", "or"]).default("and"),
+        page: z.number().int().min(1).default(1),
+        perPage: z.number().int().min(1).max(100).default(10),
         projectId: z.string().min(1),
+        sortBy: z.enum(["name", "createdAt", "lastUsedAt"]).optional(),
+        sortDesc: z.boolean().default(true),
       })
     )
     .handler(async ({ context, input }) => {
       await assertProjectAccess(context.session.user.id, input.projectId);
 
-      return prisma.apiKey.findMany({
-        orderBy: { createdAt: "desc" },
-        select: {
-          createdAt: true,
-          id: true,
-          lastUsedAt: true,
-          name: true,
-          publishableKey: true,
-        },
-        where: { projectId: input.projectId, revokedAt: null },
-      });
+      const sortBy = input.sortBy ?? "createdAt";
+      const where = {
+        projectId: input.projectId,
+        revokedAt: null,
+        ...buildPrismaWhere(
+          input.filters,
+          API_KEY_FILTER_COLUMNS,
+          input.joinOperator
+        ),
+      };
+
+      const [rows, total] = await Promise.all([
+        prisma.apiKey.findMany({
+          orderBy: { [sortBy]: input.sortDesc ? "desc" : "asc" },
+          select: {
+            createdAt: true,
+            id: true,
+            lastUsedAt: true,
+            name: true,
+            publishableKey: true,
+          },
+          skip: (input.page - 1) * input.perPage,
+          take: input.perPage,
+          where,
+        }),
+        prisma.apiKey.count({ where }),
+      ]);
+
+      return { rows, total };
     }),
 
   revoke: protectedProcedure

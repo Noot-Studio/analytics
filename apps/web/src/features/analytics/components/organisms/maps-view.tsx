@@ -7,7 +7,9 @@ import {
 } from "@sbox-analytics/ui/components/empty";
 import { Skeleton } from "@sbox-analytics/ui/components/skeleton";
 import { useQuery } from "@tanstack/react-query";
+import type { ColumnDef } from "@tanstack/react-table";
 import { Map as MapIcon } from "lucide-react";
+import { useMemo } from "react";
 import {
   Bar,
   BarChart,
@@ -20,11 +22,20 @@ import {
   YAxis,
 } from "recharts";
 
+import { DataTable } from "@/components/data-table/data-table";
+import { DataTableAdvancedToolbar } from "@/components/data-table/data-table-advanced-toolbar";
+import { DataTableFilterList } from "@/components/data-table/data-table-filter-list";
+import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
+import { useDataTable } from "@/hooks/use-data-table";
+import { useQueryState } from "@/hooks/use-query-state";
+import { getFiltersStateParser, getSortingStateParser } from "@/lib/parsers";
+import { parseAsInteger, parseAsStringEnum } from "@/lib/query-params";
 import { orpc } from "@/utils/orpc";
 
-import { isoDaysAgo } from "../../lib/date-window";
+import { toApiFilters } from "../../lib/api-filters";
+import { useAnalyticsFilters } from "../../lib/use-analytics-filters";
+import { TimeRangeFilter } from "../molecules/time-range-filter";
 
-const MAPS_WINDOW_DAYS = 30;
 const TOP_MAPS_FOR_TREND = 5;
 const SECONDS_PER_MINUTE = 60;
 const LINE_COLORS = [
@@ -41,57 +52,122 @@ const formatDuration = (seconds: number): string => {
   return `${minutes}m ${remainder}s`;
 };
 
+interface MapRow {
+  avg_seconds: number;
+  map: string;
+  players: number;
+  sessions: number;
+}
+
+const MAP_COLUMN_IDS = ["map", "sessions", "players", "avg_seconds"] as const;
+type MapSortColumn = (typeof MAP_COLUMN_IDS)[number];
+
+const columns: ColumnDef<MapRow, unknown>[] = [
+  {
+    accessorKey: "map",
+    enableColumnFilter: true,
+    header: "Map",
+    id: "map",
+    meta: { label: "Map", variant: "text" },
+  },
+  {
+    accessorKey: "sessions",
+    cell: ({ row }) => row.original.sessions.toLocaleString(),
+    enableColumnFilter: true,
+    header: "Sessions",
+    id: "sessions",
+    meta: { label: "Sessions", variant: "number" },
+  },
+  {
+    accessorKey: "players",
+    cell: ({ row }) => row.original.players.toLocaleString(),
+    enableColumnFilter: true,
+    header: "Players",
+    id: "players",
+    meta: { label: "Players", variant: "number" },
+  },
+  {
+    accessorKey: "avg_seconds",
+    cell: ({ row }) => formatDuration(row.original.avg_seconds),
+    enableColumnFilter: true,
+    header: "Avg duration",
+    id: "avg_seconds",
+    meta: { label: "Avg duration", variant: "number" },
+  },
+];
+
+// Module-level parsers: stable references prevent useMemo invalidation on every render.
+const mapFiltersParser = getFiltersStateParser<MapRow>([
+  ...MAP_COLUMN_IDS,
+]).withDefault([]);
+const mapJoinOperatorParser = parseAsStringEnum([
+  "and",
+  "or",
+] as const).withDefault("and");
+
+const MapsHeader = () => (
+  <div className="flex items-center justify-between gap-4">
+    <h1 className="font-semibold text-2xl">Maps &amp; Modes</h1>
+    <TimeRangeFilter />
+  </div>
+);
+
 export const MapsView = ({ projectId }: { projectId: string }) => {
+  const { from, to } = useAnalyticsFilters();
+  const fromDate = from.slice(0, 10);
+  const toDate = to.slice(0, 10);
+
+  const [page] = useQueryState("mapPage", parseAsInteger.withDefault(1));
+  const [perPage] = useQueryState("mapPerPage", parseAsInteger.withDefault(10));
+  const [sorting] = useQueryState(
+    "mapSort",
+    getSortingStateParser<MapRow>().withDefault([])
+  );
+  const sortEntry = sorting[0] ?? null;
+  const [tableFilters] = useQueryState("mapFilters", mapFiltersParser);
+  const [joinOperator] = useQueryState(
+    "mapJoinOperator",
+    mapJoinOperatorParser
+  );
+
+  const apiFilters = useMemo(() => toApiFilters(tableFilters), [tableFilters]);
+
   const query = useQuery(
     orpc.insights.maps.queryOptions({
       input: {
-        from: isoDaysAgo(MAPS_WINDOW_DAYS),
+        filters: apiFilters.length > 0 ? apiFilters : undefined,
+        from: fromDate,
+        joinOperator,
+        page,
+        perPage,
         projectId,
-        to: isoDaysAgo(0),
+        sortBy: sortEntry?.id as MapSortColumn | undefined,
+        sortDesc: sortEntry?.desc ?? true,
+        to: toDate,
       },
     })
   );
 
-  if (query.isLoading) {
-    return (
-      <div className="flex flex-col gap-6 p-4 lg:p-6">
-        <Skeleton className="h-7 w-40" />
-        <Skeleton className="h-64 w-full" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
-  }
+  const data = query.data ?? {
+    breakdown: [],
+    overTime: [],
+    table: { rows: [], total: 0 },
+  };
+  const tableRows = data.table.rows;
+  const pageCount = perPage > 0 ? Math.ceil(data.table.total / perPage) : -1;
 
-  if (query.isError) {
-    return (
-      <div className="p-4 text-destructive lg:p-6">Failed to load maps.</div>
-    );
-  }
-
-  const data = query.data ?? { breakdown: [], overTime: [] };
-
-  if (data.breakdown.length === 0) {
-    return (
-      <div className="flex flex-col gap-6 p-4 lg:p-6">
-        <div>
-          <h1 className="font-semibold text-2xl">Maps &amp; Modes</h1>
-          <p className="text-muted-foreground">Last {MAPS_WINDOW_DAYS} days.</p>
-        </div>
-        <Empty>
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <MapIcon />
-            </EmptyMedia>
-            <EmptyTitle>No map data yet</EmptyTitle>
-            <EmptyDescription>
-              Send <code>session_start</code> events with a <code>map</code>{" "}
-              property to populate this view.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      </div>
-    );
-  }
+  const { table } = useDataTable({
+    columns,
+    data: tableRows,
+    pageCount,
+    queryKeys: {
+      filters: "mapFilters",
+      joinOperator: "mapJoinOperator",
+      page: "mapPage",
+      perPage: "mapPerPage",
+      sort: "mapSort",
+    },
+  });
 
   const topMaps = data.breakdown
     .slice(0, TOP_MAPS_FOR_TREND)
@@ -112,61 +188,69 @@ export const MapsView = ({ projectId }: { projectId: string }) => {
     String(a.event_date).localeCompare(String(b.event_date))
   );
 
+  if (query.isLoading) {
+    return (
+      <div className="flex flex-col gap-6 p-4 lg:p-6">
+        <MapsHeader />
+        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  if (query.isError) {
+    return (
+      <div className="p-4 text-destructive lg:p-6">Failed to load maps.</div>
+    );
+  }
+
+  // No data at all (and no filter narrowing it) — show the onboarding empty state.
+  if (data.breakdown.length === 0 && apiFilters.length === 0) {
+    return (
+      <div className="flex flex-col gap-6 p-4 lg:p-6">
+        <MapsHeader />
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <MapIcon />
+            </EmptyMedia>
+            <EmptyTitle>No map data yet</EmptyTitle>
+            <EmptyDescription>
+              Send <code>session_start</code> events with a <code>map</code>{" "}
+              property to populate this view.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6 p-4 lg:p-6">
-      <div>
-        <h1 className="font-semibold text-2xl">Maps &amp; Modes</h1>
-        <p className="text-muted-foreground">Last {MAPS_WINDOW_DAYS} days.</p>
-      </div>
+      <MapsHeader />
 
-      <div className="rounded-lg border border-border p-4">
-        <h2 className="mb-4 font-medium text-sm">Sessions per map</h2>
-        <ResponsiveContainer height={240} width="100%">
-          <BarChart data={data.breakdown}>
-            <XAxis dataKey="map" fontSize={12} tickLine={false} />
-            <YAxis allowDecimals={false} fontSize={12} tickLine={false} />
-            <Tooltip />
-            <Bar dataKey="sessions" fill="var(--primary)" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      {data.breakdown.length > 0 ? (
+        <div className="rounded-lg border border-border p-4">
+          <h2 className="mb-4 font-medium text-sm">Sessions per map</h2>
+          <ResponsiveContainer height={240} width="100%">
+            <BarChart data={data.breakdown}>
+              <XAxis dataKey="map" fontSize={12} tickLine={false} />
+              <YAxis allowDecimals={false} fontSize={12} tickLine={false} />
+              <Tooltip />
+              <Bar dataKey="sessions" fill="var(--primary)" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      ) : null}
 
       <div className="rounded-lg border border-border p-4">
         <h2 className="mb-3 font-medium text-sm">Map breakdown</h2>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-muted-foreground">
-              <th className="pb-2 font-medium" scope="col">
-                Map
-              </th>
-              <th className="pb-2 text-right font-medium" scope="col">
-                Sessions
-              </th>
-              <th className="pb-2 text-right font-medium" scope="col">
-                Players
-              </th>
-              <th className="pb-2 text-right font-medium" scope="col">
-                Avg duration
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.breakdown.map((row) => (
-              <tr className="border-border border-t" key={row.map}>
-                <td className="py-2 font-medium">{row.map}</td>
-                <td className="py-2 text-right tabular-nums">
-                  {row.sessions.toLocaleString()}
-                </td>
-                <td className="py-2 text-right tabular-nums">
-                  {row.players.toLocaleString()}
-                </td>
-                <td className="py-2 text-right tabular-nums">
-                  {formatDuration(row.avg_seconds)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable table={table}>
+          <DataTableAdvancedToolbar table={table}>
+            <DataTableFilterList table={table} />
+            <DataTableSortList table={table} />
+          </DataTableAdvancedToolbar>
+        </DataTable>
       </div>
 
       {trend.length > 0 ? (

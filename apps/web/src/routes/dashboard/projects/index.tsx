@@ -10,6 +10,8 @@ import { orpc } from "@/utils/orpc";
 
 export const Route = createFileRoute("/dashboard/projects/")({
   component: ProjectsIndexPage,
+  // Passthrough so the projects data-table's page/sort/filter search params persist.
+  validateSearch: (search: Record<string, unknown>) => search,
 });
 
 function ProjectsIndexPage() {
@@ -21,9 +23,7 @@ function ProjectsIndexPage() {
     onError: () => toast.error("Failed to create project"),
     onSuccess: () => {
       setCreateOpen(false);
-      queryClient.invalidateQueries({
-        queryKey: orpc.projects.list.queryOptions().queryKey,
-      });
+      queryClient.invalidateQueries({ queryKey: orpc.projects.list.key() });
       toast.success("Project created");
     },
   });

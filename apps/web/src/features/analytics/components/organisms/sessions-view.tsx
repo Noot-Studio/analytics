@@ -13,19 +13,27 @@ import {
 
 import { orpc } from "@/utils/orpc";
 
-import { isoDaysAgo } from "../../lib/date-window";
 import { buildHeatmapGrid } from "../../lib/heatmap";
+import { useAnalyticsFilters } from "../../lib/use-analytics-filters";
+import { TimeRangeFilter } from "../molecules/time-range-filter";
 
-const SESSIONS_WINDOW_DAYS = 30;
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+const SessionsHeader = () => (
+  <div className="flex items-center justify-between gap-4">
+    <h1 className="font-semibold text-2xl">Sessions</h1>
+    <TimeRangeFilter />
+  </div>
+);
+
 export const SessionsView = ({ projectId }: { projectId: string }) => {
+  const { from, to } = useAnalyticsFilters();
   const query = useQuery(
     orpc.insights.sessions.queryOptions({
       input: {
-        from: isoDaysAgo(SESSIONS_WINDOW_DAYS),
+        from: from.slice(0, 10),
         projectId,
-        to: isoDaysAgo(0),
+        to: to.slice(0, 10),
       },
     })
   );
@@ -33,7 +41,7 @@ export const SessionsView = ({ projectId }: { projectId: string }) => {
   if (query.isLoading) {
     return (
       <div className="flex flex-col gap-6 p-4 lg:p-6">
-        <Skeleton className="h-7 w-40" />
+        <SessionsHeader />
         <Skeleton className="h-64 w-full" />
         <Skeleton className="h-64 w-full" />
       </div>
@@ -53,12 +61,7 @@ export const SessionsView = ({ projectId }: { projectId: string }) => {
 
   return (
     <div className="flex flex-col gap-6 p-4 lg:p-6">
-      <div>
-        <h1 className="font-semibold text-2xl">Sessions</h1>
-        <p className="text-muted-foreground">
-          Last {SESSIONS_WINDOW_DAYS} days.
-        </p>
-      </div>
+      <SessionsHeader />
 
       {data.histogram.length > 0 ? (
         <div className="rounded-lg border border-border p-4">

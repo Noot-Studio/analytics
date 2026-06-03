@@ -3,6 +3,20 @@ import prisma, { ProjectEnvironment } from "@sbox-analytics/db";
 import { z } from "zod";
 
 import { protectedProcedure } from "../index";
+import { buildPrismaWhere } from "../prisma-filters";
+import { filterSchema } from "../query-builder";
+
+const projectsListInput = z.object({
+  filters: z.array(filterSchema).max(10).optional(),
+  joinOperator: z.enum(["and", "or"]).default("and"),
+  page: z.number().int().min(1).default(1),
+  perPage: z.number().int().min(1).max(100).default(10),
+  sortBy: z.enum(["name", "slug", "environment", "createdAt"]).optional(),
+  sortDesc: z.boolean().default(true),
+});
+
+// Columns the data-table may filter on; anything else is dropped server-side.
+const PROJECT_FILTER_COLUMNS = new Set(["name", "slug", "environment"]);
 
 function requireActiveOrg(context: {
   session: { session: { activeOrganizationId?: string | null } };
@@ -148,24 +162,46 @@ export const projectsRouter = {
       return project;
     }),
 
-  list: protectedProcedure.handler(async ({ context }) => {
-    const organizationId = requireActiveOrg(context);
-    await assertOrgMembership(context.session.user.id, organizationId);
+  list: protectedProcedure
+    .input(projectsListInput.optional())
+    .handler(async ({ context, input }) => {
+      const organizationId = requireActiveOrg(context);
+      await assertOrgMembership(context.session.user.id, organizationId);
 
-    return prisma.project.findMany({
-      orderBy: { createdAt: "desc" },
-      select: {
-        apiKeys: {
-          select: { lastUsedAt: true },
-          where: { revokedAt: null },
-        },
-        createdAt: true,
-        environment: true,
-        id: true,
-        name: true,
-        slug: true,
-      },
-      where: { organizationId },
-    });
-  }),
+      const page = input?.page ?? 1;
+      const perPage = input?.perPage ?? 10;
+      const sortBy = input?.sortBy ?? "createdAt";
+      const sortDesc = input?.sortDesc ?? true;
+      const where = {
+        organizationId,
+        ...buildPrismaWhere(
+          input?.filters,
+          PROJECT_FILTER_COLUMNS,
+          input?.joinOperator ?? "and"
+        ),
+      };
+
+      const [rows, total] = await Promise.all([
+        prisma.project.findMany({
+          orderBy: { [sortBy]: sortDesc ? "desc" : "asc" },
+          select: {
+            apiKeys: {
+              select: { lastUsedAt: true },
+              where: { revokedAt: null },
+            },
+            createdAt: true,
+            environment: true,
+            id: true,
+            name: true,
+            slug: true,
+          },
+          skip: (page - 1) * perPage,
+          take: perPage,
+          where,
+        }),
+        prisma.project.count({ where }),
+      ]);
+
+      return { rows, total };
+    }),
 };
