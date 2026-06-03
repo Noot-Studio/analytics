@@ -21,6 +21,7 @@ import {
 
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableAdvancedToolbar } from "@/components/data-table/data-table-advanced-toolbar";
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { DataTableFilterList } from "@/components/data-table/data-table-filter-list";
 import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
 import { useDataTable } from "@/hooks/use-data-table";
@@ -60,7 +61,9 @@ const columns: ColumnDef<CohortRow, unknown>[] = [
   {
     accessorKey: "cohort_date",
     enableColumnFilter: true,
-    header: "Cohort",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Cohort" />
+    ),
     id: "cohort_date",
     meta: { label: "Cohort", variant: "text" },
   },
@@ -68,7 +71,9 @@ const columns: ColumnDef<CohortRow, unknown>[] = [
     accessorKey: "size",
     cell: ({ row }) => row.original.size.toLocaleString(),
     enableColumnFilter: true,
-    header: "Players",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Players" />
+    ),
     id: "size",
     meta: { label: "Players", variant: "number" },
   },
@@ -76,7 +81,9 @@ const columns: ColumnDef<CohortRow, unknown>[] = [
     accessorKey: "d1",
     cell: ({ row }) => `${row.original.d1}%`,
     enableColumnFilter: true,
-    header: "Day 1",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Day 1" />
+    ),
     id: "d1",
     meta: { label: "Day 1 %", variant: "number" },
   },
@@ -84,7 +91,9 @@ const columns: ColumnDef<CohortRow, unknown>[] = [
     accessorKey: "d7",
     cell: ({ row }) => `${row.original.d7}%`,
     enableColumnFilter: true,
-    header: "Day 7",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Day 7" />
+    ),
     id: "d7",
     meta: { label: "Day 7 %", variant: "number" },
   },
@@ -92,7 +101,9 @@ const columns: ColumnDef<CohortRow, unknown>[] = [
     accessorKey: "d30",
     cell: ({ row }) => `${row.original.d30}%`,
     enableColumnFilter: true,
-    header: "Day 30",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Day 30" />
+    ),
     id: "d30",
     meta: { label: "Day 30 %", variant: "number" },
   },

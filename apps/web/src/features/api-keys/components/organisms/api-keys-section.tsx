@@ -14,6 +14,7 @@ import { toast } from "sonner";
 
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableAdvancedToolbar } from "@/components/data-table/data-table-advanced-toolbar";
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { DataTableFilterList } from "@/components/data-table/data-table-filter-list";
 import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
 import { TableSkeleton } from "@/components/table-skeleton";
@@ -148,7 +149,9 @@ const columns: ColumnDef<ApiKeyRow>[] = [
     accessorKey: "name",
     cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
     enableColumnFilter: true,
-    header: "Name",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Name" />
+    ),
     id: "name",
     meta: { label: "Name", variant: "text" },
   },
@@ -160,19 +163,25 @@ const columns: ColumnDef<ApiKeyRow>[] = [
       </span>
     ),
     enableSorting: false,
-    header: "Public Key",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Public Key" />
+    ),
     id: "publishableKey",
   },
   {
     accessorKey: "createdAt",
     cell: ({ row }) => formatDate(row.original.createdAt),
-    header: "Created",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Created" />
+    ),
     id: "createdAt",
   },
   {
     accessorKey: "lastUsedAt",
     cell: ({ row }) => formatDate(row.original.lastUsedAt),
-    header: "Last Used",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Last Used" />
+    ),
     id: "lastUsedAt",
   },
   {

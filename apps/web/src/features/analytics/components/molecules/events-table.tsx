@@ -12,6 +12,7 @@ import { useMemo } from "react";
 
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableAdvancedToolbar } from "@/components/data-table/data-table-advanced-toolbar";
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { DataTableFilterList } from "@/components/data-table/data-table-filter-list";
 import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
 import { TableSkeleton } from "@/components/table-skeleton";
@@ -35,21 +36,27 @@ const columns: ColumnDef<EventRow>[] = [
   {
     accessorKey: "event_type",
     enableColumnFilter: true,
-    header: "Event",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Event" />
+    ),
     id: "event_type",
     meta: { label: "Event", variant: "text" },
   },
   {
     accessorKey: "event_count",
     enableColumnFilter: true,
-    header: "Count",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Count" />
+    ),
     id: "event_count",
     meta: { label: "Count", variant: "number" },
   },
   {
     accessorKey: "unique_players",
     enableColumnFilter: true,
-    header: "Unique players",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Unique players" />
+    ),
     id: "unique_players",
     meta: { label: "Unique players", variant: "number" },
   },

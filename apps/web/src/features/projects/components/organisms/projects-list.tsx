@@ -22,6 +22,7 @@ import { toast } from "sonner";
 
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableAdvancedToolbar } from "@/components/data-table/data-table-advanced-toolbar";
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { DataTableFilterList } from "@/components/data-table/data-table-filter-list";
 import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
 import { TableSkeleton } from "@/components/table-skeleton";
@@ -132,7 +133,9 @@ const columns: ColumnDef<ProjectRow>[] = [
       </Link>
     ),
     enableColumnFilter: true,
-    header: "Name",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Name" />
+    ),
     id: "name",
     meta: { label: "Name", variant: "text" },
   },
@@ -142,7 +145,9 @@ const columns: ColumnDef<ProjectRow>[] = [
       <span className="text-muted-foreground">{row.original.slug}</span>
     ),
     enableColumnFilter: true,
-    header: "Slug",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Slug" />
+    ),
     id: "slug",
     meta: { label: "Slug", variant: "text" },
   },
@@ -152,7 +157,9 @@ const columns: ColumnDef<ProjectRow>[] = [
       <EnvironmentBadge environment={row.original.environment} />
     ),
     enableColumnFilter: true,
-    header: "Environment",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Environment" />
+    ),
     id: "environment",
     meta: {
       label: "Environment",

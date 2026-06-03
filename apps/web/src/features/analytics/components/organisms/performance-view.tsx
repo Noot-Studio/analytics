@@ -24,6 +24,7 @@ import {
 
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableAdvancedToolbar } from "@/components/data-table/data-table-advanced-toolbar";
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { DataTableFilterList } from "@/components/data-table/data-table-filter-list";
 import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
 import { useDataTable } from "@/hooks/use-data-table";
@@ -63,25 +64,33 @@ const mapColumns: ColumnDef<PerformanceMapRow, unknown>[] = [
   {
     accessorKey: "map",
     enableColumnFilter: true,
-    header: "Map",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Map" />
+    ),
     meta: { label: "Map", variant: "text" },
   },
   {
     accessorKey: "avg_fps",
     enableColumnFilter: true,
-    header: "Avg FPS",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Avg FPS" />
+    ),
     meta: { label: "Avg FPS", variant: "number" },
   },
   {
     accessorKey: "p95_fps",
     enableColumnFilter: true,
-    header: "p95 FPS",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="p95 FPS" />
+    ),
     meta: { label: "p95 FPS", variant: "number" },
   },
   {
     accessorKey: "crashes",
     enableColumnFilter: true,
-    header: "Crashes",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Crashes" />
+    ),
     meta: { label: "Crashes", variant: "number" },
   },
 ];

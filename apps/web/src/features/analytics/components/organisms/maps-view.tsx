@@ -24,6 +24,7 @@ import {
 
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableAdvancedToolbar } from "@/components/data-table/data-table-advanced-toolbar";
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { DataTableFilterList } from "@/components/data-table/data-table-filter-list";
 import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
 import { useDataTable } from "@/hooks/use-data-table";
@@ -71,7 +72,9 @@ const columns: ColumnDef<MapRow, unknown>[] = [
   {
     accessorKey: "map",
     enableColumnFilter: true,
-    header: "Map",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Map" />
+    ),
     id: "map",
     meta: { label: "Map", variant: "text" },
   },
@@ -79,7 +82,9 @@ const columns: ColumnDef<MapRow, unknown>[] = [
     accessorKey: "sessions",
     cell: ({ row }) => row.original.sessions.toLocaleString(),
     enableColumnFilter: true,
-    header: "Sessions",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Sessions" />
+    ),
     id: "sessions",
     meta: { label: "Sessions", variant: "number" },
   },
@@ -87,7 +92,9 @@ const columns: ColumnDef<MapRow, unknown>[] = [
     accessorKey: "players",
     cell: ({ row }) => row.original.players.toLocaleString(),
     enableColumnFilter: true,
-    header: "Players",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Players" />
+    ),
     id: "players",
     meta: { label: "Players", variant: "number" },
   },
@@ -95,7 +102,9 @@ const columns: ColumnDef<MapRow, unknown>[] = [
     accessorKey: "avg_seconds",
     cell: ({ row }) => formatDuration(row.original.avg_seconds),
     enableColumnFilter: true,
-    header: "Avg duration",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Avg duration" />
+    ),
     id: "avg_seconds",
     meta: { label: "Avg duration", variant: "number" },
   },

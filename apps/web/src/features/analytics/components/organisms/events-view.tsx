@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableAdvancedToolbar } from "@/components/data-table/data-table-advanced-toolbar";
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { DataTableFilterList } from "@/components/data-table/data-table-filter-list";
 import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
 import { useDataTable } from "@/hooks/use-data-table";
@@ -30,28 +31,36 @@ const recentColumns: ColumnDef<RecentEvent, unknown>[] = [
   {
     accessorKey: "event_type",
     enableColumnFilter: true,
-    header: "Event",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Event" />
+    ),
     id: "event_type",
     meta: { label: "Event type", variant: "select" },
   },
   {
     accessorKey: "player_id",
     enableColumnFilter: true,
-    header: "Player",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Player" />
+    ),
     id: "player_id",
     meta: { label: "Player", variant: "text" },
   },
   {
     accessorKey: "session_id",
     enableColumnFilter: true,
-    header: "Session",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Session" />
+    ),
     id: "session_id",
     meta: { label: "Session", variant: "text" },
   },
   {
     accessorKey: "timestamp",
     cell: ({ row }) => <RelativeTime date={row.original.timestamp} />,
-    header: "Time",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Time" />
+    ),
     id: "timestamp",
   },
 ];
