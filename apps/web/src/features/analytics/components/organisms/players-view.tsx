@@ -23,8 +23,18 @@ import {
 import { orpc } from "@/utils/orpc";
 
 import { useAnalyticsFilters } from "../../lib/use-analytics-filters";
+import {
+  ChartViewOptions,
+  useChartVisibility,
+} from "../molecules/chart-view-options";
 import { MetricCard } from "../molecules/metric-card";
 import { TimeRangeFilter } from "../molecules/time-range-filter";
+
+const DAU_SERIES = [{ key: "dau", label: "Daily active" }];
+const NEW_RETURNING_SERIES = [
+  { key: "new_players", label: "New" },
+  { key: "returning_players", label: "Returning" },
+];
 
 const PlayersHeader = () => (
   <div className="flex items-center justify-between gap-4">
@@ -35,6 +45,8 @@ const PlayersHeader = () => (
 
 export const PlayersView = ({ projectId }: { projectId: string }) => {
   const { from, to } = useAnalyticsFilters();
+  const dauChart = useChartVisibility();
+  const newReturningChart = useChartVisibility();
   const query = useQuery(
     orpc.insights.players.queryOptions({
       input: {
@@ -101,19 +113,28 @@ export const PlayersView = ({ projectId }: { projectId: string }) => {
 
       {data.daily.length > 0 ? (
         <div className="rounded-lg border border-border p-4">
-          <h2 className="mb-4 font-medium text-sm">Daily active players</h2>
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <h2 className="font-medium text-sm">Daily active players</h2>
+            <ChartViewOptions
+              hidden={dauChart.hidden}
+              onToggle={dauChart.toggle}
+              series={DAU_SERIES}
+            />
+          </div>
           <ResponsiveContainer height={240} width="100%">
             <AreaChart data={data.daily}>
               <XAxis dataKey="event_date" fontSize={12} tickLine={false} />
               <YAxis allowDecimals={false} fontSize={12} tickLine={false} />
               <Tooltip />
-              <Area
-                dataKey="dau"
-                fill="var(--primary)"
-                fillOpacity={0.2}
-                stroke="var(--primary)"
-                type="monotone"
-              />
+              {dauChart.isVisible("dau") ? (
+                <Area
+                  dataKey="dau"
+                  fill="var(--primary)"
+                  fillOpacity={0.2}
+                  stroke="var(--primary)"
+                  type="monotone"
+                />
+              ) : null}
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -121,25 +142,36 @@ export const PlayersView = ({ projectId }: { projectId: string }) => {
 
       {data.daily.length > 0 ? (
         <div className="rounded-lg border border-border p-4">
-          <h2 className="mb-4 font-medium text-sm">New vs returning</h2>
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <h2 className="font-medium text-sm">New vs returning</h2>
+            <ChartViewOptions
+              hidden={newReturningChart.hidden}
+              onToggle={newReturningChart.toggle}
+              series={NEW_RETURNING_SERIES}
+            />
+          </div>
           <ResponsiveContainer height={240} width="100%">
             <BarChart data={data.daily}>
               <XAxis dataKey="event_date" fontSize={12} tickLine={false} />
               <YAxis allowDecimals={false} fontSize={12} tickLine={false} />
               <Tooltip />
               <Legend />
-              <Bar
-                dataKey="new_players"
-                fill="var(--primary)"
-                name="New"
-                stackId="p"
-              />
-              <Bar
-                dataKey="returning_players"
-                fill="var(--muted-foreground)"
-                name="Returning"
-                stackId="p"
-              />
+              {newReturningChart.isVisible("new_players") ? (
+                <Bar
+                  dataKey="new_players"
+                  fill="var(--primary)"
+                  name="New"
+                  stackId="p"
+                />
+              ) : null}
+              {newReturningChart.isVisible("returning_players") ? (
+                <Bar
+                  dataKey="returning_players"
+                  fill="var(--muted-foreground)"
+                  name="Returning"
+                  stackId="p"
+                />
+              ) : null}
             </BarChart>
           </ResponsiveContainer>
         </div>

@@ -19,11 +19,18 @@ import {
 import { orpc } from "@/utils/orpc";
 
 import { useAnalyticsFilters } from "../../lib/use-analytics-filters";
+import {
+  ChartViewOptions,
+  useChartVisibility,
+} from "../molecules/chart-view-options";
 import { MetricCard } from "../molecules/metric-card";
 import { TimeRangeFilter } from "../molecules/time-range-filter";
 
+const TREND_SERIES = [{ key: "events", label: "Events" }];
+
 export const OverviewView = ({ projectId }: { projectId: string }) => {
   const { from, to } = useAnalyticsFilters();
+  const trendChart = useChartVisibility();
   // The route loader has already warmed this exact query, so useSuspenseQuery
   // resolves from cache on mount — no client-side loading branch. The loading
   // skeleton lives in the route's pendingComponent, errors in its errorComponent.
@@ -105,19 +112,28 @@ export const OverviewView = ({ projectId }: { projectId: string }) => {
 
       {trend.length > 0 ? (
         <div className="rounded-lg border border-border p-4">
-          <h2 className="mb-4 font-medium text-sm">Events per day</h2>
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <h2 className="font-medium text-sm">Events per day</h2>
+            <ChartViewOptions
+              hidden={trendChart.hidden}
+              onToggle={trendChart.toggle}
+              series={TREND_SERIES}
+            />
+          </div>
           <ResponsiveContainer height={240} width="100%">
             <AreaChart data={trend}>
               <XAxis dataKey="date" fontSize={12} tickLine={false} />
               <YAxis allowDecimals={false} fontSize={12} tickLine={false} />
               <Tooltip />
-              <Area
-                dataKey="events"
-                fill="var(--primary)"
-                fillOpacity={0.2}
-                stroke="var(--primary)"
-                type="monotone"
-              />
+              {trendChart.isVisible("events") ? (
+                <Area
+                  dataKey="events"
+                  fill="var(--primary)"
+                  fillOpacity={0.2}
+                  stroke="var(--primary)"
+                  type="monotone"
+                />
+              ) : null}
             </AreaChart>
           </ResponsiveContainer>
         </div>
