@@ -361,11 +361,128 @@ const playerTimelineRow = z.object({
   timestamp: z.string(),
 });
 
+// Per-player retention: cohort = first-seen day; retained_dN is 1 when the
+// player had any activity exactly N days after their cohort day. Mirrors the
+// day-offset logic of the global `retention` procedure, scoped to one player.
+const playerRetentionRow = z.object({
+  cohort_date: z.string(),
+  retained_d1: z.coerce.number(),
+  retained_d30: z.coerce.number(),
+  retained_d7: z.coerce.number(),
+});
+
 const playerProfileOutput = z.object({
   lifetime: playerLifetimeRow,
+  retention: playerRetentionRow,
   sessions: z.array(playerSessionRow),
   sessionsTotal: z.coerce.number(),
   timeline: z.array(playerTimelineRow),
+});
+
+const playersListInput = z.object({
+  filters: z.array(filterSchema).max(10).optional(),
+  from: z.iso.datetime(),
+  joinOperator: z.enum(["and", "or"]).default("and"),
+  page: z.number().int().min(1).default(1),
+  perPage: z.number().int().min(1).max(100).default(10),
+  projectId: z.string().min(1),
+  sortBy: z.string().optional(),
+  sortDesc: z.boolean().default(true),
+  to: z.iso.datetime(),
+});
+
+// Browsable-player list filters — all aggregate aliases (player_id is the
+// GROUP BY key), applied via HAVING and mirrored into the count subquery.
+const PLAYERS_LIST_FILTER_COLUMNS: Record<string, ColumnFilterDef> = {
+  events: { expr: "events", type: "number" },
+  first_seen: { expr: "first_seen", type: "string" },
+  last_seen: { expr: "last_seen", type: "string" },
+  player_id: { expr: "player_id", type: "string" },
+  sessions: { expr: "sessions", type: "number" },
+};
+
+const playersListRow = z.object({
+  events: z.coerce.number(),
+  first_seen: z.string(),
+  last_seen: z.string(),
+  player_id: z.string(),
+  sessions: z.coerce.number(),
+});
+
+const playersListOutput = z.object({
+  rows: z.array(playersListRow),
+  total: z.coerce.number(),
+});
+
+const sessionsListInput = z.object({
+  filters: z.array(filterSchema).max(10).optional(),
+  from: z.iso.datetime(),
+  joinOperator: z.enum(["and", "or"]).default("and"),
+  page: z.number().int().min(1).default(1),
+  perPage: z.number().int().min(1).max(100).default(10),
+  projectId: z.string().min(1),
+  sortBy: z.string().optional(),
+  sortDesc: z.boolean().default(true),
+  to: z.iso.datetime(),
+});
+
+// Browsable-session list filters — session_id is the GROUP BY key; the rest are
+// per-session aggregate aliases. All applied via HAVING.
+const SESSIONS_LIST_FILTER_COLUMNS: Record<string, ColumnFilterDef> = {
+  duration_seconds: { expr: "duration_seconds", type: "number" },
+  event_count: { expr: "event_count", type: "number" },
+  map: { expr: "map", type: "string" },
+  player_id: { expr: "player_id", type: "string" },
+  session_id: { expr: "session_id", type: "string" },
+  started_at: { expr: "started_at", type: "string" },
+};
+
+const sessionsListRow = z.object({
+  duration_seconds: z.coerce.number(),
+  ended_at: z.string(),
+  event_count: z.coerce.number(),
+  map: z.string(),
+  player_id: z.string(),
+  session_id: z.string(),
+  started_at: z.string(),
+});
+
+const sessionsListOutput = z.object({
+  rows: z.array(sessionsListRow),
+  total: z.coerce.number(),
+});
+
+const sessionProfileInput = z.object({
+  eventsFilters: z.array(filterSchema).max(10).optional(),
+  eventsJoinOperator: z.enum(["and", "or"]).default("and"),
+  eventsPage: z.number().int().min(1).default(1),
+  eventsPerPage: z.number().int().min(1).max(100).default(20),
+  eventsSortBy: z.string().optional(),
+  eventsSortDesc: z.boolean().default(false),
+  projectId: z.string().min(1),
+  sessionId: z.string().min(1),
+});
+
+const sessionMetaRow = z.object({
+  duration_seconds: z.coerce.number(),
+  ended_at: z.string(),
+  event_count: z.coerce.number(),
+  map: z.string(),
+  player_id: z.string(),
+  session_id: z.string(),
+  started_at: z.string(),
+});
+
+const sessionEventRow = z.object({
+  event_type: z.string(),
+  properties: z.string(),
+  timestamp: z.string(),
+});
+
+const sessionProfileOutput = z.object({
+  events: z.array(sessionEventRow),
+  eventsTotal: z.coerce.number(),
+  meta: sessionMetaRow,
 });
 
 const spatialScenesInput = z.object({
@@ -1320,6 +1437,7 @@ export const analyticsRouter = {
         sessionsResult,
         sessionsCountResult,
         timelineResult,
+        retentionResult,
       ] = await Promise.all([
         ch.query({
           format: "JSON",
@@ -1393,21 +1511,292 @@ export const analyticsRouter = {
             `,
           query_params: input,
         }),
+        ch.query({
+          format: "JSON",
+          query: `
+              WITH (
+                SELECT min(toDate(timestamp))
+                FROM analytics.events
+                WHERE project_id = {projectId:String}
+                  AND player_id = {playerId:String}
+              ) AS cohort
+              SELECT
+                toString(cohort) AS cohort_date,
+                countIf(toDate(timestamp) = cohort + 1) > 0 AS retained_d1,
+                countIf(toDate(timestamp) = cohort + 7) > 0 AS retained_d7,
+                countIf(toDate(timestamp) = cohort + 30) > 0 AS retained_d30
+              FROM analytics.events
+              WHERE project_id = {projectId:String}
+                AND player_id = {playerId:String}
+            `,
+          query_params: input,
+        }),
       ]);
 
-      const [lifetimeJson, sessionsJson, sessionsCountJson, timelineJson] =
-        await Promise.all([
-          lifetimeResult.json<z.infer<typeof playerLifetimeRow>>(),
-          sessionsResult.json<z.infer<typeof playerSessionRow>>(),
-          sessionsCountResult.json<{ total: number }>(),
-          timelineResult.json<z.infer<typeof playerTimelineRow>>(),
-        ]);
+      const [
+        lifetimeJson,
+        sessionsJson,
+        sessionsCountJson,
+        timelineJson,
+        retentionJson,
+      ] = await Promise.all([
+        lifetimeResult.json<z.infer<typeof playerLifetimeRow>>(),
+        sessionsResult.json<z.infer<typeof playerSessionRow>>(),
+        sessionsCountResult.json<{ total: number }>(),
+        timelineResult.json<z.infer<typeof playerTimelineRow>>(),
+        retentionResult.json<z.infer<typeof playerRetentionRow>>(),
+      ]);
 
       return playerProfileOutput.parse({
         lifetime: lifetimeJson.data[0],
+        retention: retentionJson.data[0],
         sessions: sessionsJson.data,
         sessionsTotal: sessionsCountJson.data[0]?.total ?? 0,
         timeline: timelineJson.data,
+      });
+    }),
+
+  // Browsable, paginated list of players active in the range — powers the
+  // clickable players table on the Engagement → Players page.
+  playersList: protectedProcedure
+    .input(playersListInput)
+    .handler(async ({ context, input }) => {
+      await assertProjectAccess(input.projectId, context.session.user.id);
+
+      const SAFE_SORT_COLUMNS: Record<string, string> = {
+        events: "events",
+        first_seen: "first_seen",
+        last_seen: "last_seen",
+        sessions: "sessions",
+      };
+      const sortCol = input.sortBy
+        ? (SAFE_SORT_COLUMNS[input.sortBy] ?? "last_seen")
+        : "last_seen";
+      const sortDir = input.sortDesc ? "DESC" : "ASC";
+      const offset = (input.page - 1) * input.perPage;
+
+      const params: Record<string, unknown> = {
+        from: input.from.replace(/Z$/u, ""),
+        offset,
+        perPage: input.perPage,
+        projectId: input.projectId,
+        to: input.to.replace(/Z$/u, ""),
+      };
+      const havingCondition = buildColumnFilters(
+        input.filters,
+        PLAYERS_LIST_FILTER_COLUMNS,
+        params,
+        input.joinOperator
+      );
+      const havingClause = havingCondition ? `HAVING ${havingCondition}` : "";
+
+      // Anonymous activity (empty player_id) groups into a single non-clickable
+      // row, so exclude it from the browsable list.
+      const playerSelect = `
+        SELECT
+          player_id,
+          toString(min(timestamp)) AS first_seen,
+          toString(max(timestamp)) AS last_seen,
+          uniq(session_id) AS sessions,
+          count() AS events
+        FROM analytics.events
+        WHERE project_id = {projectId:String}
+          AND player_id != ''
+          AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
+        GROUP BY player_id
+        ${havingClause}
+      `;
+
+      const ch = clickhouse();
+      const [result, countResult] = await Promise.all([
+        ch.query({
+          format: "JSON",
+          query: `
+            ${playerSelect}
+            ORDER BY ${sortCol} ${sortDir}
+            LIMIT {perPage:UInt32} OFFSET {offset:UInt32}
+          `,
+          query_params: params,
+        }),
+        ch.query({
+          format: "JSON",
+          query: `SELECT count() AS total FROM (${playerSelect})`,
+          query_params: params,
+        }),
+      ]);
+
+      const json = await result.json<z.infer<typeof playersListRow>>();
+      const countJson = await countResult.json<{ total: string }>();
+
+      return playersListOutput.parse({
+        rows: json.data,
+        total: Number(countJson.data[0]?.total ?? 0),
+      });
+    }),
+
+  // Browsable, paginated list of sessions in the range — powers the clickable
+  // sessions table on the Engagement → Sessions page.
+  sessionsList: protectedProcedure
+    .input(sessionsListInput)
+    .handler(async ({ context, input }) => {
+      await assertProjectAccess(input.projectId, context.session.user.id);
+
+      const SAFE_SORT_COLUMNS: Record<string, string> = {
+        duration_seconds: "duration_seconds",
+        event_count: "event_count",
+        started_at: "started_at",
+      };
+      const sortCol = input.sortBy
+        ? (SAFE_SORT_COLUMNS[input.sortBy] ?? "started_at")
+        : "started_at";
+      const sortDir = input.sortDesc ? "DESC" : "ASC";
+      const offset = (input.page - 1) * input.perPage;
+
+      const params: Record<string, unknown> = {
+        from: input.from.replace(/Z$/u, ""),
+        offset,
+        perPage: input.perPage,
+        projectId: input.projectId,
+        to: input.to.replace(/Z$/u, ""),
+      };
+      const havingCondition = buildColumnFilters(
+        input.filters,
+        SESSIONS_LIST_FILTER_COLUMNS,
+        params,
+        input.joinOperator
+      );
+      const havingClause = havingCondition ? `HAVING ${havingCondition}` : "";
+
+      const sessionSelect = `
+        SELECT
+          session_id,
+          argMin(player_id, timestamp) AS player_id,
+          toString(min(timestamp)) AS started_at,
+          toString(max(timestamp)) AS ended_at,
+          dateDiff('second', min(timestamp), max(timestamp)) AS duration_seconds,
+          count() AS event_count,
+          argMin(JSONExtractString(properties, 'map'), timestamp) AS map
+        FROM analytics.events
+        WHERE project_id = {projectId:String}
+          AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
+        GROUP BY session_id
+        ${havingClause}
+      `;
+
+      const ch = clickhouse();
+      const [result, countResult] = await Promise.all([
+        ch.query({
+          format: "JSON",
+          query: `
+            ${sessionSelect}
+            ORDER BY ${sortCol} ${sortDir}
+            LIMIT {perPage:UInt32} OFFSET {offset:UInt32}
+          `,
+          query_params: params,
+        }),
+        ch.query({
+          format: "JSON",
+          query: `SELECT count() AS total FROM (${sessionSelect})`,
+          query_params: params,
+        }),
+      ]);
+
+      const json = await result.json<z.infer<typeof sessionsListRow>>();
+      const countJson = await countResult.json<{ total: string }>();
+
+      return sessionsListOutput.parse({
+        rows: json.data,
+        total: Number(countJson.data[0]?.total ?? 0),
+      });
+    }),
+
+  // Single-session detail: meta header + the session's paginated event stream.
+  sessionProfile: protectedProcedure
+    .input(sessionProfileInput)
+    .handler(async ({ context, input }) => {
+      await assertProjectAccess(input.projectId, context.session.user.id);
+
+      const SAFE_SORT_COLUMNS = new Set(["timestamp", "event_type"]);
+      const sortCol =
+        input.eventsSortBy && SAFE_SORT_COLUMNS.has(input.eventsSortBy)
+          ? input.eventsSortBy
+          : "timestamp";
+      const sortDir = input.eventsSortDesc ? "DESC" : "ASC";
+      const offset = (input.eventsPage - 1) * input.eventsPerPage;
+
+      const eventsParams: Record<string, unknown> = {
+        offset,
+        perPage: input.eventsPerPage,
+        projectId: input.projectId,
+        sessionId: input.sessionId,
+      };
+      const eventConditions = [
+        "project_id = {projectId:String}",
+        "session_id = {sessionId:String}",
+      ];
+      for (const condition of applyFilters(input.eventsFilters, eventsParams)) {
+        eventConditions.push(condition);
+      }
+      const eventsWhere = eventConditions.join(" AND ");
+
+      const ch = clickhouse();
+      const [metaResult, eventsResult, eventsCountResult] = await Promise.all([
+        ch.query({
+          format: "JSON",
+          query: `
+            SELECT
+              argMin(player_id, timestamp) AS player_id,
+              toString(min(timestamp)) AS started_at,
+              toString(max(timestamp)) AS ended_at,
+              dateDiff('second', min(timestamp), max(timestamp)) AS duration_seconds,
+              count() AS event_count,
+              argMin(JSONExtractString(properties, 'map'), timestamp) AS map
+            FROM analytics.events
+            WHERE project_id = {projectId:String}
+              AND session_id = {sessionId:String}
+          `,
+          query_params: {
+            projectId: input.projectId,
+            sessionId: input.sessionId,
+          },
+        }),
+        ch.query({
+          format: "JSON",
+          query: `
+            SELECT
+              event_type,
+              toString(timestamp) AS timestamp,
+              properties
+            FROM analytics.events
+            WHERE ${eventsWhere}
+            ORDER BY ${sortCol} ${sortDir}
+            LIMIT {perPage:UInt32} OFFSET {offset:UInt32}
+          `,
+          query_params: eventsParams,
+        }),
+        ch.query({
+          format: "JSON",
+          query: `
+            SELECT count() AS total
+            FROM analytics.events
+            WHERE ${eventsWhere}
+          `,
+          query_params: eventsParams,
+        }),
+      ]);
+
+      const metaJson =
+        await metaResult.json<
+          Omit<z.infer<typeof sessionMetaRow>, "session_id">
+        >();
+      const eventsJson =
+        await eventsResult.json<z.infer<typeof sessionEventRow>>();
+      const eventsCountJson = await eventsCountResult.json<{ total: string }>();
+
+      return sessionProfileOutput.parse({
+        events: eventsJson.data,
+        eventsTotal: Number(eventsCountJson.data[0]?.total ?? 0),
+        meta: { ...metaJson.data[0], session_id: input.sessionId },
       });
     }),
   spatial: {

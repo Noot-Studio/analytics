@@ -27,6 +27,7 @@ import {
   useChartVisibility,
 } from "../molecules/chart-view-options";
 import { MetricCard } from "../molecules/metric-card";
+import { PlayersListTable } from "../molecules/players-list-table";
 import { TimeRangeFilter } from "../molecules/time-range-filter";
 
 const DAU_SERIES = [{ key: "dau", label: "Daily active" }];
@@ -169,6 +170,11 @@ export const PlayersView = ({ projectId }: { projectId: string }) => {
           </ResponsiveContainer>
         </div>
       ) : null}
+
+      <div className="rounded-lg border border-border p-4">
+        <h2 className="mb-4 font-medium text-sm">All players</h2>
+        <PlayersListTable from={from} projectId={projectId} to={to} />
+      </div>
     </div>
   );
 };
