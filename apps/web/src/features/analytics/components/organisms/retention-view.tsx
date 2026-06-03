@@ -31,11 +31,16 @@ import { orpc } from "@/utils/orpc";
 
 import { toApiFilters } from "../../lib/api-filters";
 import { useAnalyticsFilters } from "../../lib/use-analytics-filters";
+import {
+  ChartViewOptions,
+  useChartVisibility,
+} from "../molecules/chart-view-options";
 import { MetricCard } from "../molecules/metric-card";
 import { TimeRangeFilter } from "../molecules/time-range-filter";
 
 const PERCENT = 100;
 const CHART_HEIGHT = 240;
+const CURVE_SERIES = [{ key: "retention", label: "Retention" }];
 
 const pct = (value: number, total: number): number =>
   total > 0 ? Math.round((value / total) * PERCENT) : 0;
@@ -116,6 +121,7 @@ const RetentionHeader = () => (
 
 export const RetentionView = ({ projectId }: { projectId: string }) => {
   const { from, to } = useAnalyticsFilters();
+  const curveChart = useChartVisibility();
 
   const [page] = useQueryState("cohortPage", parseAsInteger.withDefault(1));
   const [perPage] = useQueryState(
@@ -242,21 +248,30 @@ export const RetentionView = ({ projectId }: { projectId: string }) => {
 
       {curve.length > 0 ? (
         <div className="rounded-lg border border-border p-4">
-          <h2 className="mb-4 font-medium text-sm">
-            Average retention curve (mature cohorts)
-          </h2>
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <h2 className="font-medium text-sm">
+              Average retention curve (mature cohorts)
+            </h2>
+            <ChartViewOptions
+              hidden={curveChart.hidden}
+              onToggle={curveChart.toggle}
+              series={CURVE_SERIES}
+            />
+          </div>
           <ResponsiveContainer height={CHART_HEIGHT} width="100%">
             <LineChart data={curve}>
               <XAxis dataKey="day" fontSize={12} tickLine={false} />
               <YAxis fontSize={12} tickLine={false} unit="%" />
               <Tooltip formatter={(value) => `${value}%`} />
-              <Line
-                dataKey="retention"
-                dot={false}
-                name="Retention"
-                stroke="var(--primary)"
-                type="monotone"
-              />
+              {curveChart.isVisible("retention") ? (
+                <Line
+                  dataKey="retention"
+                  dot={false}
+                  name="Retention"
+                  stroke="var(--primary)"
+                  type="monotone"
+                />
+              ) : null}
             </LineChart>
           </ResponsiveContainer>
         </div>

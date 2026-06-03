@@ -31,6 +31,10 @@ import {
 import { orpc } from "@/utils/orpc";
 
 import { useAnalyticsFilters } from "../../lib/use-analytics-filters";
+import {
+  ChartViewOptions,
+  useChartVisibility,
+} from "../molecules/chart-view-options";
 import { FunnelBuilder } from "../molecules/funnel-builder";
 import { TimeRangeFilter } from "../molecules/time-range-filter";
 
@@ -38,12 +42,16 @@ const MIN_FUNNEL_STEPS = 2;
 const PERCENT = 100;
 const CHART_HEIGHT = 240;
 const CATEGORY_AXIS_WIDTH = 140;
+const STEPS_SERIES = [{ key: "reached", label: "Players" }];
+const CONVERSION_SERIES = [{ key: "conversion", label: "Conversion" }];
 
 const pct = (value: number, total: number): number =>
   total > 0 ? Math.round((value / total) * PERCENT) : 0;
 
 export const FunnelsView = ({ projectId }: { projectId: string }) => {
   const [steps, setSteps] = useState<string[]>([]);
+  const stepsChart = useChartVisibility();
+  const conversionChart = useChartVisibility();
   const { from, to } = useAnalyticsFilters();
   const window = { from: from.slice(0, 10), to: to.slice(0, 10) };
 
@@ -112,7 +120,14 @@ export const FunnelsView = ({ projectId }: { projectId: string }) => {
       {funnel ? (
         <>
           <div className="rounded-lg border border-border p-4">
-            <h2 className="mb-4 font-medium text-sm">Players per step</h2>
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <h2 className="font-medium text-sm">Players per step</h2>
+              <ChartViewOptions
+                hidden={stepsChart.hidden}
+                onToggle={stepsChart.toggle}
+                series={STEPS_SERIES}
+              />
+            </div>
             <ResponsiveContainer height={CHART_HEIGHT} width="100%">
               <BarChart data={funnel.steps} layout="vertical">
                 <XAxis fontSize={12} tickLine={false} type="number" />
@@ -124,7 +139,9 @@ export const FunnelsView = ({ projectId }: { projectId: string }) => {
                   width={CATEGORY_AXIS_WIDTH}
                 />
                 <Tooltip />
-                <Bar dataKey="reached" fill="var(--primary)" name="Players" />
+                {stepsChart.isVisible("reached") ? (
+                  <Bar dataKey="reached" fill="var(--primary)" name="Players" />
+                ) : null}
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -169,7 +186,14 @@ export const FunnelsView = ({ projectId }: { projectId: string }) => {
 
           {funnel.trend.length > 0 ? (
             <div className="rounded-lg border border-border p-4">
-              <h2 className="mb-4 font-medium text-sm">Conversion over time</h2>
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <h2 className="font-medium text-sm">Conversion over time</h2>
+                <ChartViewOptions
+                  hidden={conversionChart.hidden}
+                  onToggle={conversionChart.toggle}
+                  series={CONVERSION_SERIES}
+                />
+              </div>
               <ResponsiveContainer height={CHART_HEIGHT} width="100%">
                 <LineChart
                   data={funnel.trend.map((row) => ({
@@ -180,13 +204,15 @@ export const FunnelsView = ({ projectId }: { projectId: string }) => {
                   <XAxis dataKey="day" fontSize={12} tickLine={false} />
                   <YAxis fontSize={12} tickLine={false} unit="%" />
                   <Tooltip formatter={(value) => `${value}%`} />
-                  <Line
-                    dataKey="conversion"
-                    dot={false}
-                    name="Conversion"
-                    stroke="var(--primary)"
-                    type="monotone"
-                  />
+                  {conversionChart.isVisible("conversion") ? (
+                    <Line
+                      dataKey="conversion"
+                      dot={false}
+                      name="Conversion"
+                      stroke="var(--primary)"
+                      type="monotone"
+                    />
+                  ) : null}
                 </LineChart>
               </ResponsiveContainer>
             </div>

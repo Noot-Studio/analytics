@@ -34,11 +34,23 @@ import { orpc } from "@/utils/orpc";
 
 import { toApiFilters } from "../../lib/api-filters";
 import { useAnalyticsFilters } from "../../lib/use-analytics-filters";
+import {
+  ChartViewOptions,
+  useChartVisibility,
+} from "../molecules/chart-view-options";
 import { MetricCard } from "../molecules/metric-card";
 import { TimeRangeFilter } from "../molecules/time-range-filter";
 
 const PERCENT = 100;
 const CRASH_RATE_PRECISION = 2;
+
+const FPS_SERIES = [
+  { key: "p50", label: "p50" },
+  { key: "p95", label: "p95" },
+  { key: "p99", label: "p99" },
+];
+const CRASH_SERIES = [{ key: "crash_rate", label: "Crash rate" }];
+const LOAD_SERIES = [{ key: "count", label: "Sessions" }];
 
 interface PerformanceMapRow {
   map: string;
@@ -108,6 +120,114 @@ const PerformanceByMapTable = ({ rows }: { rows: PerformanceMapRow[] }) => {
         </DataTableAdvancedToolbar>
       </DataTable>
     </div>
+  );
+};
+
+const PerformanceCharts = ({
+  crashes,
+  fps,
+  loadHistogram,
+}: {
+  crashes: { event_date: string; crash_rate: number }[];
+  fps: { event_date: string; p50: number; p95: number; p99: number }[];
+  loadHistogram: { bucket: string; count: number }[];
+}) => {
+  const fpsChart = useChartVisibility();
+  const crashChart = useChartVisibility();
+  const loadChart = useChartVisibility();
+
+  return (
+    <>
+      <div className="rounded-lg border border-border p-4">
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <h2 className="font-medium text-sm">Frame rate percentiles</h2>
+          <ChartViewOptions
+            hidden={fpsChart.hidden}
+            onToggle={fpsChart.toggle}
+            series={FPS_SERIES}
+          />
+        </div>
+        <ResponsiveContainer height={240} width="100%">
+          <LineChart data={fps}>
+            <XAxis dataKey="event_date" fontSize={12} tickLine={false} />
+            <YAxis fontSize={12} tickLine={false} width={40} />
+            <Tooltip />
+            <Legend />
+            {fpsChart.isVisible("p50") ? (
+              <Line
+                dataKey="p50"
+                name="p50"
+                stroke="var(--chart-1)"
+                type="monotone"
+              />
+            ) : null}
+            {fpsChart.isVisible("p95") ? (
+              <Line
+                dataKey="p95"
+                name="p95"
+                stroke="var(--chart-2)"
+                type="monotone"
+              />
+            ) : null}
+            {fpsChart.isVisible("p99") ? (
+              <Line
+                dataKey="p99"
+                name="p99"
+                stroke="var(--chart-3)"
+                type="monotone"
+              />
+            ) : null}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="rounded-lg border border-border p-4">
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <h2 className="font-medium text-sm">Crash rate over time</h2>
+          <ChartViewOptions
+            hidden={crashChart.hidden}
+            onToggle={crashChart.toggle}
+            series={CRASH_SERIES}
+          />
+        </div>
+        <ResponsiveContainer height={240} width="100%">
+          <LineChart data={crashes}>
+            <XAxis dataKey="event_date" fontSize={12} tickLine={false} />
+            <YAxis fontSize={12} tickLine={false} width={40} />
+            <Tooltip />
+            {crashChart.isVisible("crash_rate") ? (
+              <Line
+                dataKey="crash_rate"
+                name="Crash rate"
+                stroke="var(--chart-4)"
+                type="monotone"
+              />
+            ) : null}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="rounded-lg border border-border p-4">
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <h2 className="font-medium text-sm">Load time distribution</h2>
+          <ChartViewOptions
+            hidden={loadChart.hidden}
+            onToggle={loadChart.toggle}
+            series={LOAD_SERIES}
+          />
+        </div>
+        <ResponsiveContainer height={240} width="100%">
+          <BarChart data={loadHistogram}>
+            <XAxis dataKey="bucket" fontSize={12} tickLine={false} />
+            <YAxis allowDecimals={false} fontSize={12} tickLine={false} />
+            <Tooltip />
+            {loadChart.isVisible("count") ? (
+              <Bar dataKey="count" fill="var(--primary)" />
+            ) : null}
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </>
   );
 };
 
@@ -230,64 +350,11 @@ export const PerformanceView = ({ projectId }: { projectId: string }) => {
         />
       </div>
 
-      <div className="rounded-lg border border-border p-4">
-        <h2 className="mb-4 font-medium text-sm">Frame rate percentiles</h2>
-        <ResponsiveContainer height={240} width="100%">
-          <LineChart data={data.fps}>
-            <XAxis dataKey="event_date" fontSize={12} tickLine={false} />
-            <YAxis fontSize={12} tickLine={false} width={40} />
-            <Tooltip />
-            <Legend />
-            <Line
-              dataKey="p50"
-              name="p50"
-              stroke="var(--chart-1)"
-              type="monotone"
-            />
-            <Line
-              dataKey="p95"
-              name="p95"
-              stroke="var(--chart-2)"
-              type="monotone"
-            />
-            <Line
-              dataKey="p99"
-              name="p99"
-              stroke="var(--chart-3)"
-              type="monotone"
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div className="rounded-lg border border-border p-4">
-        <h2 className="mb-4 font-medium text-sm">Crash rate over time</h2>
-        <ResponsiveContainer height={240} width="100%">
-          <LineChart data={data.crashes}>
-            <XAxis dataKey="event_date" fontSize={12} tickLine={false} />
-            <YAxis fontSize={12} tickLine={false} width={40} />
-            <Tooltip />
-            <Line
-              dataKey="crash_rate"
-              name="Crash rate"
-              stroke="var(--chart-4)"
-              type="monotone"
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div className="rounded-lg border border-border p-4">
-        <h2 className="mb-4 font-medium text-sm">Load time distribution</h2>
-        <ResponsiveContainer height={240} width="100%">
-          <BarChart data={data.loadHistogram}>
-            <XAxis dataKey="bucket" fontSize={12} tickLine={false} />
-            <YAxis allowDecimals={false} fontSize={12} tickLine={false} />
-            <Tooltip />
-            <Bar dataKey="count" fill="var(--primary)" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      <PerformanceCharts
+        crashes={data.crashes}
+        fps={data.fps}
+        loadHistogram={data.loadHistogram}
+      />
 
       {data.byMap.length > 0 || apiMapFilters.length > 0 ? (
         <PerformanceByMapTable rows={data.byMap} />

@@ -15,9 +15,15 @@ import { orpc } from "@/utils/orpc";
 
 import { buildHeatmapGrid } from "../../lib/heatmap";
 import { useAnalyticsFilters } from "../../lib/use-analytics-filters";
+import {
+  ChartViewOptions,
+  useChartVisibility,
+} from "../molecules/chart-view-options";
 import { TimeRangeFilter } from "../molecules/time-range-filter";
 
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DURATION_SERIES = [{ key: "sessions", label: "Sessions" }];
+const TREND_SERIES = [{ key: "avg_seconds", label: "Avg duration" }];
 
 const SessionsHeader = () => (
   <div className="flex items-center justify-between gap-4">
@@ -28,6 +34,8 @@ const SessionsHeader = () => (
 
 export const SessionsView = ({ projectId }: { projectId: string }) => {
   const { from, to } = useAnalyticsFilters();
+  const durationChart = useChartVisibility();
+  const trendChart = useChartVisibility();
   const query = useQuery(
     orpc.insights.sessions.queryOptions({
       input: {
@@ -65,13 +73,22 @@ export const SessionsView = ({ projectId }: { projectId: string }) => {
 
       {data.histogram.length > 0 ? (
         <div className="rounded-lg border border-border p-4">
-          <h2 className="mb-4 font-medium text-sm">Session duration</h2>
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <h2 className="font-medium text-sm">Session duration</h2>
+            <ChartViewOptions
+              hidden={durationChart.hidden}
+              onToggle={durationChart.toggle}
+              series={DURATION_SERIES}
+            />
+          </div>
           <ResponsiveContainer height={240} width="100%">
             <BarChart data={data.histogram}>
               <XAxis dataKey="bucket" fontSize={12} tickLine={false} />
               <YAxis allowDecimals={false} fontSize={12} tickLine={false} />
               <Tooltip />
-              <Bar dataKey="sessions" fill="var(--primary)" />
+              {durationChart.isVisible("sessions") ? (
+                <Bar dataKey="sessions" fill="var(--primary)" />
+              ) : null}
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -79,20 +96,29 @@ export const SessionsView = ({ projectId }: { projectId: string }) => {
 
       {data.trend.length > 0 ? (
         <div className="rounded-lg border border-border p-4">
-          <h2 className="mb-4 font-medium text-sm">
-            Avg session duration (seconds)
-          </h2>
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <h2 className="font-medium text-sm">
+              Avg session duration (seconds)
+            </h2>
+            <ChartViewOptions
+              hidden={trendChart.hidden}
+              onToggle={trendChart.toggle}
+              series={TREND_SERIES}
+            />
+          </div>
           <ResponsiveContainer height={240} width="100%">
             <LineChart data={data.trend}>
               <XAxis dataKey="event_date" fontSize={12} tickLine={false} />
               <YAxis allowDecimals={false} fontSize={12} tickLine={false} />
               <Tooltip />
-              <Line
-                dataKey="avg_seconds"
-                dot={false}
-                stroke="var(--primary)"
-                type="monotone"
-              />
+              {trendChart.isVisible("avg_seconds") ? (
+                <Line
+                  dataKey="avg_seconds"
+                  dot={false}
+                  stroke="var(--primary)"
+                  type="monotone"
+                />
+              ) : null}
             </LineChart>
           </ResponsiveContainer>
         </div>

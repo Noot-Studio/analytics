@@ -34,9 +34,14 @@ import { orpc } from "@/utils/orpc";
 
 import { toApiFilters } from "../../lib/api-filters";
 import { useAnalyticsFilters } from "../../lib/use-analytics-filters";
+import {
+  ChartViewOptions,
+  useChartVisibility,
+} from "../molecules/chart-view-options";
 import { TimeRangeFilter } from "../molecules/time-range-filter";
 
 const TOP_MAPS_FOR_TREND = 5;
+const SESSIONS_SERIES = [{ key: "sessions", label: "Sessions" }];
 const SECONDS_PER_MINUTE = 60;
 const LINE_COLORS = [
   "var(--primary)",
@@ -114,6 +119,8 @@ const MapsHeader = () => (
 
 export const MapsView = ({ projectId }: { projectId: string }) => {
   const { from, to } = useAnalyticsFilters();
+  const sessionsChart = useChartVisibility();
+  const popularityChart = useChartVisibility();
   const fromDate = from.slice(0, 10);
   const toDate = to.slice(0, 10);
 
@@ -172,6 +179,7 @@ export const MapsView = ({ projectId }: { projectId: string }) => {
   const topMaps = data.breakdown
     .slice(0, TOP_MAPS_FOR_TREND)
     .map((row) => row.map);
+  const popularitySeries = topMaps.map((map) => ({ key: map, label: map }));
 
   const trendByDate = new Map<string, Record<string, number | string>>();
   for (const row of data.overTime) {
@@ -231,13 +239,22 @@ export const MapsView = ({ projectId }: { projectId: string }) => {
 
       {data.breakdown.length > 0 ? (
         <div className="rounded-lg border border-border p-4">
-          <h2 className="mb-4 font-medium text-sm">Sessions per map</h2>
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <h2 className="font-medium text-sm">Sessions per map</h2>
+            <ChartViewOptions
+              hidden={sessionsChart.hidden}
+              onToggle={sessionsChart.toggle}
+              series={SESSIONS_SERIES}
+            />
+          </div>
           <ResponsiveContainer height={240} width="100%">
             <BarChart data={data.breakdown}>
               <XAxis dataKey="map" fontSize={12} tickLine={false} />
               <YAxis allowDecimals={false} fontSize={12} tickLine={false} />
               <Tooltip />
-              <Bar dataKey="sessions" fill="var(--primary)" />
+              {sessionsChart.isVisible("sessions") ? (
+                <Bar dataKey="sessions" fill="var(--primary)" />
+              ) : null}
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -255,24 +272,33 @@ export const MapsView = ({ projectId }: { projectId: string }) => {
 
       {trend.length > 0 ? (
         <div className="rounded-lg border border-border p-4">
-          <h2 className="mb-4 font-medium text-sm">
-            Map popularity over time (top {TOP_MAPS_FOR_TREND})
-          </h2>
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <h2 className="font-medium text-sm">
+              Map popularity over time (top {TOP_MAPS_FOR_TREND})
+            </h2>
+            <ChartViewOptions
+              hidden={popularityChart.hidden}
+              onToggle={popularityChart.toggle}
+              series={popularitySeries}
+            />
+          </div>
           <ResponsiveContainer height={240} width="100%">
             <LineChart data={trend}>
               <XAxis dataKey="event_date" fontSize={12} tickLine={false} />
               <YAxis allowDecimals={false} fontSize={12} tickLine={false} />
               <Tooltip />
               <Legend />
-              {topMaps.map((map, index) => (
-                <Line
-                  dataKey={map}
-                  dot={false}
-                  key={map}
-                  stroke={LINE_COLORS[index % LINE_COLORS.length]}
-                  type="monotone"
-                />
-              ))}
+              {topMaps.map((map, index) =>
+                popularityChart.isVisible(map) ? (
+                  <Line
+                    dataKey={map}
+                    dot={false}
+                    key={map}
+                    stroke={LINE_COLORS[index % LINE_COLORS.length]}
+                    type="monotone"
+                  />
+                ) : null
+              )}
             </LineChart>
           </ResponsiveContainer>
         </div>
