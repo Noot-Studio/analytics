@@ -8,10 +8,17 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
+import { useMemo } from "react";
 
 import { DataTable } from "@/components/data-table/data-table";
+import { DataTableAdvancedToolbar } from "@/components/data-table/data-table-advanced-toolbar";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
-import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
+import { DataTableFilterList } from "@/components/data-table/data-table-filter-list";
+import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
+import { useQueryState } from "@/hooks/use-query-state";
+import { filterRows } from "@/lib/client-filter";
+import { getFiltersStateParser } from "@/lib/parsers";
+import { parseAsStringEnum } from "@/lib/query-params";
 
 export interface LiveEventRow {
   event_type: string;
@@ -22,10 +29,13 @@ export interface LiveEventRow {
 }
 
 const LIVE_PAGE_SIZE = 25;
+const FILTERS_KEY = "liveFilters";
+const JOIN_OPERATOR_KEY = "liveJoinOperator";
 
 // Live events are filtered/sorted/paginated in-memory: the table tails a polled
 // page of recent rows, so doing it client-side keeps the stream live without a
-// round-trip per keystroke.
+// round-trip per keystroke. The advanced filter expression is read from the URL
+// (written by DataTableFilterList) and evaluated against the rows by filterRows.
 const columns: ColumnDef<LiveEventRow>[] = [
   {
     accessorKey: "timestamp",
@@ -45,7 +55,6 @@ const columns: ColumnDef<LiveEventRow>[] = [
       <span className="font-medium">{row.original.event_type}</span>
     ),
     enableColumnFilter: true,
-    filterFn: "includesString",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} label="Event" />
     ),
@@ -58,7 +67,6 @@ const columns: ColumnDef<LiveEventRow>[] = [
       <span className="text-muted-foreground">{row.original.player_id}</span>
     ),
     enableColumnFilter: true,
-    filterFn: "includesString",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} label="Player" />
     ),
@@ -71,7 +79,6 @@ const columns: ColumnDef<LiveEventRow>[] = [
       <span className="text-muted-foreground">{row.original.session_id}</span>
     ),
     enableColumnFilter: true,
-    filterFn: "includesString",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} label="Session" />
     ),
@@ -84,10 +91,28 @@ const columns: ColumnDef<LiveEventRow>[] = [
   },
 ];
 
+const FILTER_COLUMN_IDS = columns.flatMap((column) =>
+  column.id ? [column.id] : []
+);
+
 export const LiveEventsTable = ({ rows }: { rows: LiveEventRow[] }) => {
+  const [filters] = useQueryState(
+    FILTERS_KEY,
+    getFiltersStateParser<LiveEventRow>(FILTER_COLUMN_IDS).withDefault([])
+  );
+  const [joinOperator] = useQueryState(
+    JOIN_OPERATOR_KEY,
+    parseAsStringEnum(["and", "or"] as const).withDefault("and")
+  );
+
+  const filteredRows = useMemo(
+    () => filterRows(rows, filters, joinOperator),
+    [rows, filters, joinOperator]
+  );
+
   const table = useReactTable({
     columns,
-    data: rows,
+    data: filteredRows,
     getCoreRowModel: getCoreRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
@@ -95,11 +120,23 @@ export const LiveEventsTable = ({ rows }: { rows: LiveEventRow[] }) => {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     initialState: { pagination: { pageIndex: 0, pageSize: LIVE_PAGE_SIZE } },
+    meta: {
+      queryKeys: {
+        filters: FILTERS_KEY,
+        joinOperator: JOIN_OPERATOR_KEY,
+        page: "livePage",
+        perPage: "livePerPage",
+        sort: "liveSort",
+      },
+    },
   });
 
   return (
     <DataTable table={table}>
-      <DataTableToolbar table={table} />
+      <DataTableAdvancedToolbar table={table}>
+        <DataTableFilterList table={table} />
+        <DataTableSortList table={table} />
+      </DataTableAdvancedToolbar>
     </DataTable>
   );
 };
