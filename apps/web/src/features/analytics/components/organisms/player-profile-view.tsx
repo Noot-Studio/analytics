@@ -14,6 +14,7 @@ import { useMemo } from "react";
 
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableAdvancedToolbar } from "@/components/data-table/data-table-advanced-toolbar";
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { DataTableFilterList } from "@/components/data-table/data-table-filter-list";
 import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
 import { useDataTable } from "@/hooks/use-data-table";
@@ -51,7 +52,9 @@ const sessionColumns: ColumnDef<SessionRow, unknown>[] = [
     accessorKey: "started_at",
     cell: ({ row }) => formatTimestamp(row.original.started_at),
     enableColumnFilter: true,
-    header: "Started",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Started" />
+    ),
     id: "started_at",
     meta: { label: "Started", variant: "text" },
   },
@@ -59,7 +62,9 @@ const sessionColumns: ColumnDef<SessionRow, unknown>[] = [
     accessorKey: "map",
     cell: ({ row }) => row.original.map || "—",
     enableColumnFilter: true,
-    header: "Map",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Map" />
+    ),
     id: "map",
     meta: { label: "Map", variant: "text" },
   },
@@ -67,7 +72,9 @@ const sessionColumns: ColumnDef<SessionRow, unknown>[] = [
     accessorKey: "duration_seconds",
     cell: ({ row }) => formatDuration(row.original.duration_seconds),
     enableColumnFilter: true,
-    header: "Duration",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Duration" />
+    ),
     id: "duration_seconds",
     meta: { label: "Duration", variant: "number" },
   },
@@ -75,7 +82,9 @@ const sessionColumns: ColumnDef<SessionRow, unknown>[] = [
     accessorKey: "event_count",
     cell: ({ row }) => row.original.event_count.toLocaleString(),
     enableColumnFilter: true,
-    header: "Events",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} label="Events" />
+    ),
     id: "event_count",
     meta: { label: "Events", variant: "number" },
   },
