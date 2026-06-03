@@ -6,7 +6,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@sbox-analytics/ui/components/empty";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { Database } from "lucide-react";
 import {
   AreaChart,
@@ -24,9 +24,37 @@ import {
   useChartVisibility,
 } from "../molecules/chart-view-options";
 import { MetricCard } from "../molecules/metric-card";
+import type { MetricTrend } from "../molecules/metric-card";
 import { TimeRangeFilter } from "../molecules/time-range-filter";
 
 const TREND_SERIES = [{ key: "events", label: "Events" }];
+
+const DAY_MS = 86_400_000;
+const PERCENT = 100;
+const TREND_EPSILON = 0.05;
+
+const toDay = (iso: string) => iso.slice(0, 10);
+
+const buildTrend = (
+  current: number,
+  previous: number
+): MetricTrend | undefined => {
+  if (previous <= 0) {
+    return;
+  }
+  const change = ((current - previous) / previous) * PERCENT;
+  let direction: MetricTrend["direction"] = "neutral";
+  if (change > TREND_EPSILON) {
+    direction = "up";
+  } else if (change < -TREND_EPSILON) {
+    direction = "down";
+  }
+  const sign = change > 0 ? "+" : "";
+  return {
+    direction,
+    label: `${sign}${change.toFixed(1)}% vs previous period`,
+  };
+};
 
 export const OverviewView = ({ projectId }: { projectId: string }) => {
   const { from, to } = useAnalyticsFilters();
@@ -44,9 +72,30 @@ export const OverviewView = ({ projectId }: { projectId: string }) => {
     })
   );
 
+  // Preceding window of equal length, used to compute period-over-period
+  // trends. Non-suspense so it never blocks the warmed primary query —
+  // trends simply appear once it resolves.
+  const fromMs = new Date(toDay(from)).getTime();
+  const spanMs = new Date(toDay(to)).getTime() - fromMs;
+  const prevTo = new Date(fromMs - DAY_MS).toISOString().slice(0, 10);
+  const prevFrom = new Date(fromMs - DAY_MS - spanMs)
+    .toISOString()
+    .slice(0, 10);
+  const { data: prevRows } = useQuery(
+    orpc.insights.daily.queryOptions({
+      input: { from: prevFrom, projectId, to: prevTo },
+    })
+  );
+
+  const hasData = rows.length > 0;
   const totalEvents = rows.reduce((sum, row) => sum + row.event_count, 0);
   const uniquePlayers = rows.reduce((sum, row) => sum + row.unique_players, 0);
   const sessions = rows.reduce((sum, row) => sum + row.unique_sessions, 0);
+
+  const prev = prevRows ?? [];
+  const prevEvents = prev.reduce((sum, row) => sum + row.event_count, 0);
+  const prevPlayers = prev.reduce((sum, row) => sum + row.unique_players, 0);
+  const prevSessions = prev.reduce((sum, row) => sum + row.unique_sessions, 0);
 
   const byDate = new Map<string, number>();
   for (const row of rows) {
@@ -93,15 +142,21 @@ export const OverviewView = ({ projectId }: { projectId: string }) => {
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-3">
-        <MetricCard label="Total Events" value={totalEvents} />
-        <MetricCard label="Unique Players (sum/day)" value={uniquePlayers} />
-        <MetricCard label="Sessions (sum/day)" value={sessions} />
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <MetricCard comingSoon label="Retention (D1/D7/D30)" />
-        <MetricCard comingSoon label="Avg session duration" />
-        <MetricCard comingSoon label="DAU over time" />
+        <MetricCard
+          label="Total Events"
+          trend={hasData ? buildTrend(totalEvents, prevEvents) : undefined}
+          value={hasData ? totalEvents : undefined}
+        />
+        <MetricCard
+          label="Unique Players (sum/day)"
+          trend={hasData ? buildTrend(uniquePlayers, prevPlayers) : undefined}
+          value={hasData ? uniquePlayers : undefined}
+        />
+        <MetricCard
+          label="Sessions (sum/day)"
+          trend={hasData ? buildTrend(sessions, prevSessions) : undefined}
+          value={hasData ? sessions : undefined}
+        />
       </div>
 
       {trend.length > 0 ? (
