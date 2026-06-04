@@ -22,4 +22,9 @@ const RouteComponent = () => {
 
 export const Route = createFileRoute("/login")({
   component: RouteComponent,
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } =>
+    // Only same-origin paths — never redirect off-site after login.
+    typeof search.redirect === "string" && search.redirect.startsWith("/")
+      ? { redirect: search.redirect }
+      : {},
 });

@@ -4,6 +4,11 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { organization } from "better-auth/plugins";
 
+import {
+  canSendEmail,
+  sendInvitationEmail,
+  sendVerificationEmail,
+} from "./emails";
 import { steam } from "./steam";
 
 export function createAuth() {
@@ -29,7 +34,25 @@ export function createAuth() {
       enabled: true,
     },
 
-    plugins: [steam({ apiKey: env.STEAM_API_KEY }), organization()],
+    // Only deliverable when Resend is configured; without it, signups would
+    // be stuck unverifiable, so verification is dev-disabled alongside the
+    // invitation gate below.
+    emailVerification: canSendEmail
+      ? {
+          sendOnSignUp: true,
+          sendVerificationEmail: ({ url, user }) =>
+            sendVerificationEmail(user.email, url),
+        }
+      : undefined,
+
+    plugins: [
+      steam({ apiKey: env.STEAM_API_KEY }),
+      organization({
+        // Invite-takeover protection needs verified emails, which need Resend.
+        requireEmailVerificationOnInvitation: canSendEmail,
+        sendInvitationEmail: (data) => sendInvitationEmail(data),
+      }),
+    ],
 
     secret: env.BETTER_AUTH_SECRET,
 

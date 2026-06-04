@@ -18,7 +18,7 @@ export interface NavItem {
 export const orgNavMain: NavItem[] = [
   { icon: IconDashboard, title: "Dashboard", url: "/dashboard" },
   { icon: IconFolder, title: "Projects", url: "/dashboard/projects" },
-  { icon: IconUsers, title: "Team", url: "/dashboard" },
+  { icon: IconUsers, title: "Team", url: "/dashboard/teams" },
 ];
 
 export const orgNavSecondary: (NavItem & { icon: Icon })[] = [

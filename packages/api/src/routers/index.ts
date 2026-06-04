@@ -8,6 +8,7 @@ import { dashboardsRouter } from "./dashboards";
 import { introspectionRouter } from "./introspection";
 import { orgAnalyticsRouter } from "./org-analytics";
 import { projectsRouter } from "./projects";
+import { teamsRouter } from "./teams";
 
 export const appRouter = {
   apiKeys: apiKeysRouter,
@@ -22,6 +23,7 @@ export const appRouter = {
     user: context.session?.user,
   })),
   projects: projectsRouter,
+  teams: teamsRouter,
 };
 export type AppRouter = typeof appRouter;
 export type AppRouterClient = RouterClient<typeof appRouter>;

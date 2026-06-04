@@ -11,7 +11,7 @@ import {
 import { Input } from "@sbox-analytics/ui/components/input";
 import { cn } from "@sbox-analytics/ui/lib/utils";
 import { useForm } from "@tanstack/react-form";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { BarChart3 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -34,8 +34,8 @@ const signUpSchema = baseSchema.extend({
   name: z.string().min(2, "Name must be at least 2 characters"),
 });
 
-const startSteamSignIn = () => {
-  const callbackURL = `${window.location.origin}/dashboard`;
+const startSteamSignIn = (redirectPath: string) => {
+  const callbackURL = `${window.location.origin}${redirectPath}`;
   const url = new URL(`${env.VITE_SERVER_URL}/api/auth/sign-in/steam`);
   url.searchParams.set("callbackURL", callbackURL);
   window.location.href = url.toString();
@@ -49,6 +49,8 @@ export const LoginForm = ({
   ...props
 }: React.ComponentProps<"div">) => {
   const navigate = useNavigate({ from: "/login" });
+  const { redirect } = useSearch({ from: "/login" });
+  const redirectPath = redirect ?? "/dashboard";
   const [mode, setMode] = useState<Mode>("signin");
   const isSignUp = mode === "signup";
 
@@ -66,7 +68,7 @@ export const LoginForm = ({
           toast.error(error.error.message || error.error.statusText);
         },
         onSuccess: () => {
-          navigate({ to: "/dashboard" });
+          navigate({ href: redirectPath });
           toast.success(isSignUp ? "Account created" : "Welcome back");
         },
       };
@@ -211,7 +213,11 @@ export const LoginForm = ({
           <FieldSeparator>Or</FieldSeparator>
 
           <Field>
-            <Button type="button" variant="outline" onClick={startSteamSignIn}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => startSteamSignIn(redirectPath)}
+            >
               <SteamIcon className="size-4" />
               Continue with Steam
             </Button>
