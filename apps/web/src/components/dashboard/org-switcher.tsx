@@ -19,7 +19,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { OrgAvatar } from "@/components/org-avatar";
-import { CreateOrgDrawer } from "@/features/org/components/organisms/create-org-drawer";
+import { CreateOrgDialog } from "@/features/org/components/organisms/create-org-dialog";
 import { authClient } from "@/lib/auth-client";
 
 export const OrgSwitcher = () => {
@@ -133,7 +133,7 @@ export const OrgSwitcher = () => {
           </DropdownMenu>
         </SidebarMenuItem>
       </SidebarMenu>
-      <CreateOrgDrawer open={createOpen} onOpenChange={setCreateOpen} />
+      <CreateOrgDialog open={createOpen} onOpenChange={setCreateOpen} />
     </>
   );
 };

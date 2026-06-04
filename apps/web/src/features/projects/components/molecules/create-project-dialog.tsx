@@ -1,14 +1,13 @@
 import { Button } from "@sbox-analytics/ui/components/button";
-import { DotmSquare4 } from "@sbox-analytics/ui/components/dotm-square-4";
 import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@sbox-analytics/ui/components/drawer";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@sbox-analytics/ui/components/dialog";
+import { DotmSquare4 } from "@sbox-analytics/ui/components/dotm-square-4";
 import { Input } from "@sbox-analytics/ui/components/input";
 import { Label } from "@sbox-analytics/ui/components/label";
 import {
@@ -18,12 +17,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@sbox-analytics/ui/components/select";
-import { useIsMobile } from "@sbox-analytics/ui/hooks/use-mobile";
 import { useState } from "react";
 
 import type { ProjectEnvironment } from "../atoms/environment-badge";
 
-interface CreateProjectDrawerProps {
+interface CreateProjectDialogProps {
   isPending: boolean;
   onCreate: (name: string, environment: ProjectEnvironment) => void;
   onOpenChange: (open: boolean) => void;
@@ -36,18 +34,17 @@ const ENVIRONMENTS: ProjectEnvironment[] = [
   "Production",
 ];
 
-export const CreateProjectDrawer = ({
+export const CreateProjectDialog = ({
   isPending,
   onCreate,
   onOpenChange,
   open,
-}: CreateProjectDrawerProps) => {
-  const isMobile = useIsMobile();
+}: CreateProjectDialogProps) => {
   const [name, setName] = useState("");
   const [environment, setEnvironment] =
     useState<ProjectEnvironment>("Development");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: { preventDefault(): void }) => {
     e.preventDefault();
     if (name.trim()) {
       onCreate(name.trim(), environment);
@@ -57,20 +54,16 @@ export const CreateProjectDrawer = ({
   };
 
   return (
-    <Drawer
-      direction={isMobile ? "bottom" : "right"}
-      onOpenChange={onOpenChange}
-      open={open}
-    >
-      <DrawerContent>
-        <DrawerHeader className="gap-1">
-          <DrawerTitle>Create Project</DrawerTitle>
-          <DrawerDescription>
+    <Dialog onOpenChange={onOpenChange} open={open}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Create Project</DialogTitle>
+          <DialogDescription>
             Create a new project to track analytics for your game.
-          </DrawerDescription>
-        </DrawerHeader>
+          </DialogDescription>
+        </DialogHeader>
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 px-4 py-4">
+          <div className="grid gap-4 py-2">
             <div className="grid gap-2">
               <Label htmlFor="name">Project Name</Label>
               <Input
@@ -102,6 +95,15 @@ export const CreateProjectDrawer = ({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button
+              onClick={() => onOpenChange(false)}
+              type="button"
+              variant="outline"
+            >
+              Cancel
+            </Button>
             <Button disabled={isPending || !name.trim()} type="submit">
               {isPending ? (
                 <DotmSquare4 ariaLabel="Creating" dotSize={2} size={18} />
@@ -109,14 +111,9 @@ export const CreateProjectDrawer = ({
                 "Create"
               )}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
-        <DrawerFooter>
-          <DrawerClose asChild>
-            <Button variant="outline">Cancel</Button>
-          </DrawerClose>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
+      </DialogContent>
+    </Dialog>
   );
 };

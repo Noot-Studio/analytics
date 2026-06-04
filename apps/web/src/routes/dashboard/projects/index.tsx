@@ -4,7 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { CreateProjectDrawer } from "@/features/projects/components/molecules/create-project-drawer";
+import { CreateProjectDialog } from "@/features/projects/components/molecules/create-project-dialog";
 import { ProjectsList } from "@/features/projects/components/organisms/projects-list";
 import { orpc } from "@/utils/orpc";
 
@@ -40,7 +40,7 @@ function ProjectsIndexPage() {
         <Button onClick={() => setCreateOpen(true)}>Create Project</Button>
       </div>
       <ProjectsList />
-      <CreateProjectDrawer
+      <CreateProjectDialog
         isPending={createMutation.isPending}
         onCreate={(name, environment) =>
           createMutation.mutate({ environment, name })
