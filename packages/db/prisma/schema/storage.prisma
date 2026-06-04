@@ -1,0 +1,18 @@
+model UploadedImage {
+  id       String @id @default(cuid())
+  data     Bytes
+  mimeType String
+
+  // Exactly one owner is set: userId for avatars, organizationId for logos.
+  // Replacing an image deletes the owner's previous rows.
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([organizationId])
+  @@map("uploaded_image")
+}

@@ -6,6 +6,7 @@ import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import { createContext } from "@sbox-analytics/api/context";
 import { appRouter } from "@sbox-analytics/api/routers/index";
 import { auth } from "@sbox-analytics/auth";
+import prisma from "@sbox-analytics/db";
 import { env } from "@sbox-analytics/env/server";
 import { initLogger } from "evlog";
 import { createAuthMiddleware } from "evlog/better-auth";
@@ -87,6 +88,21 @@ app.use("/*", async (c, next) => {
   }
 
   await next();
+});
+
+// Serves uploaded avatars/logos. Public by design (loaded via <img> without
+// credentials); ids are unguessable cuids. Each upload gets a fresh id, so
+// responses are immutable.
+app.get("/images/:id", async (c) => {
+  const image = await prisma.uploadedImage.findFirst({
+    where: { id: c.req.param("id") },
+  });
+  if (!image) {
+    return c.notFound();
+  }
+  c.header("Cache-Control", "public, max-age=31536000, immutable");
+  c.header("Content-Type", image.mimeType);
+  return c.body(image.data);
 });
 
 app.get("/", (c) => c.text("OK"));
