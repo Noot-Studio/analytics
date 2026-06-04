@@ -10,8 +10,14 @@ const DICEBEAR_BASE_URL = "https://api.dicebear.com/9.x/pixel-art/svg";
  * Deterministic DiceBear avatar seeded by player_id. Anonymous activity
  * (empty player_id) falls back to a placeholder glyph.
  */
-export const PlayerAvatar = ({ playerId }: { playerId: string }) => (
-  <Avatar size="sm">
+export const PlayerAvatar = ({
+  playerId,
+  size = "sm",
+}: {
+  playerId: string;
+  size?: "sm" | "default" | "lg";
+}) => (
+  <Avatar size={size}>
     {playerId ? (
       <AvatarImage
         alt={`Avatar for player ${playerId}`}

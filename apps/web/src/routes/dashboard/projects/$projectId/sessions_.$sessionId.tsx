@@ -6,22 +6,34 @@ export const Route = createFileRoute(
   "/dashboard/projects/$projectId/sessions_/$sessionId"
 )({
   component: SessionProfilePage,
-  // Warm the default profile (first page of events) on hover/intent so opening
-  // a session paints with data. Event table paging/sort/filters resolve after
-  // mount with keepPreviousData. Errors surface via the view's useQuery state.
+  // Warm the profile aggregates and the default first page of the event log
+  // on hover/intent so opening a session paints with data. Later table
+  // paging/sort/filters hit only insights.sessionEvents. Errors surface via
+  // the view's useQuery state.
   loader: async ({ context, params }) => {
     try {
-      await context.queryClient.ensureQueryData(
-        context.orpc.insights.sessionProfile.queryOptions({
-          input: {
-            eventsJoinOperator: "and",
-            eventsPage: 1,
-            eventsPerPage: 20,
-            projectId: params.projectId,
-            sessionId: params.sessionId,
-          },
-        })
-      );
+      await Promise.all([
+        context.queryClient.ensureQueryData(
+          context.orpc.insights.sessionProfile.queryOptions({
+            input: {
+              projectId: params.projectId,
+              sessionId: params.sessionId,
+            },
+          })
+        ),
+        context.queryClient.ensureQueryData(
+          context.orpc.insights.sessionEvents.queryOptions({
+            input: {
+              joinOperator: "and",
+              page: 1,
+              perPage: 20,
+              projectId: params.projectId,
+              sessionId: params.sessionId,
+              sortDesc: false,
+            },
+          })
+        ),
+      ]);
     } catch {
       // Surfaced by the view's useQuery error state.
     }

@@ -6,23 +6,34 @@ export const Route = createFileRoute(
   "/dashboard/projects/$projectId/players_/$playerId"
 )({
   component: PlayerProfilePage,
-  // Warm the default profile (first page of sessions) on hover/intent so opening
-  // a player paints with data. Session table paging/sort/filters resolve after
-  // mount with keepPreviousData. Errors surface via the view's useQuery state.
+  // Warm the profile aggregates and the default first page of session history
+  // on hover/intent so opening a player paints with data. Later table
+  // paging/sort/filters hit only insights.playerSessions. Errors surface via
+  // the view's useQuery state.
   loader: async ({ context, params }) => {
     try {
-      await context.queryClient.ensureQueryData(
-        context.orpc.insights.playerProfile.queryOptions({
-          input: {
-            playerId: params.playerId,
-            projectId: params.projectId,
-            sessionsJoinOperator: "and",
-            sessionsPage: 1,
-            sessionsPerPage: 10,
-            sessionsSortDesc: true,
-          },
-        })
-      );
+      await Promise.all([
+        context.queryClient.ensureQueryData(
+          context.orpc.insights.playerProfile.queryOptions({
+            input: {
+              playerId: params.playerId,
+              projectId: params.projectId,
+            },
+          })
+        ),
+        context.queryClient.ensureQueryData(
+          context.orpc.insights.playerSessions.queryOptions({
+            input: {
+              joinOperator: "and",
+              page: 1,
+              perPage: 10,
+              playerId: params.playerId,
+              projectId: params.projectId,
+              sortDesc: true,
+            },
+          })
+        ),
+      ]);
     } catch {
       // Surfaced by the view's useQuery error state.
     }

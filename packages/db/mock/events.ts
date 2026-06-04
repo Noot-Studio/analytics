@@ -1,4 +1,14 @@
-import { DEMO_MAPS, DEMO_PLATFORMS, DEMO_PROJECT, DEMO_VERSIONS } from "./demo";
+import {
+  DEMO_CPUS,
+  DEMO_GPUS_BY_PLATFORM,
+  DEMO_MAPS,
+  DEMO_OSES_BY_PLATFORM,
+  DEMO_PLATFORMS,
+  DEMO_PROJECT,
+  DEMO_RAM_GB,
+  DEMO_RESOLUTIONS,
+  DEMO_VERSIONS,
+} from "./demo";
 import { createRng } from "./rng";
 import type { Rng } from "./rng";
 
@@ -32,6 +42,15 @@ export interface GenerateEventsOptions {
   seed?: number;
 }
 
+// One machine per player — stable across all of that player's sessions.
+interface PlayerSpecs {
+  os: string;
+  gpu: string;
+  cpu: string;
+  ram_gb: number;
+  resolution: string;
+}
+
 interface EventContext {
   projectId: string;
   playerId: string;
@@ -39,6 +58,7 @@ interface EventContext {
   map: string;
   platform: string;
   version: string;
+  specs: PlayerSpecs;
 }
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -126,6 +146,7 @@ const generateSession = (
     makeEvent(ctx, "session_start", sessionStart, {
       platform: ctx.platform,
       version: ctx.version,
+      ...ctx.specs,
     })
   );
   events.push(
@@ -254,6 +275,15 @@ export const generateDemoEvents = (
     const playerId = `player_${pad(p + 1, 4)}`;
     const platform = rng.pick(DEMO_PLATFORMS);
     const version = rng.pick(DEMO_VERSIONS);
+    // Apple Silicon is a single SoC — cpu mirrors the gpu chip on macOS.
+    const gpu = rng.pick(DEMO_GPUS_BY_PLATFORM[platform]);
+    const specs: PlayerSpecs = {
+      cpu: platform === "macOS" ? gpu : rng.pick(DEMO_CPUS),
+      gpu,
+      os: rng.pick(DEMO_OSES_BY_PLATFORM[platform]),
+      ram_gb: rng.pick(DEMO_RAM_GB),
+      resolution: rng.pick(DEMO_RESOLUTIONS),
+    };
     // Weight first-seen toward the start so most players have returning history.
     const firstSeenOffset = Math.floor(
       rng.next() ** FIRST_SEEN_SKEW * (days - 1)
@@ -272,6 +302,7 @@ export const generateDemoEvents = (
           playerId,
           projectId,
           sessionId: `sess_${playerId}_${dayOffset}_${s}`,
+          specs,
           version,
         };
         events.push(...generateSession(rng, ctx, new Date(startMs)));
