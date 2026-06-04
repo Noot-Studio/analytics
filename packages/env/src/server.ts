@@ -14,6 +14,10 @@ export const env = createEnv({
     CLICKHOUSE_USER: z.string().min(1).default("analytics"),
     CORS_ORIGIN: z.url(),
     DATABASE_URL: z.string().min(1),
+    EMAIL_FROM: z
+      .string()
+      .min(1)
+      .default("s&box Analytics <onboarding@resend.dev>"),
     INGEST_PORT: z.coerce.number().int().positive().default(8080),
     KAFKA_BROKERS: z.string().min(1).default("localhost:19092"),
     KAFKA_EVENTS_TOPIC: z.string().min(1).default("events"),
@@ -21,6 +25,7 @@ export const env = createEnv({
       .enum(["development", "production", "test"])
       .default("development"),
     REDIS_URL: z.string().min(1).default("redis://localhost:6379"),
+    RESEND_API_KEY: z.string().min(1).optional(),
     SERVER_PORT: z.coerce.number().int().positive().default(3000),
     STEAM_API_KEY: z.string().min(1),
   },

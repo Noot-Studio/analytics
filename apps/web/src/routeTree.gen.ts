@@ -14,8 +14,11 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
+import { Route as JoinTokenRouteImport } from './routes/join.$token'
+import { Route as DashboardTeamsRouteImport } from './routes/dashboard/teams'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard/settings'
 import { Route as DashboardOrganizationRouteImport } from './routes/dashboard/organization'
+import { Route as AcceptInvitationInvitationIdRouteImport } from './routes/accept-invitation.$invitationId'
 import { Route as DashboardProjectsIndexRouteImport } from './routes/dashboard/projects/index'
 import { Route as DashboardProjectsProjectIdRouteImport } from './routes/dashboard/projects/$projectId'
 import { Route as DashboardProjectsProjectIdIndexRouteImport } from './routes/dashboard/projects/$projectId/index'
@@ -58,6 +61,16 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
   path: '/',
   getParentRoute: () => DashboardRoute,
 } as any)
+const JoinTokenRoute = JoinTokenRouteImport.update({
+  id: '/join/$token',
+  path: '/join/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardTeamsRoute = DashboardTeamsRouteImport.update({
+  id: '/teams',
+  path: '/teams',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -68,6 +81,12 @@ const DashboardOrganizationRoute = DashboardOrganizationRouteImport.update({
   path: '/organization',
   getParentRoute: () => DashboardRoute,
 } as any)
+const AcceptInvitationInvitationIdRoute =
+  AcceptInvitationInvitationIdRouteImport.update({
+    id: '/accept-invitation/$invitationId',
+    path: '/accept-invitation/$invitationId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const DashboardProjectsIndexRoute = DashboardProjectsIndexRouteImport.update({
   id: '/projects/',
   path: '/projects/',
@@ -169,8 +188,11 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
   '/dashboard/organization': typeof DashboardOrganizationRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/teams': typeof DashboardTeamsRoute
+  '/join/$token': typeof JoinTokenRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/projects/$projectId': typeof DashboardProjectsProjectIdRouteWithChildren
   '/dashboard/projects/': typeof DashboardProjectsIndexRoute
@@ -193,8 +215,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
   '/dashboard/organization': typeof DashboardOrganizationRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/teams': typeof DashboardTeamsRoute
+  '/join/$token': typeof JoinTokenRoute
   '/dashboard': typeof DashboardIndexRoute
   '/dashboard/projects': typeof DashboardProjectsIndexRoute
   '/dashboard/projects/$projectId/events': typeof DashboardProjectsProjectIdEventsRoute
@@ -218,8 +243,11 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
   '/dashboard/organization': typeof DashboardOrganizationRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/teams': typeof DashboardTeamsRoute
+  '/join/$token': typeof JoinTokenRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/projects/$projectId': typeof DashboardProjectsProjectIdRouteWithChildren
   '/dashboard/projects/': typeof DashboardProjectsIndexRoute
@@ -245,8 +273,11 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/onboarding'
+    | '/accept-invitation/$invitationId'
     | '/dashboard/organization'
     | '/dashboard/settings'
+    | '/dashboard/teams'
+    | '/join/$token'
     | '/dashboard/'
     | '/dashboard/projects/$projectId'
     | '/dashboard/projects/'
@@ -269,8 +300,11 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/onboarding'
+    | '/accept-invitation/$invitationId'
     | '/dashboard/organization'
     | '/dashboard/settings'
+    | '/dashboard/teams'
+    | '/join/$token'
     | '/dashboard'
     | '/dashboard/projects'
     | '/dashboard/projects/$projectId/events'
@@ -293,8 +327,11 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/onboarding'
+    | '/accept-invitation/$invitationId'
     | '/dashboard/organization'
     | '/dashboard/settings'
+    | '/dashboard/teams'
+    | '/join/$token'
     | '/dashboard/'
     | '/dashboard/projects/$projectId'
     | '/dashboard/projects/'
@@ -319,6 +356,8 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRouteWithChildren
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
+  AcceptInvitationInvitationIdRoute: typeof AcceptInvitationInvitationIdRoute
+  JoinTokenRoute: typeof JoinTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -358,6 +397,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/join/$token': {
+      id: '/join/$token'
+      path: '/join/$token'
+      fullPath: '/join/$token'
+      preLoaderRoute: typeof JoinTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/teams': {
+      id: '/dashboard/teams'
+      path: '/teams'
+      fullPath: '/dashboard/teams'
+      preLoaderRoute: typeof DashboardTeamsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/settings': {
       id: '/dashboard/settings'
       path: '/settings'
@@ -371,6 +424,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/organization'
       preLoaderRoute: typeof DashboardOrganizationRouteImport
       parentRoute: typeof DashboardRoute
+    }
+    '/accept-invitation/$invitationId': {
+      id: '/accept-invitation/$invitationId'
+      path: '/accept-invitation/$invitationId'
+      fullPath: '/accept-invitation/$invitationId'
+      preLoaderRoute: typeof AcceptInvitationInvitationIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/dashboard/projects/': {
       id: '/dashboard/projects/'
@@ -541,6 +601,7 @@ const DashboardProjectsProjectIdRouteWithChildren =
 interface DashboardRouteChildren {
   DashboardOrganizationRoute: typeof DashboardOrganizationRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
+  DashboardTeamsRoute: typeof DashboardTeamsRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
   DashboardProjectsProjectIdRoute: typeof DashboardProjectsProjectIdRouteWithChildren
   DashboardProjectsIndexRoute: typeof DashboardProjectsIndexRoute
@@ -549,6 +610,7 @@ interface DashboardRouteChildren {
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardOrganizationRoute: DashboardOrganizationRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
+  DashboardTeamsRoute: DashboardTeamsRoute,
   DashboardIndexRoute: DashboardIndexRoute,
   DashboardProjectsProjectIdRoute: DashboardProjectsProjectIdRouteWithChildren,
   DashboardProjectsIndexRoute: DashboardProjectsIndexRoute,
@@ -563,6 +625,8 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRouteWithChildren,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
+  AcceptInvitationInvitationIdRoute: AcceptInvitationInvitationIdRoute,
+  JoinTokenRoute: JoinTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
