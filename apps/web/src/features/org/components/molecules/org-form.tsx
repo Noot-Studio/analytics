@@ -8,6 +8,7 @@ import {
 import { Input } from "@sbox-analytics/ui/components/input";
 import { useForm } from "@tanstack/react-form";
 import { useRef } from "react";
+import type { ReactNode } from "react";
 import z from "zod";
 
 const orgSchema = z.object({
@@ -33,12 +34,14 @@ interface OrgFormProps {
   onSubmit: (values: { name: string; slug: string }) => Promise<void>;
   isLoading: boolean;
   submitLabel?: string;
+  cancelAction?: ReactNode;
 }
 
 export const OrgForm = ({
   onSubmit,
   isLoading,
   submitLabel = "Create Organization",
+  cancelAction,
 }: OrgFormProps) => {
   const slugManuallyEdited = useRef(false);
 
@@ -117,8 +120,8 @@ export const OrgForm = ({
             isSubmitting: state.isSubmitting,
           })}
         >
-          {({ canSubmit, isSubmitting }) => (
-            <Field>
+          {({ canSubmit, isSubmitting }) => {
+            const submitButton = (
               <Button
                 type="submit"
                 disabled={!canSubmit || isSubmitting || isLoading}
@@ -129,8 +132,17 @@ export const OrgForm = ({
                   submitLabel
                 )}
               </Button>
-            </Field>
-          )}
+            );
+            if (cancelAction) {
+              return (
+                <div className="flex justify-end gap-2">
+                  {cancelAction}
+                  {submitButton}
+                </div>
+              );
+            }
+            return <Field>{submitButton}</Field>;
+          }}
         </form.Subscribe>
       </FieldGroup>
     </form>
