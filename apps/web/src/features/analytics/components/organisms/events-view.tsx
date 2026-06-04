@@ -15,6 +15,7 @@ import { orpc } from "@/utils/orpc";
 
 import { toApiFilters } from "../../lib/api-filters";
 import { useAnalyticsFilters } from "../../lib/use-analytics-filters";
+import { PlayerAvatar } from "../atoms/player-avatar";
 import { PlayerLink } from "../atoms/player-link";
 import { RelativeTime } from "../atoms/relative-time";
 import { SessionLink } from "../atoms/session-link";
@@ -41,7 +42,12 @@ const recentColumns: ColumnDef<RecentEvent, unknown>[] = [
   },
   {
     accessorKey: "player_id",
-    cell: ({ row }) => <PlayerLink playerId={row.original.player_id} />,
+    cell: ({ row }) => (
+      <div className="flex items-center gap-2">
+        <PlayerAvatar playerId={row.original.player_id} />
+        <PlayerLink playerId={row.original.player_id} />
+      </div>
+    ),
     enableColumnFilter: true,
     header: ({ column }) => (
       <DataTableColumnHeader column={column} label="Player" />
