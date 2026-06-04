@@ -1,4 +1,5 @@
 import { Badge } from "@sbox-analytics/ui/components/badge";
+import { Bar } from "@sbox-analytics/ui/components/chart-series";
 import {
   Empty,
   EmptyDescription,
@@ -9,103 +10,62 @@ import {
 import { Skeleton } from "@sbox-analytics/ui/components/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowLeft, UserSearch } from "lucide-react";
-import { useMemo } from "react";
+import { BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
-import { DataTable } from "@/components/data-table/data-table";
-import { DataTableAdvancedToolbar } from "@/components/data-table/data-table-advanced-toolbar";
-import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
-import { DataTableFilterList } from "@/components/data-table/data-table-filter-list";
-import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
-import { useDataTable } from "@/hooks/use-data-table";
-import { useQueryState } from "@/hooks/use-query-state";
-import { getFiltersStateParser, getSortingStateParser } from "@/lib/parsers";
-import { parseAsInteger, parseAsStringEnum } from "@/lib/query-params";
 import { orpc } from "@/utils/orpc";
 
-import { toApiFilters } from "../../lib/api-filters";
-import { SessionLink } from "../atoms/session-link";
+import { PlayerAvatar } from "../atoms/player-avatar";
+import { ActivityCalendar } from "../molecules/activity-calendar";
 import { MetricCard } from "../molecules/metric-card";
+import { PlayTimeHeatmap } from "../molecules/play-time-heatmap";
+import { PlayerSessionsTable } from "../molecules/player-sessions-table";
+import { PlayerSpecsCard } from "../molecules/player-specs-card";
+import { ShareList } from "../molecules/share-list";
+import type { ShareListItem } from "../molecules/share-list";
 
 const SECONDS_PER_MINUTE = 60;
+const MINUTES_PER_HOUR = 60;
 const TIMESTAMP_LENGTH = 19;
 const PROPERTIES_PREVIEW_LENGTH = 120;
-
-const formatDuration = (seconds: number) => {
-  const minutes = Math.floor(seconds / SECONDS_PER_MINUTE);
-  const remainder = seconds % SECONDS_PER_MINUTE;
-  return `${minutes}m ${remainder}s`;
-};
+const PERCENT = 100;
+const HISTOGRAM_HEIGHT = 200;
 
 const formatTimestamp = (value: string) => value.slice(0, TIMESTAMP_LENGTH);
 
-interface SessionRow {
-  duration_seconds: number;
-  ended_at: string;
-  event_count: number;
-  map: string;
-  session_id: string;
-  started_at: string;
-}
+// Compact duration for stat values and playtime details: "1h 12m", "24m", "38s".
+const formatPlaytime = (seconds: number) => {
+  const hours = Math.floor(seconds / (SECONDS_PER_MINUTE * MINUTES_PER_HOUR));
+  const minutes = Math.floor(
+    (seconds % (SECONDS_PER_MINUTE * MINUTES_PER_HOUR)) / SECONDS_PER_MINUTE
+  );
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  if (minutes > 0) {
+    return `${minutes}m ${seconds % SECONDS_PER_MINUTE}s`;
+  }
+  return `${seconds}s`;
+};
 
-const sessionColumns: ColumnDef<SessionRow, unknown>[] = [
-  {
-    accessorKey: "started_at",
-    cell: ({ row }) => (
-      <SessionLink sessionId={row.original.session_id}>
-        {formatTimestamp(row.original.started_at)}
-      </SessionLink>
-    ),
-    enableColumnFilter: true,
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} label="Started" />
-    ),
-    id: "started_at",
-    meta: { label: "Started", variant: "text" },
-  },
-  {
-    accessorKey: "map",
-    cell: ({ row }) => row.original.map || "—",
-    enableColumnFilter: true,
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} label="Map" />
-    ),
-    id: "map",
-    meta: { label: "Map", variant: "text" },
-  },
-  {
-    accessorKey: "duration_seconds",
-    cell: ({ row }) => formatDuration(row.original.duration_seconds),
-    enableColumnFilter: true,
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} label="Duration" />
-    ),
-    id: "duration_seconds",
-    meta: { label: "Duration", variant: "number" },
-  },
-  {
-    accessorKey: "event_count",
-    cell: ({ row }) => row.original.event_count.toLocaleString(),
-    enableColumnFilter: true,
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} label="Events" />
-    ),
-    id: "event_count",
-    meta: { label: "Events", variant: "number" },
-  },
-];
+const RETENTION_DAYS = [
+  { key: "retained_d1", label: "Day 1" },
+  { key: "retained_d7", label: "Day 7" },
+  { key: "retained_d30", label: "Day 30" },
+] as const;
 
-const sessionFiltersParser = getFiltersStateParser<SessionRow>([
-  "started_at",
-  "map",
-  "duration_seconds",
-  "event_count",
-]).withDefault([]);
-const sessionJoinOperatorParser = parseAsStringEnum([
-  "and",
-  "or",
-] as const).withDefault("and");
+const Panel = ({
+  children,
+  title,
+}: {
+  children: React.ReactNode;
+  title: string;
+}) => (
+  <section className="rounded-lg border border-border p-4">
+    <h2 className="mb-4 font-medium text-sm">{title}</h2>
+    {children}
+  </section>
+);
 
 export const PlayerProfileView = ({
   playerId,
@@ -114,69 +74,11 @@ export const PlayerProfileView = ({
   playerId: string;
   projectId: string;
 }) => {
-  const [sessionsPage] = useQueryState(
-    "sessionsPage",
-    parseAsInteger.withDefault(1)
-  );
-  const [sessionsPerPage] = useQueryState(
-    "sessionsPerPage",
-    parseAsInteger.withDefault(10)
-  );
-  const [sessionsSort] = useQueryState(
-    "sessionsSort",
-    getSortingStateParser<SessionRow>().withDefault([])
-  );
-  const [sessionsFilters] = useQueryState(
-    "sessionsFilters",
-    sessionFiltersParser
-  );
-  const [sessionsJoinOperator] = useQueryState(
-    "sessionsJoinOperator",
-    sessionJoinOperatorParser
-  );
-  const sessionsSortEntry = sessionsSort[0] ?? null;
-
-  const apiSessionsFilters = useMemo(
-    () => toApiFilters(sessionsFilters),
-    [sessionsFilters]
-  );
-
   const query = useQuery(
     orpc.insights.playerProfile.queryOptions({
-      input: {
-        playerId,
-        projectId,
-        sessionsFilters:
-          apiSessionsFilters.length > 0 ? apiSessionsFilters : undefined,
-        sessionsJoinOperator,
-        sessionsPage,
-        sessionsPerPage,
-        sessionsSortBy: sessionsSortEntry?.id as
-          | "started_at"
-          | "duration_seconds"
-          | "event_count"
-          | undefined,
-        sessionsSortDesc: sessionsSortEntry?.desc ?? true,
-      },
+      input: { playerId, projectId },
     })
   );
-
-  const sessionsTotal = query.data?.sessionsTotal ?? 0;
-  const sessionsPageCount = Math.ceil(sessionsTotal / sessionsPerPage);
-  const sessions = query.data?.sessions ?? [];
-
-  const { table } = useDataTable({
-    columns: sessionColumns,
-    data: sessions,
-    pageCount: sessionsPageCount,
-    queryKeys: {
-      filters: "sessionsFilters",
-      joinOperator: "sessionsJoinOperator",
-      page: "sessionsPage",
-      perPage: "sessionsPerPage",
-      sort: "sessionsSort",
-    },
-  });
 
   const playersHref = `/dashboard/projects/${projectId}/players`;
 
@@ -184,12 +86,17 @@ export const PlayerProfileView = ({
     return (
       <div className="flex flex-col gap-6 p-4 lg:p-6">
         <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-20 w-full" />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-48 w-full" />
+        </div>
         <Skeleton className="h-64 w-full" />
       </div>
     );
   }
 
-  if (query.isError) {
+  if (query.isError || !query.data) {
     return (
       <div className="p-4 text-destructive lg:p-6">
         Failed to load player profile.
@@ -197,24 +104,7 @@ export const PlayerProfileView = ({
     );
   }
 
-  const data = query.data ?? {
-    lifetime: {
-      active_days: 0,
-      first_seen: "",
-      last_seen: "",
-      total_events: 0,
-      total_sessions: 0,
-    },
-    retention: {
-      cohort_date: "",
-      retained_d1: 0,
-      retained_d30: 0,
-      retained_d7: 0,
-    },
-    sessions: [],
-    sessionsTotal: 0,
-    timeline: [],
-  };
+  const { data } = query;
 
   if (data.lifetime.total_events === 0) {
     return (
@@ -241,69 +131,123 @@ export const PlayerProfileView = ({
     );
   }
 
+  const totalEvents = data.lifetime.total_events;
+  const breakdownItems: ShareListItem[] = data.eventBreakdown.map((entry) => ({
+    key: entry.event_type,
+    label: entry.event_type,
+    value: entry.count,
+    valueLabel: `${entry.count.toLocaleString()} · ${((entry.count / totalEvents) * PERCENT).toFixed(1)}%`,
+  }));
+
+  const mapItems: ShareListItem[] = data.maps.map((entry) => ({
+    detail: `${formatPlaytime(entry.playtime_seconds)} played`,
+    key: entry.map || "(unknown)",
+    label: entry.map || "(unknown)",
+    value: entry.sessions,
+    valueLabel: `${entry.sessions.toLocaleString()} ${entry.sessions === 1 ? "session" : "sessions"}`,
+  }));
+
   return (
     <div className="flex flex-col gap-6 p-4 lg:p-6">
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-3">
         <Link
           className="flex items-center gap-1 text-muted-foreground text-sm hover:text-foreground"
           to={playersHref}
         >
           <ArrowLeft className="size-4" /> Back to players
         </Link>
-        <h1 className="break-all font-semibold text-2xl">{playerId}</h1>
-        <p className="text-muted-foreground">
-          First seen {formatTimestamp(data.lifetime.first_seen)} · last seen{" "}
-          {formatTimestamp(data.lifetime.last_seen)}
-        </p>
+        <div className="flex flex-wrap items-center gap-4">
+          <PlayerAvatar playerId={playerId} size="lg" />
+          <div className="min-w-0 flex-1">
+            <h1 className="break-all font-mono font-semibold text-xl">
+              {playerId}
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              First seen {formatTimestamp(data.lifetime.first_seen)} · last seen{" "}
+              {formatTimestamp(data.lifetime.last_seen)}
+            </p>
+          </div>
+          <div className="flex flex-col items-end gap-1.5">
+            <div className="flex flex-wrap gap-2">
+              {RETENTION_DAYS.map((day) => (
+                <Badge
+                  key={day.key}
+                  variant={data.retention[day.key] > 0 ? "default" : "outline"}
+                >
+                  {day.label}
+                </Badge>
+              ))}
+            </div>
+            {data.retention.cohort_date ? (
+              <span className="text-muted-foreground text-xs">
+                Cohort {data.retention.cohort_date.slice(0, 10)}
+              </span>
+            ) : null}
+          </div>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <MetricCard label="Total events" value={data.lifetime.total_events} />
         <MetricCard label="Sessions" value={data.lifetime.total_sessions} />
         <MetricCard label="Active days" value={data.lifetime.active_days} />
+        <MetricCard
+          label="Avg session"
+          value={formatPlaytime(data.lifetime.avg_session_seconds)}
+        />
+        <MetricCard
+          label="Total playtime"
+          value={formatPlaytime(data.lifetime.total_playtime_seconds)}
+        />
       </div>
 
-      <div className="rounded-lg border border-border p-4">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="font-medium text-sm">Retention</h2>
-          {data.retention.cohort_date ? (
-            <span className="text-muted-foreground text-xs">
-              Cohort {formatTimestamp(data.retention.cohort_date)}
-            </span>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Badge
-            variant={data.retention.retained_d1 > 0 ? "default" : "outline"}
-          >
-            Day 1
-          </Badge>
-          <Badge
-            variant={data.retention.retained_d7 > 0 ? "default" : "outline"}
-          >
-            Day 7
-          </Badge>
-          <Badge
-            variant={data.retention.retained_d30 > 0 ? "default" : "outline"}
-          >
-            Day 30
-          </Badge>
-        </div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Panel title="Activity (last 12 weeks)">
+          <ActivityCalendar activity={data.activity} />
+        </Panel>
+        <Panel title="When they play">
+          <PlayTimeHeatmap cells={data.hourGrid} />
+        </Panel>
       </div>
 
-      <div className="rounded-lg border border-border p-4">
-        <h2 className="mb-4 font-medium text-sm">Session history</h2>
-        <DataTable table={table}>
-          <DataTableAdvancedToolbar table={table}>
-            <DataTableFilterList table={table} />
-            <DataTableSortList table={table} />
-          </DataTableAdvancedToolbar>
-        </DataTable>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Panel title="Event breakdown">
+          <ShareList items={breakdownItems} />
+        </Panel>
+        <Panel title="Map distribution">
+          <ShareList items={mapItems} />
+        </Panel>
       </div>
 
-      <div className="rounded-lg border border-border p-4">
-        <h2 className="mb-4 font-medium text-sm">Recent events</h2>
-        <ul className="flex flex-col gap-2">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Panel title="Hardware & client">
+          {data.specs ? (
+            <PlayerSpecsCard specs={data.specs} />
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              No hardware specs reported. Specs appear once the SDK sends them
+              on session_start.
+            </p>
+          )}
+        </Panel>
+        <Panel title="Session length">
+          <ResponsiveContainer height={HISTOGRAM_HEIGHT} width="100%">
+            <BarChart data={data.durationHistogram}>
+              <XAxis dataKey="bucket" fontSize={12} tickLine={false} />
+              <YAxis allowDecimals={false} fontSize={12} tickLine={false} />
+              <Tooltip />
+              <Bar dataKey="sessions" fill="var(--primary)" />
+            </BarChart>
+          </ResponsiveContainer>
+        </Panel>
+      </div>
+
+      <Panel title="Session history">
+        <PlayerSessionsTable playerId={playerId} projectId={projectId} />
+      </Panel>
+
+      <Panel title="Recent events">
+        <ul className="flex max-h-96 flex-col gap-2 overflow-y-auto pr-1">
           {data.timeline.map((event, index) => (
             <li
               className="flex flex-col gap-0.5 border-border border-b pb-2 last:border-b-0"
@@ -323,7 +267,7 @@ export const PlayerProfileView = ({
             </li>
           ))}
         </ul>
-      </div>
+      </Panel>
     </div>
   );
 };

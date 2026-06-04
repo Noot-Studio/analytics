@@ -1,3 +1,5 @@
+import { Badge } from "@sbox-analytics/ui/components/badge";
+import { Line } from "@sbox-analytics/ui/components/chart-series";
 import {
   Empty,
   EmptyDescription,
@@ -8,29 +10,30 @@ import {
 import { Skeleton } from "@sbox-analytics/ui/components/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowLeft, SearchX } from "lucide-react";
-import { useMemo } from "react";
+import {
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
-import { DataTable } from "@/components/data-table/data-table";
-import { DataTableAdvancedToolbar } from "@/components/data-table/data-table-advanced-toolbar";
-import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
-import { DataTableFilterList } from "@/components/data-table/data-table-filter-list";
-import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
-import { useDataTable } from "@/hooks/use-data-table";
-import { useQueryState } from "@/hooks/use-query-state";
-import { getFiltersStateParser, getSortingStateParser } from "@/lib/parsers";
-import { parseAsInteger, parseAsStringEnum } from "@/lib/query-params";
 import { orpc } from "@/utils/orpc";
 
-import { toApiFilters } from "../../lib/api-filters";
+import { PlayerAvatar } from "../atoms/player-avatar";
 import { PlayerLink } from "../atoms/player-link";
-import { RelativeTime } from "../atoms/relative-time";
 import { MetricCard } from "../molecules/metric-card";
+import { PlayerSpecsCard } from "../molecules/player-specs-card";
+import { SessionEventsTable } from "../molecules/session-events-table";
+import { ShareList } from "../molecules/share-list";
+import type { ShareListItem } from "../molecules/share-list";
 
 const SECONDS_PER_MINUTE = 60;
+const MS_PER_SECOND = 1000;
 const TIMESTAMP_LENGTH = 19;
-const PROPERTIES_PREVIEW_LENGTH = 120;
+const PERCENT = 100;
+const FPS_CHART_HEIGHT = 200;
 
 const formatDuration = (seconds: number) => {
   const minutes = Math.floor(seconds / SECONDS_PER_MINUTE);
@@ -40,57 +43,22 @@ const formatDuration = (seconds: number) => {
 
 const formatTimestamp = (value: string) => value.slice(0, TIMESTAMP_LENGTH);
 
-interface SessionEvent {
-  event_type: string;
-  properties: string;
-  timestamp: string;
-}
+// X-axis tick for FPS samples: seconds since session start as "12m".
+const formatOffset = (seconds: number) =>
+  `${Math.floor(seconds / SECONDS_PER_MINUTE)}m`;
 
-const eventColumns: ColumnDef<SessionEvent, unknown>[] = [
-  {
-    accessorKey: "event_type",
-    cell: ({ row }) => (
-      <span className="font-medium">{row.original.event_type}</span>
-    ),
-    enableColumnFilter: true,
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} label="Event" />
-    ),
-    id: "event_type",
-    meta: { label: "Event type", variant: "text" },
-  },
-  {
-    accessorKey: "timestamp",
-    cell: ({ row }) => <RelativeTime date={row.original.timestamp} />,
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} label="Time" />
-    ),
-    id: "timestamp",
-  },
-  {
-    accessorKey: "properties",
-    cell: ({ row }) =>
-      row.original.properties && row.original.properties !== "{}" ? (
-        <code className="break-all text-muted-foreground text-xs">
-          {row.original.properties.slice(0, PROPERTIES_PREVIEW_LENGTH)}
-        </code>
-      ) : (
-        "—"
-      ),
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} label="Properties" />
-    ),
-    id: "properties",
-  },
-];
-
-const eventFiltersParser = getFiltersStateParser<SessionEvent>([
-  "event_type",
-]).withDefault([]);
-const eventJoinOperatorParser = parseAsStringEnum([
-  "and",
-  "or",
-] as const).withDefault("and");
+const Panel = ({
+  children,
+  title,
+}: {
+  children: React.ReactNode;
+  title: string;
+}) => (
+  <section className="rounded-lg border border-border p-4">
+    <h2 className="mb-4 font-medium text-sm">{title}</h2>
+    {children}
+  </section>
+);
 
 export const SessionProfileView = ({
   projectId,
@@ -99,62 +67,11 @@ export const SessionProfileView = ({
   projectId: string;
   sessionId: string;
 }) => {
-  const [eventsPage] = useQueryState(
-    "eventsPage",
-    parseAsInteger.withDefault(1)
-  );
-  const [eventsPerPage] = useQueryState(
-    "eventsPerPage",
-    parseAsInteger.withDefault(20)
-  );
-  const [eventsSort] = useQueryState(
-    "eventsSort",
-    getSortingStateParser<SessionEvent>().withDefault([])
-  );
-  const [eventsFilters] = useQueryState("eventsFilters", eventFiltersParser);
-  const [eventsJoinOperator] = useQueryState(
-    "eventsJoinOperator",
-    eventJoinOperatorParser
-  );
-  const eventsSortEntry = eventsSort[0] ?? null;
-
-  const apiEventsFilters = useMemo(
-    () => toApiFilters(eventsFilters),
-    [eventsFilters]
-  );
-
   const query = useQuery(
     orpc.insights.sessionProfile.queryOptions({
-      input: {
-        eventsFilters:
-          apiEventsFilters.length > 0 ? apiEventsFilters : undefined,
-        eventsJoinOperator,
-        eventsPage,
-        eventsPerPage,
-        eventsSortBy: eventsSortEntry?.id,
-        eventsSortDesc: eventsSortEntry?.desc ?? false,
-        projectId,
-        sessionId,
-      },
+      input: { projectId, sessionId },
     })
   );
-
-  const eventsTotal = query.data?.eventsTotal ?? 0;
-  const eventsPageCount = Math.ceil(eventsTotal / eventsPerPage);
-  const events = query.data?.events ?? [];
-
-  const { table } = useDataTable({
-    columns: eventColumns,
-    data: events,
-    pageCount: eventsPageCount,
-    queryKeys: {
-      filters: "eventsFilters",
-      joinOperator: "eventsJoinOperator",
-      page: "eventsPage",
-      perPage: "eventsPerPage",
-      sort: "eventsSort",
-    },
-  });
 
   const sessionsHref = `/dashboard/projects/${projectId}/sessions`;
 
@@ -162,12 +79,17 @@ export const SessionProfileView = ({
     return (
       <div className="flex flex-col gap-6 p-4 lg:p-6">
         <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-20 w-full" />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-48 w-full" />
+        </div>
         <Skeleton className="h-64 w-full" />
       </div>
     );
   }
 
-  if (query.isError) {
+  if (query.isError || !query.data) {
     return (
       <div className="p-4 text-destructive lg:p-6">Failed to load session.</div>
     );
@@ -182,9 +104,10 @@ export const SessionProfileView = ({
     </Link>
   );
 
-  const meta = query.data?.meta;
+  const { data } = query;
+  const { meta, perf } = data;
 
-  if (!meta || meta.event_count === 0) {
+  if (meta.event_count === 0) {
     return (
       <div className="flex flex-col gap-6 p-4 lg:p-6">
         {backLink}
@@ -204,36 +127,125 @@ export const SessionProfileView = ({
     );
   }
 
+  const breakdownItems: ShareListItem[] = data.eventBreakdown.map((entry) => ({
+    key: entry.event_type,
+    label: entry.event_type,
+    value: entry.count,
+    valueLabel: `${entry.count.toLocaleString()} · ${((entry.count / meta.event_count) * PERCENT).toFixed(1)}%`,
+  }));
+
   return (
     <div className="flex flex-col gap-6 p-4 lg:p-6">
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-3">
         {backLink}
-        <h1 className="break-all font-semibold text-2xl">{sessionId}</h1>
-        <p className="text-muted-foreground">
-          Player <PlayerLink playerId={meta.player_id} /> ·{" "}
-          {formatTimestamp(meta.started_at)} → {formatTimestamp(meta.ended_at)}
-        </p>
+        <div className="flex flex-wrap items-center gap-4">
+          <PlayerAvatar playerId={meta.player_id} size="lg" />
+          <div className="min-w-0 flex-1">
+            <h1 className="break-all font-mono font-semibold text-xl">
+              {sessionId}
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              Player <PlayerLink playerId={meta.player_id} /> ·{" "}
+              {formatTimestamp(meta.started_at)} →{" "}
+              {formatTimestamp(meta.ended_at)}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {meta.map ? <Badge variant="outline">{meta.map}</Badge> : null}
+            {data.specs?.platform ? (
+              <Badge variant="outline">{data.specs.platform}</Badge>
+            ) : null}
+            {data.specs?.version ? (
+              <Badge variant="outline">v{data.specs.version}</Badge>
+            ) : null}
+            {perf.crashes > 0 ? (
+              <Badge variant="destructive">
+                Crashed{perf.crash_reason ? ` · ${perf.crash_reason}` : ""}
+              </Badge>
+            ) : null}
+          </div>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <MetricCard
           format={formatDuration}
           label="Duration"
           value={meta.duration_seconds}
         />
         <MetricCard label="Events" value={meta.event_count} />
-        <MetricCard label="Map" value={meta.map || "—"} />
+        <MetricCard
+          label="Avg FPS"
+          value={perf.avg_fps > 0 ? perf.avg_fps : "—"}
+        />
+        <MetricCard label="Deaths" value={perf.deaths} />
+        <MetricCard
+          label="Load time"
+          value={
+            perf.load_ms > 0
+              ? `${(perf.load_ms / MS_PER_SECOND).toFixed(1)}s`
+              : "—"
+          }
+        />
       </div>
 
-      <div className="rounded-lg border border-border p-4">
-        <h2 className="mb-4 font-medium text-sm">Events</h2>
-        <DataTable table={table}>
-          <DataTableAdvancedToolbar table={table}>
-            <DataTableFilterList table={table} />
-            <DataTableSortList table={table} />
-          </DataTableAdvancedToolbar>
-        </DataTable>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Panel title="FPS during session">
+          {data.fpsSeries.length > 0 ? (
+            <>
+              <ResponsiveContainer height={FPS_CHART_HEIGHT} width="100%">
+                <LineChart data={data.fpsSeries}>
+                  <XAxis
+                    dataKey="offset_seconds"
+                    fontSize={12}
+                    tickFormatter={formatOffset}
+                    tickLine={false}
+                  />
+                  <YAxis allowDecimals={false} fontSize={12} tickLine={false} />
+                  <Tooltip
+                    labelFormatter={(value) =>
+                      `${formatOffset(Number(value))} into session`
+                    }
+                  />
+                  <Line
+                    dataKey="fps"
+                    dot={false}
+                    stroke="var(--primary)"
+                    type="monotone"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+              <p className="mt-2 text-muted-foreground text-xs">
+                {perf.min_fps} min · {perf.avg_fps} avg · {perf.max_fps} max
+              </p>
+            </>
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              No FPS samples recorded for this session.
+            </p>
+          )}
+        </Panel>
+        <Panel title="Event breakdown">
+          <ShareList items={breakdownItems} />
+        </Panel>
       </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Panel title="Hardware & client">
+          {data.specs ? (
+            <PlayerSpecsCard specs={data.specs} />
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              No hardware specs reported. Specs appear once the SDK sends them
+              on session_start.
+            </p>
+          )}
+        </Panel>
+      </div>
+
+      <Panel title="Events">
+        <SessionEventsTable projectId={projectId} sessionId={sessionId} />
+      </Panel>
     </div>
   );
 };
