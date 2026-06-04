@@ -35,6 +35,7 @@ interface OrgFormProps {
   isLoading: boolean;
   submitLabel?: string;
   cancelAction?: ReactNode;
+  defaultValues?: { name: string; slug: string };
 }
 
 export const OrgForm = ({
@@ -42,11 +43,13 @@ export const OrgForm = ({
   isLoading,
   submitLabel = "Create Organization",
   cancelAction,
+  defaultValues,
 }: OrgFormProps) => {
-  const slugManuallyEdited = useRef(false);
+  // When editing an existing org, never auto-derive the slug from the name.
+  const slugManuallyEdited = useRef(Boolean(defaultValues));
 
   const form = useForm({
-    defaultValues: { name: "", slug: "" },
+    defaultValues: defaultValues ?? { name: "", slug: "" },
     onSubmit: async ({ value }) => {
       await onSubmit(value);
     },
