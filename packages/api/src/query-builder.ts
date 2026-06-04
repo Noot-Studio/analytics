@@ -383,14 +383,21 @@ export const buildColumnFilters = (
   return `(${conditions.join(glue)})`;
 };
 
+/**
+ * ClickHouse can't parse an ISO `Z` suffix as DateTime64(3); it expects
+ * `YYYY-MM-DD HH:MM:SS[.mmm]` (UTC is the column timezone already).
+ */
+const toClickHouseDateTime = (iso: string): string =>
+  iso.replace("T", " ").replace("Z", "");
+
 export const buildQuery = (config: QueryConfig): QueryResult => {
   const propertyParams = new Map<string, string>();
   const selectColumns: string[] = [];
   const groupByColumns: string[] = [];
   const params: Record<string, unknown> = {
-    from: config.timeRange.from,
+    from: toClickHouseDateTime(config.timeRange.from),
     projectId: config.projectId,
-    to: config.timeRange.to,
+    to: toClickHouseDateTime(config.timeRange.to),
   };
 
   // Time bucket
@@ -460,11 +467,13 @@ export const buildQuery = (config: QueryConfig): QueryResult => {
   // Build query
   let query = `SELECT\n  ${selectColumns.join(",\n  ")}\nFROM analytics.events\nWHERE ${whereConditions.join("\n  AND ")}`;
 
+  // Without grouping the SELECT is a single aggregate row, where ordering by
+  // a raw column is invalid (NOT_AN_AGGREGATE).
   if (groupByColumns.length > 0) {
     query += `\nGROUP BY ${groupByColumns.join(", ")}`;
+    query += `\nORDER BY ${groupByColumns.join(", ")}`;
   }
 
-  query += `\nORDER BY ${groupByColumns.length > 0 ? groupByColumns.join(", ") : "timestamp DESC"}`;
   query += `\nLIMIT {limit:UInt32}`;
   params.limit = config.limit;
 

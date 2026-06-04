@@ -1,7 +1,66 @@
 import { describe, expect, it } from "bun:test";
 
 import type { ColumnFilterDef } from "./query-builder";
-import { applyFilters, buildColumnFilters } from "./query-builder";
+import {
+  applyFilters,
+  buildColumnFilters,
+  buildQuery,
+  queryConfigSchema,
+} from "./query-builder";
+
+describe("buildQuery", () => {
+  it("normalizes ISO time-range bounds for ClickHouse DateTime64 params", () => {
+    const config = queryConfigSchema.parse({
+      aggregation: "count",
+      granularity: "none",
+      projectId: "p1",
+      timeRange: {
+        from: "2026-05-28T00:00:00.000Z",
+        to: "2026-06-04T23:59:59.999Z",
+      },
+    });
+
+    const { params } = buildQuery(config);
+
+    // ClickHouse rejects the trailing Z / T separator in DateTime64(3) params.
+    expect(params.from).toBe("2026-05-28 00:00:00.000");
+    expect(params.to).toBe("2026-06-04 23:59:59.999");
+  });
+
+  it("omits ORDER BY for an ungrouped aggregate (single-row result)", () => {
+    const config = queryConfigSchema.parse({
+      aggregation: "count",
+      granularity: "none",
+      projectId: "p1",
+      timeRange: {
+        from: "2026-05-28T00:00:00.000Z",
+        to: "2026-06-04T23:59:59.999Z",
+      },
+    });
+
+    const { query } = buildQuery(config);
+
+    expect(query).not.toContain("ORDER BY");
+    expect(query).not.toContain("GROUP BY");
+  });
+
+  it("orders grouped queries by their group columns", () => {
+    const config = queryConfigSchema.parse({
+      aggregation: "count",
+      granularity: "day",
+      projectId: "p1",
+      timeRange: {
+        from: "2026-05-28T00:00:00.000Z",
+        to: "2026-06-04T23:59:59.999Z",
+      },
+    });
+
+    const { query } = buildQuery(config);
+
+    expect(query).toContain("GROUP BY time_bucket");
+    expect(query).toContain("ORDER BY time_bucket");
+  });
+});
 
 describe("applyFilters", () => {
   it("references a known top-level column directly (no JSONExtract)", () => {

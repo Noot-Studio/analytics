@@ -72,9 +72,11 @@ model Organization {
   metadata  String?
   createdAt DateTime @default(now())
 
-  members     Member[]
-  invitations Invitation[]
-  projects    Project[]
+  members         Member[]
+  invitations     Invitation[]
+  projects        Project[]
+  dashboards      Dashboard[]
+  cardDefinitions DashboardCardDefinition[]
 
   @@map("organization")
 }
