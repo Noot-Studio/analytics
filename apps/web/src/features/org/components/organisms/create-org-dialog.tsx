@@ -3,7 +3,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@sbox-analytics/ui/components/dialog";
@@ -51,12 +50,16 @@ export const CreateOrgDialog = ({
           onSubmit={handleSubmit}
           isLoading={isCreating}
           submitLabel="Create Organization"
+          cancelAction={
+            <Button
+              onClick={() => onOpenChange(false)}
+              type="button"
+              variant="outline"
+            >
+              Cancel
+            </Button>
+          }
         />
-        <DialogFooter>
-          <Button onClick={() => onOpenChange(false)} variant="outline">
-            Cancel
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
