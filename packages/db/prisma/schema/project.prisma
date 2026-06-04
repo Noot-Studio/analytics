@@ -14,7 +14,8 @@ model Project {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  apiKeys ApiKey[]
+  apiKeys    ApiKey[]
+  dashboards Dashboard[]
 
   @@unique([organizationId, slug])
   @@index([organizationId])

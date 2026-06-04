@@ -1,0 +1,57 @@
+enum DashboardScope {
+  OrgOverview
+  ProjectOverview
+  CustomPage
+}
+
+enum CardSize {
+  Third
+  Half
+  TwoThirds
+  Full
+}
+
+model Dashboard {
+  id             String          @id @default(cuid())
+  scope          DashboardScope
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId      String?
+  project        Project?        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name           String          @default("Overview")
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  cards DashboardCard[]
+
+  @@unique([organizationId, projectId, scope])
+  @@index([organizationId])
+  @@index([projectId])
+  @@map("dashboard")
+}
+
+// Reusable user-created card definitions ("library"); built-ins are code.
+model DashboardCardDefinition {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  cardType       String       @default("custom.stat")
+  config         Json         @default("{}")
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@map("dashboard_card_definition")
+}
+
+model DashboardCard {
+  id          String    @id @default(cuid())
+  dashboardId String
+  dashboard   Dashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+  position    Int
+  size        CardSize  @default(Full)
+  cardType    String
+  config      Json      @default("{}")
+
+  @@index([dashboardId])
+  @@map("dashboard_card")
+}

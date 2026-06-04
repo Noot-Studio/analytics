@@ -1,11 +1,11 @@
 import { Skeleton } from "@sbox-analytics/ui/components/skeleton";
 import { createFileRoute } from "@tanstack/react-router";
 
-import { OverviewView } from "@/features/analytics/components/organisms/overview-view";
 import {
   analyticsSearchSchema,
   resolveRange,
 } from "@/features/analytics/lib/filters";
+import { DashboardGrid } from "@/features/dashboards/components/organisms/dashboard-grid";
 
 export const Route = createFileRoute("/dashboard/projects/$projectId/overview")(
   {
@@ -16,15 +16,26 @@ export const Route = createFileRoute("/dashboard/projects/$projectId/overview")(
     // useSuspenseQuery resolves synchronously — no skeleton on navigation.
     loader: ({ context, params, deps }) => {
       const { from, to } = resolveRange(deps);
-      return context.queryClient.ensureQueryData(
-        context.orpc.insights.daily.queryOptions({
-          input: {
-            from: from.slice(0, 10),
-            projectId: params.projectId,
-            to: to.slice(0, 10),
-          },
-        })
-      );
+      return Promise.all([
+        context.queryClient.ensureQueryData(
+          context.orpc.dashboards.get.queryOptions({
+            input: {
+              projectId: params.projectId,
+              scope: "ProjectOverview",
+            },
+          })
+        ),
+        // Default built-in cards all read from this one rollup query.
+        context.queryClient.ensureQueryData(
+          context.orpc.insights.daily.queryOptions({
+            input: {
+              from: from.slice(0, 10),
+              projectId: params.projectId,
+              to: to.slice(0, 10),
+            },
+          })
+        ),
+      ]);
     },
     // Re-run the loader (and preload-on-intent) whenever the time range changes.
     loaderDeps: ({ search }) => ({
@@ -39,7 +50,7 @@ export const Route = createFileRoute("/dashboard/projects/$projectId/overview")(
 
 function OverviewPage() {
   const { projectId } = Route.useParams();
-  return <OverviewView projectId={projectId} />;
+  return <DashboardGrid projectId={projectId} scope="ProjectOverview" />;
 }
 
 function OverviewPending() {
