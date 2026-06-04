@@ -10,6 +10,7 @@ model User {
   accounts      Account[]
   members       Member[]
   invitations   Invitation[]
+  uploadedImages UploadedImage[]
 
   @@unique([email])
   @@map("user")
@@ -77,6 +78,7 @@ model Organization {
   projects        Project[]
   dashboards      Dashboard[]
   cardDefinitions DashboardCardDefinition[]
+  uploadedImages  UploadedImage[]
 
   @@map("organization")
 }

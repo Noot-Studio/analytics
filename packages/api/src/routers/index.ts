@@ -5,6 +5,7 @@ import { analyticsRouter } from "./analytics";
 import { apiKeysRouter } from "./api-keys";
 import { customAnalyticsRouter } from "./custom-analytics";
 import { dashboardsRouter } from "./dashboards";
+import { imagesRouter } from "./images";
 import { introspectionRouter } from "./introspection";
 import { orgAnalyticsRouter } from "./org-analytics";
 import { projectsRouter } from "./projects";
@@ -15,6 +16,7 @@ export const appRouter = {
   customAnalytics: customAnalyticsRouter,
   dashboards: dashboardsRouter,
   healthCheck: publicProcedure.handler(() => "OK"),
+  images: imagesRouter,
   insights: analyticsRouter,
   introspection: introspectionRouter,
   orgInsights: orgAnalyticsRouter,
