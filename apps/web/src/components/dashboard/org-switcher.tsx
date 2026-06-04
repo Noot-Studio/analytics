@@ -14,15 +14,11 @@ import {
   useSidebar,
 } from "@sbox-analytics/ui/components/sidebar";
 import { Skeleton } from "@sbox-analytics/ui/components/skeleton";
-import {
-  IconBuilding,
-  IconChevronDown,
-  IconPlus,
-  IconSettings,
-} from "@tabler/icons-react";
+import { IconChevronDown, IconPlus, IconSettings } from "@tabler/icons-react";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
+import { OrgAvatar } from "@/components/org-avatar";
 import { CreateOrgDrawer } from "@/features/org/components/organisms/create-org-drawer";
 import { authClient } from "@/lib/auth-client";
 
@@ -69,9 +65,18 @@ export const OrgSwitcher = () => {
                 />
               }
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <IconBuilding className="size-4" />
-              </div>
+              {activeOrg ? (
+                <OrgAvatar
+                  className="size-8 rounded-lg"
+                  logo={activeOrg.logo}
+                  name={activeOrg.name}
+                  seed={activeOrg.slug ?? activeOrg.id}
+                />
+              ) : (
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                  <IconChevronDown className="size-4" />
+                </div>
+              )}
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">
                   {activeOrg?.name ?? "Select Organization"}
@@ -101,7 +106,12 @@ export const OrgSwitcher = () => {
                       });
                     }}
                   >
-                    <IconBuilding className="mr-2 size-4" />
+                    <OrgAvatar
+                      className="mr-2 size-4 rounded-sm"
+                      logo={org.logo}
+                      name={org.name}
+                      seed={org.slug ?? org.id}
+                    />
                     <span className="truncate">{org.name}</span>
                   </DropdownMenuItem>
                 ))}

@@ -1,9 +1,4 @@
 import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@sbox-analytics/ui/components/avatar";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
@@ -25,6 +20,7 @@ import {
 } from "@tabler/icons-react";
 import { useNavigate } from "@tanstack/react-router";
 
+import { UserAvatar } from "@/components/user-avatar";
 import { authClient } from "@/lib/auth-client";
 
 export function NavUser() {
@@ -38,13 +34,6 @@ export function NavUser() {
     return null;
   }
 
-  const initials = user.name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -57,10 +46,12 @@ export function NavUser() {
               />
             }
           >
-            <Avatar className="h-8 w-8 rounded-lg grayscale">
-              <AvatarImage src={user.image ?? undefined} alt={user.name} />
-              <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
-            </Avatar>
+            <UserAvatar
+              className="h-8 w-8 rounded-lg grayscale"
+              image={user.image}
+              name={user.name}
+              seed={user.email}
+            />
             <div className="grid flex-1 text-left text-sm leading-tight">
               <span className="truncate font-medium">{user.name}</span>
               <span className="truncate text-xs text-muted-foreground">
@@ -78,15 +69,12 @@ export function NavUser() {
             <DropdownMenuGroup>
               <DropdownMenuLabel className="p-0 font-normal">
                 <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                  <Avatar className="h-8 w-8 rounded-lg">
-                    <AvatarImage
-                      src={user.image ?? undefined}
-                      alt={user.name}
-                    />
-                    <AvatarFallback className="rounded-lg">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
+                  <UserAvatar
+                    className="h-8 w-8 rounded-lg"
+                    image={user.image}
+                    name={user.name}
+                    seed={user.email}
+                  />
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-medium">{user.name}</span>
                     <span className="truncate text-xs text-muted-foreground">
