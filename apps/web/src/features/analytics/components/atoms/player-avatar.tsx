@@ -4,7 +4,7 @@ import {
   AvatarImage,
 } from "@sbox-analytics/ui/components/avatar";
 
-const DICEBEAR_BASE_URL = "https://api.dicebear.com/9.x/pixel-art/svg";
+const DICEBEAR_BASE_URL = "https://api.dicebear.com/10.x/identicon/svg";
 
 /**
  * Deterministic DiceBear avatar seeded by player_id. Anonymous activity
