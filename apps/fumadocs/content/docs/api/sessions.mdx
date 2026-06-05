@@ -40,6 +40,32 @@ The above two events produce a session duration of ~14 minutes and 37 seconds.
 
 The heatmap is based on the **start time** of each session (the earliest event timestamp for that `session_id`). The hour axis uses UTC. If your players are concentrated in a specific timezone, consider offsetting timestamps server-side or noting the UTC offset in your documentation.
 
+## Session profiles
+
+Click a session anywhere in the dashboard to open its profile: duration, event count, the map it was played on, hardware and client specs (read from the session's `session_start` properties — see [Players → Hardware & client specs](/docs/api/players#hardware--client-specs)), a paginated event list, and a performance panel.
+
+### Performance events
+
+The performance panel is powered by well-known event types. None are required — metrics simply stay empty if you don't send them:
+
+| Metric                            | Event type      | Property          |
+| --------------------------------- | --------------- | ----------------- |
+| Avg / min / max FPS and FPS chart | `fps_sample`    | `fps` (number)    |
+| Deaths                            | `player_death`  | —                 |
+| Crash badge and reason            | `crash`         | `reason` (string) |
+| Load time                         | `load_complete` | `ms` (number)     |
+
+```json title="fps_sample event"
+{
+  "type": "fps_sample",
+  "session_id": "sess_abc123",
+  "player_id": "76561198000000000",
+  "properties": { "fps": 58.5 }
+}
+```
+
+A periodic `fps_sample` (every 30–60 seconds) does double duty: it draws the FPS-over-time chart **and** acts as the heartbeat that keeps session durations accurate.
+
 ## Tips
 
 - **Reuse the same `session_id` for the entire play session.** If a player's session spans multiple network calls or reconnects, keep the same ID so the duration calculation spans the full playtime.

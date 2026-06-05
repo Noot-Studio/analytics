@@ -25,9 +25,9 @@ You can belong to more than one Organization (for example, a personal workspace 
 ## Creating an Organization
 
 1. Open the dashboard and click the **Organization switcher** in the top-left.
-2. Choose **Create organization**.
-3. Enter a **name** (for example, your studio name). A URL-friendly **slug** is derived from it automatically and must be unique.
-4. Confirm. The new Organization becomes your active workspace.
+2. Choose **Create Organization**.
+3. Enter a **name** of at least 2 characters (for example, your studio name). A URL-friendly **slug** is filled in from the name as you type — adjust it if you like (lowercase letters, numbers, and hyphens). It must be unique.
+4. Confirm with **Create Organization**. The new Organization becomes your active workspace.
 
 The account that creates an Organization becomes its **owner**.
 
@@ -43,15 +43,23 @@ Organizations are multi-user. Each member has a role that determines what they c
 | `admin`  | Manage Projects, API keys, members, and invitations.                    |
 | `member` | Access Projects and API keys within the Organization.                   |
 
-To add a teammate, open **Organization settings → Members**, send an **invitation** by email, and choose their role. They join once they accept.
+Teammates are managed from the **Team** page in the dashboard, which lists current members and pending invitations. Owners and admins can add people in three ways, each as `admin` or `member` (the `owner` role belongs to the account that created the Organization):
+
+- **Email invitation** — invite by email address; the teammate joins once they accept.
+- **Invite link** — generate a shareable link with the role baked in. Anyone with the link can join until it expires, **7 days** after creation.
+- **New user** — create the account (name, email, password) and add it to the Organization in a single step.
+
+Owners and admins can also remove members and cancel pending invitations from the same page.
 
 ### Switching the active Organization
 
 Use the Organization switcher to change which Organization you are working in. The active Organization determines where new Projects and keys are created and which data you see.
 
-### Renaming or deleting
+### Settings, renaming, and deleting
 
-Owners and admins can rename an Organization from its settings. Deleting an Organization is performed by an owner and is **irreversible** — it cascades to every Project, API key, and the events associated with them.
+Owners and admins can edit an Organization's name and slug, and upload a logo (PNG, JPEG, or WebP, up to 512 KB), from its settings page. Members who are not the owner can **leave** the Organization from the same page.
+
+Deleting an Organization is performed by an owner and is **irreversible** — it cascades to every Project, API key, and the events associated with them.
 
 <Callout type="warn">
   Deleting an Organization permanently removes all of its Projects and API keys.
