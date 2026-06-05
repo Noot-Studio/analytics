@@ -72,11 +72,11 @@ export async function completeCli() {
       ? { id: args.id, type: "discarded" }
       : (args.status === "agent_error"
         ? {
+            type: "agent_error",
             id: args.id,
             message: args.message || "unknown error",
-            type: "agent_error",
           }
-        : { id: args.id, type: "complete" });
+        : { type: "complete", id: args.id });
   const snapshot = store.appendEvent(event);
   console.log(
     JSON.stringify(

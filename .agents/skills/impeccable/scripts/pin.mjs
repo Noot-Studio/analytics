@@ -44,7 +44,7 @@ const HARNESS_DIRS = [
 // Valid sub-command names
 const VALID_COMMANDS = [
   "craft",
-  "teach",
+  "init",
   "extract",
   "document",
   "shape",

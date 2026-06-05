@@ -3,7 +3,7 @@
 ## In Scope
 
 - Hono + oRPC + TanStack Router monorepo scaffold
-- Authentication service (Better Auth + Drizzle)
+- Authentication service (Better Auth + Prisma)
 - User, organization, and project management
 - API key generation (publishable + secret pairs)
 - Event ingestion API with validation

@@ -1,9 +1,9 @@
 (function (y, v) {
   typeof exports === "object" && typeof module !== "undefined"
     ? v(exports)
-    : (typeof define === "function" && define.amd
+    : (typeof define == "function" && define.amd
       ? define(["exports"], v)
-      : ((y = typeof globalThis !== "undefined" ? globalThis : y || self),
+      : ((y = typeof globalThis != "undefined" ? globalThis : y || self),
         v((y.modernScreenshot = {}))));
 })(this, (y) => {
   "use strict";
@@ -1039,7 +1039,7 @@
                   : (p === "lowercase"
                     ? (w = w.toLowerCase())
                     : p === "capitalize" &&
-                      (w = w[0].toUpperCase() + w.slice(1))),
+                      (w = w[0].toUpperCase() + w.substring(1))),
                   E.forEach((S) => {
                     let T = s.get(S);
                     (T || s.set(S, (T = new Set())),
