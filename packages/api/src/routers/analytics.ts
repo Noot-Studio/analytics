@@ -3,6 +3,24 @@ import { z } from "zod";
 import { assertProjectAccess } from "../access";
 import { clickhouse } from "../clickhouse";
 import { protectedProcedure } from "../index";
+import { buildBreakdownQuery } from "../queries/breakdown";
+import { buildDailyQuery } from "../queries/daily";
+import {
+  buildMapsBreakdownQuery,
+  buildMapsOverTimeQuery,
+  buildMapsTableCountQuery,
+  buildMapsTableQuery,
+} from "../queries/maps";
+import {
+  buildPlayersDailyQuery,
+  buildPlayersTotalsQuery,
+} from "../queries/players";
+import { buildRecentCountQuery, buildRecentRowsQuery } from "../queries/recent";
+import {
+  buildSessionsHeatmapQuery,
+  buildSessionsHistogramQuery,
+  buildSessionsTrendQuery,
+} from "../queries/sessions";
 import type { ColumnFilterDef } from "../query-builder";
 import {
   applyFilters,
@@ -46,14 +64,6 @@ const breakdownInput = z.object({
   sortDesc: z.boolean().default(true),
   to: z.iso.date(),
 });
-
-// Filterable columns for the event-type breakdown. event_type is the GROUP BY
-// key; the other two are aggregate aliases — all are referenced via HAVING.
-const BREAKDOWN_FILTER_COLUMNS: Record<string, ColumnFilterDef> = {
-  event_count: { expr: "event_count", type: "number" },
-  event_type: { expr: "event_type", type: "string" },
-  unique_players: { expr: "unique_players", type: "number" },
-};
 
 const playersInput = z.object({
   from: z.iso.date(),
@@ -126,15 +136,6 @@ const mapsBreakdownRow = z.object({
   players: z.coerce.number(),
   sessions: z.coerce.number(),
 });
-
-// Filterable/sortable columns for the per-map table. `map` is the GROUP BY key;
-// the rest are aggregate aliases — all referenced via HAVING / ORDER BY.
-const MAPS_TABLE_FILTER_COLUMNS: Record<string, ColumnFilterDef> = {
-  avg_seconds: { expr: "avg_seconds", type: "number" },
-  map: { expr: "map", type: "string" },
-  players: { expr: "players", type: "number" },
-  sessions: { expr: "sessions", type: "number" },
-};
 
 const mapsOverTimeRow = z.object({
   event_date: z.string(),
@@ -637,22 +638,11 @@ export const analyticsRouter = {
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
+      const { query, params } = buildDailyQuery(input);
       const result = await clickhouse().query({
         format: "JSON",
-        query: `
-          SELECT
-            event_date                       AS event_date,
-            event_type                        AS event_type,
-            toUInt64(uniqMerge(unique_players))  AS unique_players,
-            toUInt64(uniqMerge(unique_sessions)) AS unique_sessions,
-            toUInt64(countMerge(event_count))    AS event_count
-          FROM analytics.events_daily
-          WHERE project_id = {projectId:String}
-            AND event_date BETWEEN {from:Date} AND {to:Date}
-          GROUP BY event_date, event_type
-          ORDER BY event_date, event_type
-        `,
-        query_params: input,
+        query,
+        query_params: params,
       });
 
       const json = await result.json<z.infer<typeof dailyRow>>();
@@ -667,48 +657,18 @@ export const analyticsRouter = {
 
       const ch = clickhouse();
 
+      const dailyQuery = buildPlayersDailyQuery(input);
+      const totalsQuery = buildPlayersTotalsQuery(input);
       const [dailyResult, totalsResult] = await Promise.all([
         ch.query({
           format: "JSON",
-          query: `
-          WITH active AS (
-            SELECT
-              toDate(timestamp) AS event_date,
-              player_id
-            FROM analytics.events
-            WHERE project_id = {projectId:String}
-              AND toDate(timestamp) BETWEEN {from:Date} AND {to:Date}
-            GROUP BY event_date, player_id
-          ),
-          firsts AS (
-            SELECT player_id, minMerge(first_seen) AS first_seen
-            FROM analytics.player_first_seen
-            WHERE project_id = {projectId:String}
-            GROUP BY player_id
-          )
-          SELECT
-            a.event_date                                   AS event_date,
-            toUInt64(uniq(a.player_id))                    AS dau,
-            toUInt64(uniqIf(a.player_id, f.first_seen = a.event_date)) AS new_players,
-            toUInt64(uniqIf(a.player_id, f.first_seen < a.event_date)) AS returning_players
-          FROM active AS a
-          LEFT JOIN firsts AS f USING (player_id)
-          GROUP BY a.event_date
-          ORDER BY a.event_date
-        `,
-          query_params: input,
+          query: dailyQuery.query,
+          query_params: dailyQuery.params,
         }),
         ch.query({
           format: "JSON",
-          query: `
-          SELECT
-            toUInt64(uniqIf(player_id, timestamp >= {to:Date} - INTERVAL 7 DAY))  AS wau,
-            toUInt64(uniqIf(player_id, timestamp >= {to:Date} - INTERVAL 30 DAY)) AS mau
-          FROM analytics.events
-          WHERE project_id = {projectId:String}
-            AND toDate(timestamp) BETWEEN ({to:Date} - INTERVAL 30 DAY) AND {to:Date}
-        `,
-          query_params: input,
+          query: totalsQuery.query,
+          query_params: totalsQuery.params,
         }),
       ]);
 
@@ -733,64 +693,25 @@ export const analyticsRouter = {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
       const ch = clickhouse();
-      const sessionsCte = `
-        WITH sessions AS (
-          SELECT
-            session_id,
-            event_date,
-            minMerge(started_at) AS started_at,
-            maxMerge(ended_at) AS ended_at,
-            dateDiff('second', started_at, ended_at) AS duration
-          FROM analytics.sessions_summary
-          WHERE project_id = {projectId:String}
-            AND event_date BETWEEN {from:Date} AND {to:Date}
-          GROUP BY session_id, event_date
-        )`;
 
+      const histogramQuery = buildSessionsHistogramQuery(input);
+      const trendQuery = buildSessionsTrendQuery(input);
+      const heatmapQuery = buildSessionsHeatmapQuery(input);
       const [histogramResult, trendResult, heatmapResult] = await Promise.all([
         ch.query({
           format: "JSON",
-          query: `${sessionsCte}
-            SELECT
-              multiIf(duration < 60, '0-1m',
-                      duration < 300, '1-5m',
-                      duration < 900, '5-15m',
-                      duration < 1800, '15-30m', '30m+') AS bucket,
-              multiIf(duration < 60, 0,
-                      duration < 300, 1,
-                      duration < 900, 2,
-                      duration < 1800, 3, 4)              AS sort,
-              toUInt64(count())                            AS sessions
-            FROM sessions
-            GROUP BY bucket, sort
-            ORDER BY sort
-          `,
-          query_params: input,
+          query: histogramQuery.query,
+          query_params: histogramQuery.params,
         }),
         ch.query({
           format: "JSON",
-          query: `${sessionsCte}
-            SELECT
-              toString(event_date)        AS event_date,
-              toUInt64(round(avg(duration))) AS avg_seconds
-            FROM sessions
-            GROUP BY event_date
-            ORDER BY event_date
-          `,
-          query_params: input,
+          query: trendQuery.query,
+          query_params: trendQuery.params,
         }),
         ch.query({
           format: "JSON",
-          query: `${sessionsCte}
-            SELECT
-              toUInt8(toDayOfWeek(started_at)) AS weekday,
-              toUInt8(toHour(started_at))      AS hour,
-              toUInt64(count())                AS sessions
-            FROM sessions
-            GROUP BY weekday, hour
-            ORDER BY weekday, hour
-          `,
-          query_params: input,
+          query: heatmapQuery.query,
+          query_params: heatmapQuery.params,
         }),
       ]);
 
@@ -816,136 +737,33 @@ export const analyticsRouter = {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
       const ch = clickhouse();
-      const mapsCte = `
-        WITH session_maps AS (
-          SELECT
-            session_id,
-            argMin(JSONExtractString(properties, 'map'), timestamp) AS map,
-            any(player_id)        AS player_id,
-            min(toDate(timestamp)) AS event_date
-          FROM analytics.events
-          WHERE project_id = {projectId:String}
-            AND event_type = 'session_start'
-            AND toDate(timestamp) BETWEEN {from:Date} AND {to:Date}
-          GROUP BY session_id
-        ),
-        durations AS (
-          SELECT
-            session_id,
-            dateDiff('second', minMerge(started_at), maxMerge(ended_at)) AS duration
-          FROM analytics.sessions_summary
-          WHERE project_id = {projectId:String}
-            AND event_date BETWEEN {from:Date} AND {to:Date}
-          GROUP BY session_id
-        )`;
 
-      const MAPS_SORT_COLS = {
-        avg_seconds: "avg_seconds",
-        map: "map",
-        players: "players",
-        sessions: "sessions",
-      } as const;
-      const tableSortCol = input.sortBy
-        ? (MAPS_SORT_COLS[input.sortBy] ?? "sessions")
-        : "sessions";
-      const tableSortDir = input.sortDesc ? "DESC" : "ASC";
-      const tableOffset = (input.page - 1) * input.perPage;
-
-      // Aggregate-alias filters apply via HAVING, mirrored into the count query
-      // so pagination reflects the filtered total. Each query binds into its own
-      // param object so the generated filter param names never collide.
-      const tableParams: Record<string, unknown> = {
-        from: input.from,
-        offset: tableOffset,
-        perPage: input.perPage,
-        projectId: input.projectId,
-        to: input.to,
-      };
-      const tableFilter = buildColumnFilters(
-        input.filters,
-        MAPS_TABLE_FILTER_COLUMNS,
-        tableParams,
-        input.joinOperator
-      );
-      const tableHaving = tableFilter ? `HAVING ${tableFilter}` : "";
-
-      const countParams: Record<string, unknown> = {
-        from: input.from,
-        projectId: input.projectId,
-        to: input.to,
-      };
-      const countFilter = buildColumnFilters(
-        input.filters,
-        MAPS_TABLE_FILTER_COLUMNS,
-        countParams,
-        input.joinOperator
-      );
-      const countHaving = countFilter ? `HAVING ${countFilter}` : "";
-
-      const tableSelect = `
-        SELECT
-          m.map                            AS map,
-          toUInt64(uniq(m.session_id))     AS sessions,
-          toUInt64(uniq(m.player_id))      AS players,
-          toUInt64(round(avg(d.duration))) AS avg_seconds
-        FROM session_maps AS m
-        LEFT JOIN durations AS d USING (session_id)
-        WHERE m.map != ''
-        GROUP BY m.map`;
+      const breakdownQuery = buildMapsBreakdownQuery(input);
+      const overTimeQuery = buildMapsOverTimeQuery(input);
+      const tableQuery = buildMapsTableQuery(input);
+      const tableCountQuery = buildMapsTableCountQuery(input);
 
       const [breakdownResult, overTimeResult, tableResult, tableCountResult] =
         await Promise.all([
           ch.query({
             format: "JSON",
-            query: `${mapsCte}
-            SELECT
-              m.map                            AS map,
-              toUInt64(uniq(m.session_id))     AS sessions,
-              toUInt64(uniq(m.player_id))      AS players,
-              toUInt64(round(avg(d.duration))) AS avg_seconds
-            FROM session_maps AS m
-            LEFT JOIN durations AS d USING (session_id)
-            WHERE m.map != ''
-            GROUP BY m.map
-            ORDER BY sessions DESC
-            LIMIT 50
-          `,
-            query_params: input,
+            query: breakdownQuery.query,
+            query_params: breakdownQuery.params,
           }),
           ch.query({
             format: "JSON",
-            query: `${mapsCte}
-            SELECT
-              toString(event_date)         AS event_date,
-              map                          AS map,
-              toUInt64(uniq(session_id))   AS sessions
-            FROM session_maps
-            WHERE map != ''
-            GROUP BY event_date, map
-            ORDER BY event_date, sessions DESC
-          `,
-            query_params: input,
+            query: overTimeQuery.query,
+            query_params: overTimeQuery.params,
           }),
           ch.query({
             format: "JSON",
-            query: `${mapsCte}
-            ${tableSelect}
-            ${tableHaving}
-            ORDER BY ${tableSortCol} ${tableSortDir}
-            LIMIT {perPage:UInt32} OFFSET {offset:UInt32}
-          `,
-            query_params: tableParams,
+            query: tableQuery.query,
+            query_params: tableQuery.params,
           }),
           ch.query({
             format: "JSON",
-            query: `
-            SELECT count() AS total FROM (
-              ${mapsCte}
-              ${tableSelect}
-              ${countHaving}
-            )
-          `,
-            query_params: countParams,
+            query: tableCountQuery.query,
+            query_params: tableCountQuery.params,
           }),
         ]);
 
@@ -1203,41 +1021,10 @@ export const analyticsRouter = {
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
-      const BREAKDOWN_SORT_COLS = {
-        event_count: "event_count",
-        event_type: "event_type",
-        unique_players: "unique_players",
-      } as const;
-      const sortCol = BREAKDOWN_SORT_COLS[input.sortBy] ?? "event_count";
-      const sortDir = input.sortDesc ? "DESC" : "ASC";
-
-      const params: Record<string, unknown> = {
-        from: input.from,
-        projectId: input.projectId,
-        to: input.to,
-      };
-      const having = buildColumnFilters(
-        input.filters,
-        BREAKDOWN_FILTER_COLUMNS,
-        params,
-        input.joinOperator
-      );
-      const havingClause = having ? `HAVING ${having}` : "";
-
+      const { query, params } = buildBreakdownQuery(input);
       const result = await clickhouse().query({
         format: "JSON",
-        query: `
-          SELECT
-            event_type                           AS event_type,
-            toUInt64(countMerge(event_count))    AS event_count,
-            toUInt64(uniqMerge(unique_players))  AS unique_players
-          FROM analytics.events_daily
-          WHERE project_id = {projectId:String}
-            AND event_date BETWEEN {from:Date} AND {to:Date}
-          GROUP BY event_type
-          ${havingClause}
-          ORDER BY ${sortCol} ${sortDir}
-        `,
+        query,
         query_params: params,
       });
 
@@ -1262,66 +1049,20 @@ export const analyticsRouter = {
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
-      const SAFE_SORT_COLUMNS = new Set([
-        "timestamp",
-        "event_type",
-        "player_id",
-        "session_id",
-      ]);
-      const sortCol =
-        input.sortBy && SAFE_SORT_COLUMNS.has(input.sortBy)
-          ? input.sortBy
-          : "timestamp";
-      const sortDir = input.sortDesc ? "DESC" : "ASC";
-      const offset = (input.page - 1) * input.perPage;
-
-      const params: Record<string, unknown> = {
-        offset,
-        perPage: input.perPage,
-        projectId: input.projectId,
-      };
-      const conditions = ["project_id = {projectId:String}"];
-      if (input.from && input.to) {
-        conditions.push(
-          "timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}"
-        );
-        // ClickHouse DateTime64 rejects the ISO `Z` suffix; the column is
-        // already UTC, so dropping it preserves the instant.
-        params.from = input.from.replace(/Z$/u, "");
-        params.to = input.to.replace(/Z$/u, "");
-      }
-      for (const condition of applyFilters(input.filters, params)) {
-        conditions.push(condition);
-      }
-
-      const whereClause = conditions.join(" AND ");
+      const rowsQuery = buildRecentRowsQuery(input);
+      const countQuery = buildRecentCountQuery(input);
       const ch = clickhouse();
 
       const [result, countResult] = await Promise.all([
         ch.query({
           format: "JSON",
-          query: `
-            SELECT
-              event_type,
-              timestamp,
-              session_id,
-              player_id,
-              properties
-            FROM analytics.events
-            WHERE ${whereClause}
-            ORDER BY ${sortCol} ${sortDir}
-            LIMIT {perPage:UInt32} OFFSET {offset:UInt32}
-          `,
-          query_params: params,
+          query: rowsQuery.query,
+          query_params: rowsQuery.params,
         }),
         ch.query({
           format: "JSON",
-          query: `
-            SELECT count() AS total
-            FROM analytics.events
-            WHERE ${whereClause}
-          `,
-          query_params: params,
+          query: countQuery.query,
+          query_params: countQuery.params,
         }),
       ]);
 
