@@ -23,6 +23,12 @@ export const projectNav = (projectId: string): NavItem[] => {
       url: `${base}/overview`,
     },
     {
+      group: "Project",
+      icon: IconSettings,
+      title: "Settings",
+      url: `${base}/settings`,
+    },
+    {
       group: "Engagement",
       icon: IconUsers,
       title: "Players",
@@ -75,12 +81,6 @@ export const projectNav = (projectId: string): NavItem[] => {
       icon: IconActivity,
       title: "Live Events",
       url: `${base}/live`,
-    },
-    {
-      group: "Project",
-      icon: IconSettings,
-      title: "Settings",
-      url: `${base}/settings`,
     },
   ];
 };
