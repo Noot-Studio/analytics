@@ -11,6 +11,9 @@ import { filterSchema } from "../query-builder";
 // Columns the data-table may filter on; anything else is dropped server-side.
 const API_KEY_FILTER_COLUMNS = new Set(["name"]);
 
+// Active (non-revoked) keys per project; matches the dashboard's unpaginated list cap.
+const MAX_ACTIVE_KEYS_PER_PROJECT = 100;
+
 function hashSecret(secret: string): string {
   return createHash("sha256").update(secret).digest("hex");
 }
@@ -57,6 +60,15 @@ export const apiKeysRouter = {
     )
     .handler(async ({ context, input }) => {
       await assertProjectAccess(context.session.user.id, input.projectId);
+
+      const activeKeyCount = await prisma.apiKey.count({
+        where: { projectId: input.projectId, revokedAt: null },
+      });
+      if (activeKeyCount >= MAX_ACTIVE_KEYS_PER_PROJECT) {
+        throw new ORPCError("FORBIDDEN", {
+          message: `Projects are limited to ${MAX_ACTIVE_KEYS_PER_PROJECT} active API keys`,
+        });
+      }
 
       const { publishableKey, secretKey, secretHash } = generateKeyPair();
       const apiKey = await prisma.apiKey.create({

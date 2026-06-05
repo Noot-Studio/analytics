@@ -18,6 +18,9 @@ const projectsListInput = z.object({
 // Columns the data-table may filter on; anything else is dropped server-side.
 const PROJECT_FILTER_COLUMNS = new Set(["name", "slug", "environment"]);
 
+// Projects per organization; matches the dashboard's unpaginated list cap.
+const MAX_PROJECTS_PER_ORG = 100;
+
 function requireActiveOrg(context: {
   session: { session: { activeOrganizationId?: string | null } };
 }): string {
@@ -82,6 +85,15 @@ export const projectsRouter = {
     .handler(async ({ context, input }) => {
       const organizationId = requireActiveOrg(context);
       await assertOrgMembership(context.session.user.id, organizationId);
+
+      const projectCount = await prisma.project.count({
+        where: { organizationId },
+      });
+      if (projectCount >= MAX_PROJECTS_PER_ORG) {
+        throw new ORPCError("FORBIDDEN", {
+          message: `Organizations are limited to ${MAX_PROJECTS_PER_ORG} projects`,
+        });
+      }
 
       const slug = input.slug || generateSlug(input.name);
 

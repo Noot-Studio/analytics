@@ -48,6 +48,9 @@ export function createAuth() {
     plugins: [
       steam({ apiKey: env.STEAM_API_KEY }),
       organization({
+        // Enforced on addMember and invitation accept; keeps orgs within the
+        // dashboard's unpaginated 100-row member list.
+        membershipLimit: 100,
         // Invite-takeover protection needs verified emails, which need Resend.
         requireEmailVerificationOnInvitation: canSendEmail,
         sendInvitationEmail: (data) => sendInvitationEmail(data),
