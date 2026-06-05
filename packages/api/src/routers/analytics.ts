@@ -25,9 +25,28 @@ import {
   buildPerformanceLoadQuery,
 } from "../queries/performance";
 import {
+  buildPlayerActivityQuery,
+  buildPlayerEventBreakdownQuery,
+  buildPlayerHistogramQuery,
+  buildPlayerHourGridQuery,
+  buildPlayerLifetimeQuery,
+  buildPlayerMapsQuery,
+  buildPlayerRetentionQuery,
+  buildPlayerSpecsQuery,
+  buildPlayerTimelineQuery,
+} from "../queries/player-profile";
+import {
+  buildPlayerSessionsCountQuery,
+  buildPlayerSessionsQuery,
+} from "../queries/player-sessions";
+import {
   buildPlayersDailyQuery,
   buildPlayersTotalsQuery,
 } from "../queries/players";
+import {
+  buildPlayersListCountQuery,
+  buildPlayersListQuery,
+} from "../queries/players-list";
 import { buildRecentCountQuery, buildRecentRowsQuery } from "../queries/recent";
 import {
   buildRetentionCurveQuery,
@@ -35,16 +54,26 @@ import {
   buildRetentionTableQuery,
 } from "../queries/retention";
 import {
+  buildSessionEventsCountQuery,
+  buildSessionEventsQuery,
+} from "../queries/session-events";
+import {
+  buildSessionBreakdownQuery,
+  buildSessionFpsQuery,
+  buildSessionMetaQuery,
+  buildSessionPerfQuery,
+  buildSessionSpecsQuery,
+} from "../queries/session-profile";
+import {
   buildSessionsHeatmapQuery,
   buildSessionsHistogramQuery,
   buildSessionsTrendQuery,
 } from "../queries/sessions";
-import type { ColumnFilterDef } from "../query-builder";
 import {
-  applyFilters,
-  buildColumnFilters,
-  filterSchema,
-} from "../query-builder";
+  buildSessionsListCountQuery,
+  buildSessionsListQuery,
+} from "../queries/sessions-list";
+import { filterSchema } from "../query-builder";
 import {
   buildScenesQuery,
   buildVoxelsQuery,
@@ -302,15 +331,6 @@ const playerSessionsInput = z.object({
   sortDesc: z.boolean().default(true),
 });
 
-// Filterable columns for a player's session history — all per-session aggregate
-// aliases, applied via HAVING (and mirrored into the paginated count subquery).
-const PLAYER_SESSION_FILTER_COLUMNS: Record<string, ColumnFilterDef> = {
-  duration_seconds: { expr: "duration_seconds", type: "number" },
-  event_count: { expr: "event_count", type: "number" },
-  map: { expr: "map", type: "string" },
-  started_at: { expr: "started_at", type: "string" },
-};
-
 const playerLifetimeRow = z.object({
   active_days: z.coerce.number(),
   avg_session_seconds: z.coerce.number(),
@@ -417,16 +437,6 @@ const playersListInput = z.object({
   to: z.iso.datetime(),
 });
 
-// Browsable-player list filters — all aggregate aliases (player_id is the
-// GROUP BY key), applied via HAVING and mirrored into the count subquery.
-const PLAYERS_LIST_FILTER_COLUMNS: Record<string, ColumnFilterDef> = {
-  events: { expr: "events", type: "number" },
-  first_seen: { expr: "first_seen", type: "string" },
-  last_seen: { expr: "last_seen", type: "string" },
-  player_id: { expr: "player_id", type: "string" },
-  sessions: { expr: "sessions", type: "number" },
-};
-
 const playersListRow = z.object({
   events: z.coerce.number(),
   first_seen: z.string(),
@@ -451,17 +461,6 @@ const sessionsListInput = z.object({
   sortDesc: z.boolean().default(true),
   to: z.iso.datetime(),
 });
-
-// Browsable-session list filters — session_id is the GROUP BY key; the rest are
-// per-session aggregate aliases. All applied via HAVING.
-const SESSIONS_LIST_FILTER_COLUMNS: Record<string, ColumnFilterDef> = {
-  duration_seconds: { expr: "duration_seconds", type: "number" },
-  event_count: { expr: "event_count", type: "number" },
-  map: { expr: "map", type: "string" },
-  player_id: { expr: "player_id", type: "string" },
-  session_id: { expr: "session_id", type: "string" },
-  started_at: { expr: "started_at", type: "string" },
-};
 
 const sessionsListRow = z.object({
   duration_seconds: z.coerce.number(),
@@ -997,18 +996,15 @@ export const analyticsRouter = {
 
       const ch = clickhouse();
 
-      // Per-session durations for one player — shared by the lifetime stats,
-      // map distribution, and duration histogram queries.
-      const playerSessionsCte = `
-          WITH player_sessions AS (
-            SELECT
-              argMin(JSONExtractString(properties, 'map'), timestamp) AS map,
-              dateDiff('second', min(timestamp), max(timestamp)) AS duration_seconds
-            FROM analytics.events
-            WHERE project_id = {projectId:String}
-              AND player_id = {playerId:String}
-            GROUP BY session_id
-          )`;
+      const lifetimeQuery = buildPlayerLifetimeQuery(input);
+      const activityQuery = buildPlayerActivityQuery(input);
+      const hourGridQuery = buildPlayerHourGridQuery(input);
+      const breakdownQuery = buildPlayerEventBreakdownQuery(input);
+      const mapsQuery = buildPlayerMapsQuery(input);
+      const histogramQuery = buildPlayerHistogramQuery(input);
+      const specsQuery = buildPlayerSpecsQuery(input);
+      const timelineQuery = buildPlayerTimelineQuery(input);
+      const retentionQuery = buildPlayerRetentionQuery(input);
 
       const [
         lifetimeResult,
@@ -1023,156 +1019,48 @@ export const analyticsRouter = {
       ] = await Promise.all([
         ch.query({
           format: "JSON",
-          query: `${playerSessionsCte}
-              SELECT
-                toString(min(timestamp)) AS first_seen,
-                toString(max(timestamp)) AS last_seen,
-                count() AS total_events,
-                uniq(session_id) AS total_sessions,
-                uniq(toDate(timestamp)) AS active_days,
-                (SELECT toUInt64(round(ifNotFinite(avg(duration_seconds), 0))) FROM player_sessions) AS avg_session_seconds,
-                (SELECT toUInt64(round(ifNotFinite(quantile(0.5)(duration_seconds), 0))) FROM player_sessions) AS median_session_seconds,
-                (SELECT toUInt64(max(duration_seconds)) FROM player_sessions) AS longest_session_seconds,
-                (SELECT toUInt64(sum(duration_seconds)) FROM player_sessions) AS total_playtime_seconds
-              FROM analytics.events
-              WHERE project_id = {projectId:String}
-                AND player_id = {playerId:String}
-            `,
-          query_params: input,
-        }),
-        // Last 12 weeks of daily activity — the profile's calendar window.
-        ch.query({
-          format: "JSON",
-          query: `
-              SELECT
-                toString(toDate(timestamp)) AS day,
-                toUInt64(count()) AS events,
-                toUInt64(uniq(session_id)) AS sessions
-              FROM analytics.events
-              WHERE project_id = {projectId:String}
-                AND player_id = {playerId:String}
-                AND timestamp >= now() - INTERVAL 84 DAY
-              GROUP BY day
-              ORDER BY day
-            `,
-          query_params: input,
+          query: lifetimeQuery.query,
+          query_params: lifetimeQuery.params,
         }),
         ch.query({
           format: "JSON",
-          query: `
-              SELECT
-                toUInt8(toDayOfWeek(timestamp)) AS weekday,
-                toUInt8(toHour(timestamp))      AS hour,
-                toUInt64(count())               AS events
-              FROM analytics.events
-              WHERE project_id = {projectId:String}
-                AND player_id = {playerId:String}
-              GROUP BY weekday, hour
-              ORDER BY weekday, hour
-            `,
-          query_params: input,
+          query: activityQuery.query,
+          query_params: activityQuery.params,
         }),
         ch.query({
           format: "JSON",
-          query: `
-              SELECT
-                event_type,
-                toUInt64(count()) AS count
-              FROM analytics.events
-              WHERE project_id = {projectId:String}
-                AND player_id = {playerId:String}
-              GROUP BY event_type
-              ORDER BY count DESC
-            `,
-          query_params: input,
+          query: hourGridQuery.query,
+          query_params: hourGridQuery.params,
         }),
         ch.query({
           format: "JSON",
-          query: `${playerSessionsCte}
-              SELECT
-                map,
-                toUInt64(count()) AS sessions,
-                toUInt64(sum(duration_seconds)) AS playtime_seconds
-              FROM player_sessions
-              GROUP BY map
-              ORDER BY sessions DESC, map ASC
-            `,
-          query_params: input,
-        }),
-        // Same buckets as the project-wide sessions histogram.
-        ch.query({
-          format: "JSON",
-          query: `${playerSessionsCte}
-              SELECT
-                multiIf(duration_seconds < 60, '0-1m',
-                        duration_seconds < 300, '1-5m',
-                        duration_seconds < 900, '5-15m',
-                        duration_seconds < 1800, '15-30m', '30m+') AS bucket,
-                multiIf(duration_seconds < 60, 0,
-                        duration_seconds < 300, 1,
-                        duration_seconds < 900, 2,
-                        duration_seconds < 1800, 3, 4)             AS sort,
-                toUInt64(count())                                   AS sessions
-              FROM player_sessions
-              GROUP BY bucket, sort
-              ORDER BY sort
-            `,
-          query_params: input,
+          query: breakdownQuery.query,
+          query_params: breakdownQuery.params,
         }),
         ch.query({
           format: "JSON",
-          query: `
-              SELECT
-                argMax(JSONExtractString(properties, 'platform'), timestamp)   AS platform,
-                argMax(JSONExtractString(properties, 'version'), timestamp)    AS version,
-                argMax(JSONExtractString(properties, 'os'), timestamp)         AS os,
-                argMax(JSONExtractString(properties, 'gpu'), timestamp)        AS gpu,
-                argMax(JSONExtractString(properties, 'cpu'), timestamp)        AS cpu,
-                argMax(JSONExtractUInt(properties, 'ram_gb'), timestamp)       AS ram_gb,
-                argMax(JSONExtractString(properties, 'resolution'), timestamp) AS resolution,
-                toString(max(timestamp)) AS captured_at
-              FROM analytics.events
-              WHERE project_id = {projectId:String}
-                AND player_id = {playerId:String}
-                AND event_type = 'session_start'
-            `,
-          query_params: input,
+          query: mapsQuery.query,
+          query_params: mapsQuery.params,
         }),
         ch.query({
           format: "JSON",
-          query: `
-              SELECT
-                event_type,
-                toString(timestamp) AS timestamp,
-                session_id,
-                properties
-              FROM analytics.events
-              WHERE project_id = {projectId:String}
-                AND player_id = {playerId:String}
-              ORDER BY timestamp DESC
-              LIMIT 100
-            `,
-          query_params: input,
+          query: histogramQuery.query,
+          query_params: histogramQuery.params,
         }),
         ch.query({
           format: "JSON",
-          query: `
-              WITH (
-                SELECT min(toDate(timestamp))
-                FROM analytics.events
-                WHERE project_id = {projectId:String}
-                  AND player_id = {playerId:String}
-              ) AS cohort
-              SELECT
-                toString(cohort) AS cohort_date,
-                countIf(toDate(timestamp) = cohort + 1) > 0 AS retained_d1,
-                countIf(toDate(timestamp) = cohort + 7) > 0 AS retained_d7,
-                countIf(toDate(timestamp) = cohort + 30) > 0 AS retained_d30
-              FROM analytics.events
-              WHERE project_id = {projectId:String}
-                AND player_id = {playerId:String}
-            `,
-          query_params: input,
+          query: specsQuery.query,
+          query_params: specsQuery.params,
+        }),
+        ch.query({
+          format: "JSON",
+          query: timelineQuery.query,
+          query_params: timelineQuery.params,
+        }),
+        ch.query({
+          format: "JSON",
+          query: retentionQuery.query,
+          query_params: retentionQuery.params,
         }),
       ]);
 
@@ -1227,68 +1115,19 @@ export const analyticsRouter = {
 
       const ch = clickhouse();
 
-      const sortColumn = input.sortBy ?? "started_at";
-      const sortDir = input.sortDesc ? "DESC" : "ASC";
-      const offset = (input.page - 1) * input.perPage;
-
-      // Filters target per-session aggregate aliases, so they go in HAVING —
-      // applied to both the page query and the count subquery so pagination
-      // reflects the filtered total.
-      const params: Record<string, unknown> = {
-        offset,
-        perPage: input.perPage,
-        playerId: input.playerId,
-        projectId: input.projectId,
-      };
-      const filterCondition = buildColumnFilters(
-        input.filters,
-        PLAYER_SESSION_FILTER_COLUMNS,
-        params,
-        input.joinOperator
-      );
-      const havingClause = filterCondition ? `HAVING ${filterCondition}` : "";
+      const sessionsQuery = buildPlayerSessionsQuery(input);
+      const countQuery = buildPlayerSessionsCountQuery(input);
 
       const [sessionsResult, countResult] = await Promise.all([
         ch.query({
           format: "JSON",
-          query: `
-              SELECT
-                session_id,
-                toString(min(timestamp)) AS started_at,
-                toString(max(timestamp)) AS ended_at,
-                dateDiff('second', min(timestamp), max(timestamp)) AS duration_seconds,
-                count() AS event_count,
-                argMin(JSONExtractString(properties, 'map'), timestamp) AS map
-              FROM analytics.events
-              WHERE project_id = {projectId:String}
-                AND player_id = {playerId:String}
-              GROUP BY session_id
-              ${havingClause}
-              ORDER BY ${sortColumn} ${sortDir}
-              LIMIT {perPage:Int32}
-              OFFSET {offset:Int32}
-            `,
-          query_params: params,
+          query: sessionsQuery.query,
+          query_params: sessionsQuery.params,
         }),
         ch.query({
           format: "JSON",
-          query: `
-              SELECT count() AS total
-              FROM (
-                SELECT
-                  session_id,
-                  toString(min(timestamp)) AS started_at,
-                  dateDiff('second', min(timestamp), max(timestamp)) AS duration_seconds,
-                  count() AS event_count,
-                  argMin(JSONExtractString(properties, 'map'), timestamp) AS map
-                FROM analytics.events
-                WHERE project_id = {projectId:String}
-                  AND player_id = {playerId:String}
-                GROUP BY session_id
-                ${havingClause}
-              )
-            `,
-          query_params: params,
+          query: countQuery.query,
+          query_params: countQuery.params,
         }),
       ]);
 
@@ -1310,65 +1149,20 @@ export const analyticsRouter = {
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
-      const SAFE_SORT_COLUMNS: Record<string, string> = {
-        events: "events",
-        first_seen: "first_seen",
-        last_seen: "last_seen",
-        sessions: "sessions",
-      };
-      const sortCol = input.sortBy
-        ? (SAFE_SORT_COLUMNS[input.sortBy] ?? "last_seen")
-        : "last_seen";
-      const sortDir = input.sortDesc ? "DESC" : "ASC";
-      const offset = (input.page - 1) * input.perPage;
-
-      const params: Record<string, unknown> = {
-        from: input.from.replace(/Z$/u, ""),
-        offset,
-        perPage: input.perPage,
-        projectId: input.projectId,
-        to: input.to.replace(/Z$/u, ""),
-      };
-      const havingCondition = buildColumnFilters(
-        input.filters,
-        PLAYERS_LIST_FILTER_COLUMNS,
-        params,
-        input.joinOperator
-      );
-      const havingClause = havingCondition ? `HAVING ${havingCondition}` : "";
-
-      // Anonymous activity (empty player_id) groups into a single non-clickable
-      // row, so exclude it from the browsable list.
-      const playerSelect = `
-        SELECT
-          player_id,
-          toString(min(timestamp)) AS first_seen,
-          toString(max(timestamp)) AS last_seen,
-          uniq(session_id) AS sessions,
-          count() AS events
-        FROM analytics.events
-        WHERE project_id = {projectId:String}
-          AND player_id != ''
-          AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
-        GROUP BY player_id
-        ${havingClause}
-      `;
-
       const ch = clickhouse();
+      const rowsQuery = buildPlayersListQuery(input);
+      const countQuery = buildPlayersListCountQuery(input);
+
       const [result, countResult] = await Promise.all([
         ch.query({
           format: "JSON",
-          query: `
-            ${playerSelect}
-            ORDER BY ${sortCol} ${sortDir}
-            LIMIT {perPage:UInt32} OFFSET {offset:UInt32}
-          `,
-          query_params: params,
+          query: rowsQuery.query,
+          query_params: rowsQuery.params,
         }),
         ch.query({
           format: "JSON",
-          query: `SELECT count() AS total FROM (${playerSelect})`,
-          query_params: params,
+          query: countQuery.query,
+          query_params: countQuery.params,
         }),
       ]);
 
@@ -1388,63 +1182,20 @@ export const analyticsRouter = {
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
-      const SAFE_SORT_COLUMNS: Record<string, string> = {
-        duration_seconds: "duration_seconds",
-        event_count: "event_count",
-        started_at: "started_at",
-      };
-      const sortCol = input.sortBy
-        ? (SAFE_SORT_COLUMNS[input.sortBy] ?? "started_at")
-        : "started_at";
-      const sortDir = input.sortDesc ? "DESC" : "ASC";
-      const offset = (input.page - 1) * input.perPage;
-
-      const params: Record<string, unknown> = {
-        from: input.from.replace(/Z$/u, ""),
-        offset,
-        perPage: input.perPage,
-        projectId: input.projectId,
-        to: input.to.replace(/Z$/u, ""),
-      };
-      const havingCondition = buildColumnFilters(
-        input.filters,
-        SESSIONS_LIST_FILTER_COLUMNS,
-        params,
-        input.joinOperator
-      );
-      const havingClause = havingCondition ? `HAVING ${havingCondition}` : "";
-
-      const sessionSelect = `
-        SELECT
-          session_id,
-          argMin(player_id, timestamp) AS player_id,
-          toString(min(timestamp)) AS started_at,
-          toString(max(timestamp)) AS ended_at,
-          dateDiff('second', min(timestamp), max(timestamp)) AS duration_seconds,
-          count() AS event_count,
-          argMin(JSONExtractString(properties, 'map'), timestamp) AS map
-        FROM analytics.events
-        WHERE project_id = {projectId:String}
-          AND timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}
-        GROUP BY session_id
-        ${havingClause}
-      `;
-
       const ch = clickhouse();
+      const rowsQuery = buildSessionsListQuery(input);
+      const countQuery = buildSessionsListCountQuery(input);
+
       const [result, countResult] = await Promise.all([
         ch.query({
           format: "JSON",
-          query: `
-            ${sessionSelect}
-            ORDER BY ${sortCol} ${sortDir}
-            LIMIT {perPage:UInt32} OFFSET {offset:UInt32}
-          `,
-          query_params: params,
+          query: rowsQuery.query,
+          query_params: rowsQuery.params,
         }),
         ch.query({
           format: "JSON",
-          query: `SELECT count() AS total FROM (${sessionSelect})`,
-          query_params: params,
+          query: countQuery.query,
+          query_params: countQuery.params,
         }),
       ]);
 
@@ -1464,94 +1215,38 @@ export const analyticsRouter = {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
       const ch = clickhouse();
+      const metaQuery = buildSessionMetaQuery(input);
+      const perfQuery = buildSessionPerfQuery(input);
+      const fpsQuery = buildSessionFpsQuery(input);
+      const breakdownQuery = buildSessionBreakdownQuery(input);
+      const specsQuery = buildSessionSpecsQuery(input);
+
       const [metaResult, perfResult, fpsResult, breakdownResult, specsResult] =
         await Promise.all([
           ch.query({
             format: "JSON",
-            query: `
-            SELECT
-              argMin(player_id, timestamp) AS player_id,
-              toString(min(timestamp)) AS started_at,
-              toString(max(timestamp)) AS ended_at,
-              dateDiff('second', min(timestamp), max(timestamp)) AS duration_seconds,
-              count() AS event_count,
-              argMin(JSONExtractString(properties, 'map'), timestamp) AS map
-            FROM analytics.events
-            WHERE project_id = {projectId:String}
-              AND session_id = {sessionId:String}
-          `,
-            query_params: input,
+            query: metaQuery.query,
+            query_params: metaQuery.params,
           }),
           ch.query({
             format: "JSON",
-            query: `
-            SELECT
-              toUInt64(round(ifNotFinite(avgIf(JSONExtractFloat(properties, 'fps'), event_type = 'fps_sample'), 0))) AS avg_fps,
-              toUInt64(round(ifNotFinite(minIf(JSONExtractFloat(properties, 'fps'), event_type = 'fps_sample'), 0))) AS min_fps,
-              toUInt64(round(ifNotFinite(maxIf(JSONExtractFloat(properties, 'fps'), event_type = 'fps_sample'), 0))) AS max_fps,
-              toUInt64(countIf(event_type = 'player_death')) AS deaths,
-              toUInt64(countIf(event_type = 'crash')) AS crashes,
-              anyIf(JSONExtractString(properties, 'reason'), event_type = 'crash') AS crash_reason,
-              toUInt64(round(ifNotFinite(avgIf(JSONExtractFloat(properties, 'ms'), event_type = 'load_complete'), 0))) AS load_ms
-            FROM analytics.events
-            WHERE project_id = {projectId:String}
-              AND session_id = {sessionId:String}
-          `,
-            query_params: input,
-          }),
-          // FPS samples positioned by seconds since session start.
-          ch.query({
-            format: "JSON",
-            query: `
-            WITH (
-              SELECT min(timestamp) FROM analytics.events
-              WHERE project_id = {projectId:String}
-                AND session_id = {sessionId:String}
-            ) AS session_start
-            SELECT
-              toUInt32(dateDiff('second', session_start, timestamp)) AS offset_seconds,
-              toUInt32(round(JSONExtractFloat(properties, 'fps'))) AS fps
-            FROM analytics.events
-            WHERE project_id = {projectId:String}
-              AND session_id = {sessionId:String}
-              AND event_type = 'fps_sample'
-            ORDER BY offset_seconds
-          `,
-            query_params: input,
+            query: perfQuery.query,
+            query_params: perfQuery.params,
           }),
           ch.query({
             format: "JSON",
-            query: `
-            SELECT
-              event_type,
-              toUInt64(count()) AS count
-            FROM analytics.events
-            WHERE project_id = {projectId:String}
-              AND session_id = {sessionId:String}
-            GROUP BY event_type
-            ORDER BY count DESC
-          `,
-            query_params: input,
+            query: fpsQuery.query,
+            query_params: fpsQuery.params,
           }),
-          // Hardware/client specs reported on this session's session_start.
           ch.query({
             format: "JSON",
-            query: `
-            SELECT
-              argMin(JSONExtractString(properties, 'platform'), timestamp)   AS platform,
-              argMin(JSONExtractString(properties, 'version'), timestamp)    AS version,
-              argMin(JSONExtractString(properties, 'os'), timestamp)         AS os,
-              argMin(JSONExtractString(properties, 'gpu'), timestamp)        AS gpu,
-              argMin(JSONExtractString(properties, 'cpu'), timestamp)        AS cpu,
-              argMin(JSONExtractUInt(properties, 'ram_gb'), timestamp)       AS ram_gb,
-              argMin(JSONExtractString(properties, 'resolution'), timestamp) AS resolution,
-              toString(min(timestamp)) AS captured_at
-            FROM analytics.events
-            WHERE project_id = {projectId:String}
-              AND session_id = {sessionId:String}
-              AND event_type = 'session_start'
-          `,
-            query_params: input,
+            query: breakdownQuery.query,
+            query_params: breakdownQuery.params,
+          }),
+          ch.query({
+            format: "JSON",
+            query: specsQuery.query,
+            query_params: specsQuery.params,
           }),
         ]);
 
@@ -1587,53 +1282,20 @@ export const analyticsRouter = {
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
-      const SAFE_SORT_COLUMNS = new Set(["timestamp", "event_type"]);
-      const sortCol =
-        input.sortBy && SAFE_SORT_COLUMNS.has(input.sortBy)
-          ? input.sortBy
-          : "timestamp";
-      const sortDir = input.sortDesc ? "DESC" : "ASC";
-      const offset = (input.page - 1) * input.perPage;
-
-      const params: Record<string, unknown> = {
-        offset,
-        perPage: input.perPage,
-        projectId: input.projectId,
-        sessionId: input.sessionId,
-      };
-      const conditions = [
-        "project_id = {projectId:String}",
-        "session_id = {sessionId:String}",
-      ];
-      for (const condition of applyFilters(input.filters, params)) {
-        conditions.push(condition);
-      }
-      const where = conditions.join(" AND ");
-
       const ch = clickhouse();
+      const eventsQuery = buildSessionEventsQuery(input);
+      const countQuery = buildSessionEventsCountQuery(input);
+
       const [eventsResult, countResult] = await Promise.all([
         ch.query({
           format: "JSON",
-          query: `
-            SELECT
-              event_type,
-              toString(timestamp) AS timestamp,
-              properties
-            FROM analytics.events
-            WHERE ${where}
-            ORDER BY ${sortCol} ${sortDir}
-            LIMIT {perPage:UInt32} OFFSET {offset:UInt32}
-          `,
-          query_params: params,
+          query: eventsQuery.query,
+          query_params: eventsQuery.params,
         }),
         ch.query({
           format: "JSON",
-          query: `
-            SELECT count() AS total
-            FROM analytics.events
-            WHERE ${where}
-          `,
-          query_params: params,
+          query: countQuery.query,
+          query_params: countQuery.params,
         }),
       ]);
 
