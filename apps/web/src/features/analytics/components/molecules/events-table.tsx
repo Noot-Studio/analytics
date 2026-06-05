@@ -5,10 +5,8 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@sbox-analytics/ui/components/empty";
-import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ChartNoAxesColumn } from "lucide-react";
-import { useMemo } from "react";
 
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableAdvancedToolbar } from "@/components/data-table/data-table-advanced-toolbar";
@@ -16,13 +14,9 @@ import { DataTableColumnHeader } from "@/components/data-table/data-table-column
 import { DataTableFilterList } from "@/components/data-table/data-table-filter-list";
 import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
 import { TableSkeleton } from "@/components/table-skeleton";
-import { useDataTable } from "@/hooks/use-data-table";
-import { useQueryState } from "@/hooks/use-query-state";
-import { getFiltersStateParser, getSortingStateParser } from "@/lib/parsers";
-import { parseAsStringEnum } from "@/lib/query-params";
 import { orpc } from "@/utils/orpc";
 
-import { toApiFilters } from "../../lib/api-filters";
+import { useFetchedTable } from "../../hooks/use-fetched-table";
 
 export interface EventRow {
   event_type: string;
@@ -30,9 +24,9 @@ export interface EventRow {
   unique_players: number;
 }
 
-const COLUMN_IDS = ["event_type", "event_count", "unique_players"] as const;
+type EventSortBy = "event_type" | "event_count" | "unique_players";
 
-const columns: ColumnDef<EventRow>[] = [
+const columns: ColumnDef<EventRow, unknown>[] = [
   {
     accessorKey: "event_type",
     enableColumnFilter: true,
@@ -62,15 +56,6 @@ const columns: ColumnDef<EventRow>[] = [
   },
 ];
 
-// Module-level parsers: stable references prevent useMemo invalidation on every render.
-const filtersParser = getFiltersStateParser<EventRow>([
-  ...COLUMN_IDS,
-]).withDefault([]);
-const joinOperatorParser = parseAsStringEnum([
-  "and",
-  "or",
-] as const).withDefault("and");
-
 export const EventsTable = ({
   from,
   projectId,
@@ -80,57 +65,28 @@ export const EventsTable = ({
   projectId: string;
   to: string;
 }) => {
-  const [breakdownSort] = useQueryState(
-    "breakdownSort",
-    getSortingStateParser<EventRow>().withDefault([])
-  );
-  const sortEntry = breakdownSort[0] ?? null;
-
-  const [breakdownFilters] = useQueryState("breakdownFilters", filtersParser);
-  const [joinOperator] = useQueryState(
-    "breakdownJoinOperator",
-    joinOperatorParser
-  );
-
-  const apiFilters = useMemo(
-    () => toApiFilters(breakdownFilters),
-    [breakdownFilters]
-  );
-
-  const { data, isLoading } = useQuery(
-    orpc.insights.breakdown.queryOptions({
-      input: {
-        filters: apiFilters.length > 0 ? apiFilters : undefined,
-        from,
-        joinOperator,
-        projectId,
-        sortBy: sortEntry?.id as
-          | "event_type"
-          | "event_count"
-          | "unique_players"
-          | undefined,
-        sortDesc: sortEntry?.desc ?? true,
-        to,
-      },
-    })
-  );
-
-  const rows = data ?? [];
-
-  const { table } = useDataTable({
+  const { table, rows, query, apiFilters } = useFetchedTable<
+    EventRow,
+    EventSortBy
+  >({
     columns,
-    data: rows,
-    pageCount: -1,
-    queryKeys: {
-      filters: "breakdownFilters",
-      joinOperator: "breakdownJoinOperator",
-      page: "breakdownPage",
-      perPage: "breakdownPerPage",
-      sort: "breakdownSort",
-    },
+    paginated: false,
+    query: ({ filters, joinOperator, sortBy, sortDesc }) =>
+      orpc.insights.breakdown.queryOptions({
+        input: {
+          filters,
+          from,
+          joinOperator,
+          projectId,
+          sortBy,
+          sortDesc,
+          to,
+        },
+      }),
+    queryKeyPrefix: "breakdown",
   });
 
-  if (isLoading) {
+  if (query.isLoading) {
     return <TableSkeleton rows={6} />;
   }
 

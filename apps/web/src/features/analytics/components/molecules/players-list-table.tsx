@@ -1,19 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { useMemo } from "react";
 
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableAdvancedToolbar } from "@/components/data-table/data-table-advanced-toolbar";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { DataTableFilterList } from "@/components/data-table/data-table-filter-list";
 import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
-import { useDataTable } from "@/hooks/use-data-table";
-import { useQueryState } from "@/hooks/use-query-state";
-import { getFiltersStateParser, getSortingStateParser } from "@/lib/parsers";
-import { parseAsInteger, parseAsStringEnum } from "@/lib/query-params";
 import { orpc } from "@/utils/orpc";
 
-import { toApiFilters } from "../../lib/api-filters";
+import { useFetchedTable } from "../../hooks/use-fetched-table";
 import { PlayerAvatar } from "../atoms/player-avatar";
 import { PlayerLink } from "../atoms/player-link";
 import { RelativeTime } from "../atoms/relative-time";
@@ -73,16 +67,6 @@ const playerColumns: ColumnDef<PlayerRow, unknown>[] = [
   },
 ];
 
-const PLAYER_FILTER_COLUMN_IDS = ["player_id", "sessions", "events"];
-
-const playersFiltersParser = getFiltersStateParser<PlayerRow>(
-  PLAYER_FILTER_COLUMN_IDS
-).withDefault([]);
-const playersJoinOperatorParser = parseAsStringEnum([
-  "and",
-  "or",
-] as const).withDefault("and");
-
 export const PlayersListTable = ({
   from,
   projectId,
@@ -92,54 +76,23 @@ export const PlayersListTable = ({
   projectId: string;
   to: string;
 }) => {
-  const [page] = useQueryState("playersPage", parseAsInteger.withDefault(1));
-  const [perPage] = useQueryState(
-    "playersPerPage",
-    parseAsInteger.withDefault(10)
-  );
-  const [sorting] = useQueryState(
-    "playersSort",
-    getSortingStateParser<PlayerRow>().withDefault([])
-  );
-  const sortEntry = sorting[0] ?? null;
-  const [tableFilters] = useQueryState("playersFilters", playersFiltersParser);
-  const [joinOperator] = useQueryState(
-    "playersJoinOperator",
-    playersJoinOperatorParser
-  );
-  const apiFilters = useMemo(() => toApiFilters(tableFilters), [tableFilters]);
-
-  const query = useQuery(
-    orpc.insights.playersList.queryOptions({
-      input: {
-        filters: apiFilters.length > 0 ? apiFilters : undefined,
-        from,
-        joinOperator,
-        page,
-        perPage,
-        projectId,
-        sortBy: sortEntry?.id,
-        sortDesc: sortEntry?.desc ?? true,
-        to,
-      },
-    })
-  );
-
-  const rows = query.data?.rows ?? [];
-  const total = query.data?.total ?? 0;
-  const pageCount = perPage > 0 ? Math.ceil(total / perPage) : -1;
-
-  const { table } = useDataTable({
+  const { table } = useFetchedTable<PlayerRow>({
     columns: playerColumns,
-    data: rows,
-    pageCount,
-    queryKeys: {
-      filters: "playersFilters",
-      joinOperator: "playersJoinOperator",
-      page: "playersPage",
-      perPage: "playersPerPage",
-      sort: "playersSort",
-    },
+    query: ({ filters, joinOperator, page, perPage, sortBy, sortDesc }) =>
+      orpc.insights.playersList.queryOptions({
+        input: {
+          filters,
+          from,
+          joinOperator,
+          page,
+          perPage,
+          projectId,
+          sortBy,
+          sortDesc,
+          to,
+        },
+      }),
+    queryKeyPrefix: "players",
   });
 
   return (

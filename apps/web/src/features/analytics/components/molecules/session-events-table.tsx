@@ -1,19 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { useMemo } from "react";
 
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableAdvancedToolbar } from "@/components/data-table/data-table-advanced-toolbar";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { DataTableFilterList } from "@/components/data-table/data-table-filter-list";
 import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
-import { useDataTable } from "@/hooks/use-data-table";
-import { useQueryState } from "@/hooks/use-query-state";
-import { getFiltersStateParser, getSortingStateParser } from "@/lib/parsers";
-import { parseAsInteger, parseAsStringEnum } from "@/lib/query-params";
 import { orpc } from "@/utils/orpc";
 
-import { toApiFilters } from "../../lib/api-filters";
+import { useFetchedTable } from "../../hooks/use-fetched-table";
 import { RelativeTime } from "../atoms/relative-time";
 
 const PROPERTIES_PREVIEW_LENGTH = 120;
@@ -62,13 +56,7 @@ const eventColumns: ColumnDef<SessionEvent, unknown>[] = [
   },
 ];
 
-const eventFiltersParser = getFiltersStateParser<SessionEvent>([
-  "event_type",
-]).withDefault([]);
-const eventJoinOperatorParser = parseAsStringEnum([
-  "and",
-  "or",
-] as const).withDefault("and");
+const EVENTS_PER_PAGE = 20;
 
 /**
  * Paginated event log for one session, backed by insights.sessionEvents so
@@ -81,53 +69,24 @@ export const SessionEventsTable = ({
   projectId: string;
   sessionId: string;
 }) => {
-  const [page] = useQueryState("eventsPage", parseAsInteger.withDefault(1));
-  const [perPage] = useQueryState(
-    "eventsPerPage",
-    parseAsInteger.withDefault(20)
-  );
-  const [sorting] = useQueryState(
-    "eventsSort",
-    getSortingStateParser<SessionEvent>().withDefault([])
-  );
-  const sortEntry = sorting[0] ?? null;
-  const [tableFilters] = useQueryState("eventsFilters", eventFiltersParser);
-  const [joinOperator] = useQueryState(
-    "eventsJoinOperator",
-    eventJoinOperatorParser
-  );
-  const apiFilters = useMemo(() => toApiFilters(tableFilters), [tableFilters]);
-
-  const query = useQuery(
-    orpc.insights.sessionEvents.queryOptions({
-      input: {
-        filters: apiFilters.length > 0 ? apiFilters : undefined,
-        joinOperator,
-        page,
-        perPage,
-        projectId,
-        sessionId,
-        sortBy: sortEntry?.id,
-        sortDesc: sortEntry?.desc ?? false,
-      },
-    })
-  );
-
-  const rows = query.data?.rows ?? [];
-  const total = query.data?.total ?? 0;
-  const pageCount = perPage > 0 ? Math.ceil(total / perPage) : -1;
-
-  const { table } = useDataTable({
+  const { table } = useFetchedTable<SessionEvent>({
     columns: eventColumns,
-    data: rows,
-    pageCount,
-    queryKeys: {
-      filters: "eventsFilters",
-      joinOperator: "eventsJoinOperator",
-      page: "eventsPage",
-      perPage: "eventsPerPage",
-      sort: "eventsSort",
-    },
+    defaultPerPage: EVENTS_PER_PAGE,
+    defaultSortDesc: false,
+    query: ({ filters, joinOperator, page, perPage, sortBy, sortDesc }) =>
+      orpc.insights.sessionEvents.queryOptions({
+        input: {
+          filters,
+          joinOperator,
+          page,
+          perPage,
+          projectId,
+          sessionId,
+          sortBy,
+          sortDesc,
+        },
+      }),
+    queryKeyPrefix: "events",
   });
 
   return (
