@@ -22,9 +22,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { loadContext } from "./context.mjs";
 import { readLiveServerInfo } from "./impeccable-paths.mjs";
 import { resolveFiles } from "./live-inject.mjs";
-import { loadContext } from "./load-context.mjs";
 
 const __dirname = import.meta.dirname;
 
@@ -90,7 +90,7 @@ The agent should then:
     process.exit(1);
   }
 
-  // 4. Load PRODUCT.md + DESIGN.md context (auto-migrates legacy .impeccable.md)
+  // 4. Load PRODUCT.md + DESIGN.md context.
   const ctx = loadContext(process.cwd());
 
   // 5. Compute drift-heal: compare resolved inject targets against the
@@ -108,7 +108,6 @@ The agent should then:
         designPath: ctx.designPath,
         hasDesign: ctx.hasDesign,
         hasProduct: ctx.hasProduct,
-        migrated: ctx.migrated,
         ok: true,
         pageFiles: resolvedFiles,
         product: ctx.product,

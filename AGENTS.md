@@ -4,7 +4,7 @@ This project is building **s&box Game Analytics**, a real-time analytics platfor
 
 > **Positioning**: "Analytics built for s&box developers — not marketers."
 
-## General Guidelines
+## Agent Skills
 
 ### 1. Think Before Coding
 
@@ -64,6 +64,18 @@ For multi-step tasks, state a brief plan:
 2. [Step] → verify: [check]
 3. [Step] → verify: [check]
 ```
+
+### Issue tracker
+
+Issues live in GitHub Issues (`Noot-Studio/analytics`) via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default vocabulary — all five labels (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`) exist on GitHub. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context — one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 
 ## Ultracite Code Standards
 
@@ -192,8 +204,5 @@ When working on this codebase, refer to the following documents for context:
 
 - **Product Vision** (`docs/agents/vision.md`) — What this product is, who it's for, and how it differs from general analytics.
 - **Product Features** (`docs/agents/features.md`) — Capabilities of the platform, analytics features, and the Event Ingestion API contract.
-- **Development Reference** (`docs/agents/development.md`) — Architecture diagram, tech stack, key trade-offs, and risks.
-- **Marketing & Positioning** (`docs/agents/marketing.md`) — Channels, launch sequence, and messaging.
-- **Pricing & Economics** (`docs/agents/pricing.md`) — Tiered pricing, infrastructure costs, and revenue targets.
-- **Success Metrics** (`docs/agents/metrics.md`) — Product and business health indicators.
+- **Development Reference** (`docs/agents/development.md`) — Architecture diagram, tech stack, and risks; trade-offs live in `docs/adr/`.
 - **Project Scope** (`docs/agents/scope.md`) — What's in scope and what's explicitly out of scope.

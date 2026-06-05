@@ -152,6 +152,8 @@ function baseSnapshot(id) {
     pendingEvent: null,
     pendingEventSeq: null,
     phase: "new",
+    previewFile: null,
+    previewMode: null,
     sourceFile: null,
     sourceMarkers: {},
     updatedAt: null,
@@ -228,9 +230,12 @@ function applyEvent(snapshot, entry, inheritedDiagnostics = []) {
     case "agent_done": {
       next.phase =
         event.carbonize === true ? "carbonize_required" : "variants_ready";
-      next.sourceFile = event.file ?? next.sourceFile;
+      next.sourceFile = event.sourceFile ?? event.file ?? next.sourceFile;
+      next.previewFile = event.previewFile ?? next.previewFile;
+      next.previewMode = event.previewMode ?? next.previewMode;
       next.arrivedVariants =
-        event.arrivedVariants ?? next.arrivedVariants ?? next.expectedVariants;
+        event.arrivedVariants ??
+        (next.expectedVariants || next.arrivedVariants || 0);
       next.pendingEventSeq = null;
       next.pendingEvent = null;
       if (event.carbonize === true) {
@@ -244,12 +249,23 @@ function applyEvent(snapshot, entry, inheritedDiagnostics = []) {
       break;
     }
     case "checkpoint": {
+      if (COMPLETED_PHASES.has(next.phase)) {
+        next.diagnostics.push({
+          error: "checkpoint_after_terminal_ignored",
+          phase: event.phase ?? null,
+          revision: event.revision ?? null,
+        });
+        break;
+      }
       if ((event.revision ?? 0) >= (next.checkpointRevision ?? 0)) {
         next.phase = event.phase ?? next.phase;
         next.checkpointRevision = event.revision ?? next.checkpointRevision;
         next.activeOwner = event.owner ?? next.activeOwner;
         next.arrivedVariants = event.arrivedVariants ?? next.arrivedVariants;
         next.visibleVariant = event.visibleVariant ?? next.visibleVariant;
+        next.sourceFile = event.sourceFile ?? next.sourceFile;
+        next.previewFile = event.previewFile ?? next.previewFile;
+        next.previewMode = event.previewMode ?? next.previewMode;
         if (event.paramValues) {
           next.paramValues = { ...event.paramValues };
         }
@@ -272,6 +288,30 @@ function applyEvent(snapshot, entry, inheritedDiagnostics = []) {
       next.pendingEvent = toPendingEvent(event);
       break;
     }
+    case "manual_edit_apply": {
+      next.phase = "manual_edit_apply_requested";
+      next.pageUrl = event.pageUrl ?? next.pageUrl;
+      next.pendingEventSeq = entry.seq ?? next.pendingEventSeq;
+      next.pendingEvent = toPendingEvent(event);
+      break;
+    }
+    case "steer": {
+      next.phase = "steer_requested";
+      next.pageUrl = event.pageUrl ?? next.pageUrl;
+      next.pendingEventSeq = entry.seq ?? next.pendingEventSeq;
+      next.pendingEvent = toPendingEvent(event);
+      break;
+    }
+    case "steer_done": {
+      next.phase = "steer_done";
+      next.sourceFile = event.sourceFile ?? event.file ?? next.sourceFile;
+      next.previewFile = event.previewFile ?? next.previewFile;
+      next.previewMode = event.previewMode ?? next.previewMode;
+      next.message = event.message ?? next.message;
+      next.pendingEventSeq = null;
+      next.pendingEvent = null;
+      break;
+    }
     case "discard": {
       next.phase = "discard_requested";
       next.pendingEventSeq = entry.seq ?? next.pendingEventSeq;
@@ -286,6 +326,9 @@ function applyEvent(snapshot, entry, inheritedDiagnostics = []) {
     }
     case "complete": {
       next.phase = "completed";
+      next.sourceFile = event.sourceFile ?? event.file ?? next.sourceFile;
+      next.previewFile = event.previewFile ?? next.previewFile;
+      next.previewMode = event.previewMode ?? next.previewMode;
       next.pendingEventSeq = null;
       next.pendingEvent = null;
       break;

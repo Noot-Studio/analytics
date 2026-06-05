@@ -11,6 +11,12 @@ export function completionTypeForAcceptResult(eventType, acceptResult) {
   if (acceptResult?.mode === "error") {
     return "error";
   }
+  if (
+    eventType === "accept" &&
+    acceptResult?.previewMode === "svelte-component"
+  ) {
+    return "error";
+  }
   return "agent_done";
 }
 
