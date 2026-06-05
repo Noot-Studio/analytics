@@ -2,6 +2,11 @@ import { ORPCError } from "@orpc/server";
 import prisma, { ProjectEnvironment } from "@sbox-analytics/db";
 import { z } from "zod";
 
+import {
+  assertOrgAccess,
+  assertProjectAccess,
+  requireActiveOrg,
+} from "../access";
 import { protectedProcedure } from "../index";
 import { buildPrismaWhere } from "../prisma-filters";
 import { filterSchema } from "../query-builder";
@@ -21,54 +26,12 @@ const PROJECT_FILTER_COLUMNS = new Set(["name", "slug", "environment"]);
 // Projects per organization; matches the dashboard's unpaginated list cap.
 const MAX_PROJECTS_PER_ORG = 100;
 
-function requireActiveOrg(context: {
-  session: { session: { activeOrganizationId?: string | null } };
-}): string {
-  const orgId = context.session.session.activeOrganizationId;
-  if (!orgId) {
-    throw new ORPCError("FORBIDDEN", { message: "No active organization" });
-  }
-  return orgId;
-}
-
 function generateSlug(name: string): string {
   return name
     .toLowerCase()
     .replaceAll(/[^a-z0-9]+/g, "-")
     .replaceAll(/^-|-$/g, "")
     .slice(0, 64);
-}
-
-async function assertOrgMembership(
-  userId: string,
-  organizationId: string
-): Promise<void> {
-  const member = await prisma.member.findFirst({
-    select: { id: true },
-    where: { organizationId, userId },
-  });
-  if (!member) {
-    throw new ORPCError("FORBIDDEN", {
-      message: "Organization not accessible",
-    });
-  }
-}
-
-async function assertProjectAccess(
-  userId: string,
-  projectId: string
-): Promise<string> {
-  const project = await prisma.project.findFirst({
-    select: { organizationId: true },
-    where: { id: projectId },
-  });
-
-  if (!project) {
-    throw new ORPCError("NOT_FOUND", { message: "Project not found" });
-  }
-
-  await assertOrgMembership(userId, project.organizationId);
-  return project.organizationId;
 }
 
 export const projectsRouter = {
@@ -84,7 +47,7 @@ export const projectsRouter = {
     )
     .handler(async ({ context, input }) => {
       const organizationId = requireActiveOrg(context);
-      await assertOrgMembership(context.session.user.id, organizationId);
+      await assertOrgAccess(organizationId, context.session.user.id);
 
       const projectCount = await prisma.project.count({
         where: { organizationId },
@@ -131,7 +94,7 @@ export const projectsRouter = {
   delete: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
     .handler(async ({ context, input }) => {
-      await assertProjectAccess(context.session.user.id, input.id);
+      await assertProjectAccess(input.id, context.session.user.id);
 
       await prisma.project.delete({
         where: { id: input.id },
@@ -143,7 +106,7 @@ export const projectsRouter = {
   get: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
     .handler(async ({ context, input }) => {
-      await assertProjectAccess(context.session.user.id, input.id);
+      await assertProjectAccess(input.id, context.session.user.id);
 
       const project = await prisma.project.findFirst({
         select: {
@@ -178,7 +141,7 @@ export const projectsRouter = {
     .input(projectsListInput.optional())
     .handler(async ({ context, input }) => {
       const organizationId = requireActiveOrg(context);
-      await assertOrgMembership(context.session.user.id, organizationId);
+      await assertOrgAccess(organizationId, context.session.user.id);
 
       const page = input?.page ?? 1;
       const perPage = input?.perPage ?? 10;

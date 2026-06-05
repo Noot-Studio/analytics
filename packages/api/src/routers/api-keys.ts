@@ -4,6 +4,7 @@ import { ORPCError } from "@orpc/server";
 import prisma from "@sbox-analytics/db";
 import { z } from "zod";
 
+import { assertProjectAccess } from "../access";
 import { protectedProcedure } from "../index";
 import { buildPrismaWhere } from "../prisma-filters";
 import { filterSchema } from "../query-builder";
@@ -24,32 +25,6 @@ function generateKeyPair() {
   return { publishableKey, secretHash: hashSecret(secretKey), secretKey };
 }
 
-async function assertProjectAccess(
-  userId: string,
-  projectId: string
-): Promise<void> {
-  const project = await prisma.project.findFirst({
-    select: { organizationId: true },
-    where: { id: projectId },
-  });
-
-  if (!project) {
-    throw new ORPCError("NOT_FOUND", { message: "Project not found" });
-  }
-
-  const membership = await prisma.member.findFirst({
-    select: { id: true },
-    where: {
-      organizationId: project.organizationId,
-      userId,
-    },
-  });
-
-  if (!membership) {
-    throw new ORPCError("FORBIDDEN", { message: "Project not accessible" });
-  }
-}
-
 export const apiKeysRouter = {
   create: protectedProcedure
     .input(
@@ -59,7 +34,7 @@ export const apiKeysRouter = {
       })
     )
     .handler(async ({ context, input }) => {
-      await assertProjectAccess(context.session.user.id, input.projectId);
+      await assertProjectAccess(input.projectId, context.session.user.id);
 
       const activeKeyCount = await prisma.apiKey.count({
         where: { projectId: input.projectId, revokedAt: null },
@@ -96,7 +71,7 @@ export const apiKeysRouter = {
       })
     )
     .handler(async ({ context, input }) => {
-      await assertProjectAccess(context.session.user.id, input.projectId);
+      await assertProjectAccess(input.projectId, context.session.user.id);
 
       const sortBy = input.sortBy ?? "createdAt";
       const where = {
@@ -141,7 +116,7 @@ export const apiKeysRouter = {
         throw new ORPCError("NOT_FOUND", { message: "API key not found" });
       }
 
-      await assertProjectAccess(context.session.user.id, apiKey.projectId);
+      await assertProjectAccess(apiKey.projectId, context.session.user.id);
 
       await prisma.apiKey.update({
         data: { revokedAt: new Date() },
@@ -163,7 +138,7 @@ export const apiKeysRouter = {
         throw new ORPCError("NOT_FOUND", { message: "API key not found" });
       }
 
-      await assertProjectAccess(context.session.user.id, apiKey.projectId);
+      await assertProjectAccess(apiKey.projectId, context.session.user.id);
 
       const { publishableKey, secretKey, secretHash } = generateKeyPair();
       await prisma.apiKey.update({

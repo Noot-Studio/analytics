@@ -1,35 +1,7 @@
-import { ORPCError } from "@orpc/server";
-import prisma from "@sbox-analytics/db";
-
+import { assertProjectAccess } from "../access";
 import { clickhouse } from "../clickhouse";
 import { protectedProcedure } from "../index";
 import { buildQuery, queryConfigSchema } from "../query-builder";
-
-const assertProjectAccess = async (
-  projectId: string,
-  userId: string
-): Promise<void> => {
-  const project = await prisma.project.findFirst({
-    select: { organizationId: true },
-    where: { id: projectId },
-  });
-
-  if (!project) {
-    throw new ORPCError("FORBIDDEN", { message: "Project not found" });
-  }
-
-  const membership = await prisma.member.findFirst({
-    select: { id: true },
-    where: {
-      organizationId: project.organizationId,
-      userId,
-    },
-  });
-
-  if (!membership) {
-    throw new ORPCError("FORBIDDEN", { message: "Project not accessible" });
-  }
-};
 
 export const customAnalyticsRouter = {
   query: protectedProcedure
