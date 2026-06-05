@@ -1,7 +1,6 @@
-import { ORPCError } from "@orpc/server";
-import prisma from "@sbox-analytics/db";
 import { z } from "zod";
 
+import { assertProjectAccess } from "../access";
 import { clickhouse } from "../clickhouse";
 import { protectedProcedure } from "../index";
 import type { ColumnFilterDef } from "../query-builder";
@@ -236,32 +235,6 @@ const funnelsOutput = z.object({
   steps: z.array(funnelsStep),
   trend: z.array(funnelsTrendRow),
 });
-
-async function assertProjectAccess(
-  projectId: string,
-  userId: string
-): Promise<void> {
-  const project = await prisma.project.findFirst({
-    select: { organizationId: true },
-    where: { id: projectId },
-  });
-
-  if (!project) {
-    throw new ORPCError("FORBIDDEN", { message: "Project not found" });
-  }
-
-  const membership = await prisma.member.findFirst({
-    select: { id: true },
-    where: {
-      organizationId: project.organizationId,
-      userId,
-    },
-  });
-
-  if (!membership) {
-    throw new ORPCError("FORBIDDEN", { message: "Project not accessible" });
-  }
-}
 
 const performanceInput = z.object({
   from: z.iso.date(),
