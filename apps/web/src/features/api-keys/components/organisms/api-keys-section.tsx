@@ -9,20 +9,16 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { KeyRound } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { DataTable } from "@/components/data-table/data-table";
-import { DataTableAdvancedToolbar } from "@/components/data-table/data-table-advanced-toolbar";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
-import { DataTableFilterList } from "@/components/data-table/data-table-filter-list";
-import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
 import { TableSkeleton } from "@/components/table-skeleton";
-import { toApiFilters } from "@/features/analytics/lib/api-filters";
 import { useDataTable } from "@/hooks/use-data-table";
 import { useQueryState } from "@/hooks/use-query-state";
-import { getFiltersStateParser, getSortingStateParser } from "@/lib/parsers";
-import { parseAsInteger, parseAsStringEnum } from "@/lib/query-params";
+import { getSortingStateParser } from "@/lib/parsers";
+import { parseAsInteger } from "@/lib/query-params";
 import { orpc } from "@/utils/orpc";
 
 import { CreateApiKeyDialog } from "../molecules/create-api-key-dialog";
@@ -148,12 +144,10 @@ const columns: ColumnDef<ApiKeyRow>[] = [
   {
     accessorKey: "name",
     cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
-    enableColumnFilter: true,
     header: ({ column }) => (
       <DataTableColumnHeader column={column} label="Name" />
     ),
     id: "name",
-    meta: { label: "Name", variant: "text" },
   },
   {
     accessorKey: "publishableKey",
@@ -192,15 +186,6 @@ const columns: ColumnDef<ApiKeyRow>[] = [
   },
 ];
 
-// Module-level parsers: stable references prevent useMemo invalidation on every render.
-const apiKeyFiltersParser = getFiltersStateParser<ApiKeyRow>([
-  "name",
-]).withDefault([]);
-const joinOperatorParser = parseAsStringEnum([
-  "and",
-  "or",
-] as const).withDefault("and");
-
 export function ApiKeysSection({ projectId }: ApiKeysSectionProps) {
   const queryClient = useQueryClient();
 
@@ -214,16 +199,10 @@ export function ApiKeysSection({ projectId }: ApiKeysSectionProps) {
     getSortingStateParser<ApiKeyRow>().withDefault([])
   );
   const sortEntry = sorting[0] ?? null;
-  const [tableFilters] = useQueryState("filters", apiKeyFiltersParser);
-  const [joinOperator] = useQueryState("joinOperator", joinOperatorParser);
-
-  const apiFilters = useMemo(() => toApiFilters(tableFilters), [tableFilters]);
 
   const listQuery = useQuery(
     orpc.apiKeys.list.queryOptions({
       input: {
-        filters: apiFilters.length > 0 ? apiFilters : undefined,
-        joinOperator,
         page,
         perPage,
         projectId,
@@ -258,7 +237,7 @@ export function ApiKeysSection({ projectId }: ApiKeysSectionProps) {
     pageCount,
   });
 
-  const isEmpty = total === 0 && apiFilters.length === 0;
+  const isEmpty = total === 0;
   const showTable = !(listQuery.isError || listQuery.isLoading) && !isEmpty;
 
   return (
@@ -295,14 +274,7 @@ export function ApiKeysSection({ projectId }: ApiKeysSectionProps) {
           </EmptyHeader>
         </Empty>
       ) : null}
-      {showTable ? (
-        <DataTable table={table}>
-          <DataTableAdvancedToolbar table={table}>
-            <DataTableFilterList table={table} />
-            <DataTableSortList table={table} />
-          </DataTableAdvancedToolbar>
-        </DataTable>
-      ) : null}
+      {showTable ? <DataTable table={table} /> : null}
 
       <CreateApiKeyDialog
         createdKey={createdKey}
