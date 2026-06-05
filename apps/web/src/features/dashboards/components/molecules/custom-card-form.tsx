@@ -2,7 +2,6 @@ import type {
   CustomCardConfig,
   DashboardCardInput,
 } from "@sbox-analytics/api/dashboard-cards";
-import { customCardConfigSchema } from "@sbox-analytics/api/dashboard-cards";
 import { Button } from "@sbox-analytics/ui/components/button";
 import { Input } from "@sbox-analytics/ui/components/input";
 import { Label } from "@sbox-analytics/ui/components/label";
@@ -14,43 +13,21 @@ import {
   SelectValue,
 } from "@sbox-analytics/ui/components/select";
 import { Skeleton } from "@sbox-analytics/ui/components/skeleton";
-import { useQuery } from "@tanstack/react-query";
-import { Suspense, useState } from "react";
+import { Suspense } from "react";
 
-import { orpc } from "@/utils/orpc";
-
+import { CUSTOM_CARD_TYPE, customCardSize } from "../../lib/card-registry";
+import type {
+  Aggregation,
+  TimeseriesGranularity,
+} from "../../lib/use-custom-card-form";
+import {
+  AGGREGATION_ITEMS,
+  DISPLAY_ITEMS,
+  GRANULARITY_ITEMS,
+  useCustomCardForm,
+} from "../../lib/use-custom-card-form";
 import { CardErrorBoundary } from "../atoms/card-error-boundary";
 import { CustomStatCard } from "./custom-stat-card";
-
-// Select label maps (the `items` prop renders labels instead of raw values).
-const AGGREGATION_ITEMS = {
-  avg: "Average of property",
-  count: "Event count",
-  max: "Maximum of property",
-  min: "Minimum of property",
-  sum: "Sum of property",
-  unique_players: "Unique players",
-  unique_sessions: "Unique sessions",
-} as const;
-
-const GRANULARITY_ITEMS = {
-  day: "Daily",
-  hour: "Hourly",
-  month: "Monthly",
-  week: "Weekly",
-} as const;
-
-const DISPLAY_ITEMS = {
-  metric: "Single number",
-  timeseries: "Chart over time",
-} as const;
-
-const PROPERTY_AGGREGATIONS = new Set(["avg", "max", "min", "sum"]);
-const QUERY_LIMIT = 1000;
-const ALL_EVENTS = "__all__";
-
-type Aggregation = keyof typeof AGGREGATION_ITEMS;
-type TimeseriesGranularity = keyof typeof GRANULARITY_ITEMS;
 
 interface CustomCardFormProps {
   from: string;
@@ -66,47 +43,8 @@ export const CustomCardForm = ({
   projectId,
   to,
 }: CustomCardFormProps) => {
-  const [title, setTitle] = useState("");
-  const [eventType, setEventType] = useState(ALL_EVENTS);
-  const [aggregation, setAggregation] = useState<Aggregation>("count");
-  const [aggregateProperty, setAggregateProperty] = useState("");
-  const [display, setDisplay] = useState<"metric" | "timeseries">("metric");
-  const [granularity, setGranularity] = useState<TimeseriesGranularity>("day");
-
-  const { data: eventTypes } = useQuery(
-    orpc.introspection.eventTypes.queryOptions({
-      enabled: Boolean(projectId),
-      input: { projectId: projectId ?? "" },
-    })
-  );
-
-  const eventItems: Record<string, string> = {
-    [ALL_EVENTS]: "All events",
-    ...Object.fromEntries((eventTypes ?? []).map((type) => [type, type])),
-  };
-
-  const needsProperty = PROPERTY_AGGREGATIONS.has(aggregation);
-  const hasEventType = eventType !== ALL_EVENTS;
-  const { data: propertyKeys } = useQuery(
-    orpc.introspection.propertyKeys.queryOptions({
-      enabled: Boolean(projectId) && hasEventType && needsProperty,
-      input: { eventType, projectId: projectId ?? "" },
-    })
-  );
-
-  const config = {
-    display,
-    projectId,
-    query: {
-      aggregateProperty: needsProperty ? aggregateProperty : undefined,
-      aggregation,
-      eventType: hasEventType ? eventType : undefined,
-      granularity: display === "metric" ? ("none" as const) : granularity,
-      limit: QUERY_LIMIT,
-    },
-    title: title.trim(),
-  };
-  const parsed = customCardConfigSchema.safeParse(config);
+  const form = useCustomCardForm(projectId);
+  const { config, parsed } = form;
 
   const handleSubmit = (event: { preventDefault(): void }) => {
     event.preventDefault();
@@ -114,9 +52,9 @@ export const CustomCardForm = ({
       return;
     }
     onAdd({
-      cardType: "custom.stat",
+      cardType: CUSTOM_CARD_TYPE,
       config,
-      size: display === "timeseries" ? "Full" : "Third",
+      size: customCardSize(parsed.data),
     });
   };
 
@@ -127,24 +65,24 @@ export const CustomCardForm = ({
         <Input
           id="custom-card-title"
           maxLength={80}
-          onChange={(event) => setTitle(event.target.value)}
+          onChange={(event) => form.setTitle(event.target.value)}
           placeholder="e.g. Knife kills"
-          value={title}
+          value={form.title}
         />
       </div>
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="custom-card-event">Event</Label>
         <Select
-          items={eventItems}
-          onValueChange={(value) => value && setEventType(value)}
-          value={eventType}
+          items={form.eventItems}
+          onValueChange={(value) => value && form.setEventType(value)}
+          value={form.eventType}
         >
           <SelectTrigger className="w-full" id="custom-card-event">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {Object.entries(eventItems).map(([value, label]) => (
+            {Object.entries(form.eventItems).map(([value, label]) => (
               <SelectItem key={value} value={value}>
                 {label}
               </SelectItem>
@@ -158,9 +96,9 @@ export const CustomCardForm = ({
         <Select
           items={AGGREGATION_ITEMS}
           onValueChange={(value) =>
-            value && setAggregation(value as Aggregation)
+            value && form.setAggregation(value as Aggregation)
           }
-          value={aggregation}
+          value={form.aggregation}
         >
           <SelectTrigger className="w-full" id="custom-card-aggregation">
             <SelectValue />
@@ -175,19 +113,21 @@ export const CustomCardForm = ({
         </Select>
       </div>
 
-      {needsProperty ? (
+      {form.needsProperty ? (
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="custom-card-property">Property</Label>
-          {propertyKeys && propertyKeys.length > 0 ? (
+          {form.propertyKeys && form.propertyKeys.length > 0 ? (
             <Select
-              onValueChange={(value) => value && setAggregateProperty(value)}
-              value={aggregateProperty}
+              onValueChange={(value) =>
+                value && form.setAggregateProperty(value)
+              }
+              value={form.aggregateProperty}
             >
               <SelectTrigger className="w-full" id="custom-card-property">
                 <SelectValue placeholder="Pick a property…" />
               </SelectTrigger>
               <SelectContent>
-                {propertyKeys.map((key) => (
+                {form.propertyKeys.map((key) => (
                   <SelectItem key={key} value={key}>
                     {key}
                   </SelectItem>
@@ -197,9 +137,11 @@ export const CustomCardForm = ({
           ) : (
             <Input
               id="custom-card-property"
-              onChange={(event) => setAggregateProperty(event.target.value)}
+              onChange={(event) =>
+                form.setAggregateProperty(event.target.value)
+              }
               placeholder="e.g. fps"
-              value={aggregateProperty}
+              value={form.aggregateProperty}
             />
           )}
         </div>
@@ -210,9 +152,9 @@ export const CustomCardForm = ({
         <Select
           items={DISPLAY_ITEMS}
           onValueChange={(value) =>
-            value && setDisplay(value as "metric" | "timeseries")
+            value && form.setDisplay(value as "metric" | "timeseries")
           }
-          value={display}
+          value={form.display}
         >
           <SelectTrigger className="w-full" id="custom-card-display">
             <SelectValue />
@@ -227,15 +169,15 @@ export const CustomCardForm = ({
         </Select>
       </div>
 
-      {display === "timeseries" ? (
+      {form.display === "timeseries" ? (
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="custom-card-granularity">Granularity</Label>
           <Select
             items={GRANULARITY_ITEMS}
             onValueChange={(value) =>
-              value && setGranularity(value as TimeseriesGranularity)
+              value && form.setGranularity(value as TimeseriesGranularity)
             }
-            value={granularity}
+            value={form.granularity}
           >
             <SelectTrigger className="w-full" id="custom-card-granularity">
               <SelectValue />
