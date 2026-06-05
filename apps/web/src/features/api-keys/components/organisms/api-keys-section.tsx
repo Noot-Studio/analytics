@@ -18,7 +18,6 @@ import { TableSkeleton } from "@/components/table-skeleton";
 import { useDataTable } from "@/hooks/use-data-table";
 import { useQueryState } from "@/hooks/use-query-state";
 import { getSortingStateParser } from "@/lib/parsers";
-import { parseAsInteger } from "@/lib/query-params";
 import { orpc } from "@/utils/orpc";
 
 import { CreateApiKeyDialog } from "../molecules/create-api-key-dialog";
@@ -51,6 +50,9 @@ interface RotatedKey {
 
 const API_KEY_COLUMN_IDS = ["name", "createdAt", "lastUsedAt"] as const;
 type ApiKeySortColumn = (typeof API_KEY_COLUMN_IDS)[number];
+
+// Server-side cap on perPage; fetched as a single page since the table is unpaginated.
+const MAX_ROWS = 100;
 
 function formatDate(date: Date | null) {
   if (!date) {
@@ -192,8 +194,6 @@ export function ApiKeysSection({ projectId }: ApiKeysSectionProps) {
   const [createOpen, setCreateOpen] = useState(false);
   const [createdKey, setCreatedKey] = useState<CreatedKey | null>(null);
 
-  const [page] = useQueryState("page", parseAsInteger.withDefault(1));
-  const [perPage] = useQueryState("perPage", parseAsInteger.withDefault(10));
   const [sorting] = useQueryState(
     "sort",
     getSortingStateParser<ApiKeyRow>().withDefault([])
@@ -203,8 +203,7 @@ export function ApiKeysSection({ projectId }: ApiKeysSectionProps) {
   const listQuery = useQuery(
     orpc.apiKeys.list.queryOptions({
       input: {
-        page,
-        perPage,
+        perPage: MAX_ROWS,
         projectId,
         sortBy: sortEntry?.id as ApiKeySortColumn | undefined,
         sortDesc: sortEntry?.desc ?? true,
@@ -228,13 +227,12 @@ export function ApiKeysSection({ projectId }: ApiKeysSectionProps) {
 
   const rows = (listQuery.data?.rows ?? []) as ApiKeyRow[];
   const total = listQuery.data?.total ?? 0;
-  const pageCount = perPage > 0 ? Math.ceil(total / perPage) : -1;
 
   const { table } = useDataTable({
     columns,
     data: rows,
     getRowId: (row) => row.id,
-    pageCount,
+    pageCount: 1,
   });
 
   const isEmpty = total === 0;
@@ -274,7 +272,7 @@ export function ApiKeysSection({ projectId }: ApiKeysSectionProps) {
           </EmptyHeader>
         </Empty>
       ) : null}
-      {showTable ? <DataTable table={table} /> : null}
+      {showTable ? <DataTable hidePagination table={table} /> : null}
 
       <CreateApiKeyDialog
         createdKey={createdKey}
