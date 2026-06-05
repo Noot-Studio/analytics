@@ -1,4 +1,8 @@
+import type { ClickHouseEvent } from "@sbox-analytics/events";
+import { formatTimestamp } from "@sbox-analytics/events";
 import { z } from "zod";
+
+export type { ClickHouseEvent };
 
 export const MAX_BATCH_SIZE = 500;
 export const MAX_PROPERTIES_BYTES = 16 * 1024;
@@ -26,44 +30,6 @@ export const batchSchema = z.object({
 
 export type IncomingEvent = z.infer<typeof eventSchema>;
 export type IncomingBatch = z.infer<typeof batchSchema>;
-
-// ClickHouse `events_queue` row shape (JSONEachRow).
-export interface ClickHouseEvent {
-  project_id: string;
-  event_type: string;
-  timestamp: string;
-  session_id: string;
-  player_id: string;
-  properties: string;
-  scene: string;
-  pos_x: number | null;
-  pos_y: number | null;
-  pos_z: number | null;
-}
-
-const TS_FORMATTER = new Intl.DateTimeFormat("en-CA", {
-  day: "2-digit",
-  fractionalSecondDigits: 3,
-  hour: "2-digit",
-  hour12: false,
-  minute: "2-digit",
-  month: "2-digit",
-  second: "2-digit",
-  timeZone: "UTC",
-  year: "numeric",
-});
-
-// ClickHouse DateTime64(3, 'UTC') wants `YYYY-MM-DD HH:MM:SS.sss`.
-export const formatTimestamp = (date: Date): string => {
-  const parts = TS_FORMATTER.formatToParts(date);
-  const lookup: Record<string, string> = {};
-  for (const p of parts) {
-    if (p.type !== "literal") {
-      lookup[p.type] = p.value;
-    }
-  }
-  return `${lookup.year}-${lookup.month}-${lookup.day} ${lookup.hour}:${lookup.minute}:${lookup.second}.${lookup.fractionalSecond}`;
-};
 
 export const toClickHouseEvent = (
   event: IncomingEvent,

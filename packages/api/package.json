@@ -19,6 +19,7 @@
     "@sbox-analytics/auth": "workspace:*",
     "@sbox-analytics/db": "workspace:*",
     "@sbox-analytics/env": "workspace:*",
+    "@sbox-analytics/events": "workspace:*",
     "dotenv": "catalog:",
     "zod": "catalog:"
   },

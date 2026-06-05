@@ -56,6 +56,7 @@
       "dependencies": {
         "@sbox-analytics/db": "workspace:*",
         "@sbox-analytics/env": "workspace:*",
+        "@sbox-analytics/events": "workspace:*",
         "evlog": "^2.14.1",
         "hono": "catalog:",
         "kafkajs": "^2.2.4",
@@ -160,6 +161,7 @@
         "@sbox-analytics/auth": "workspace:*",
         "@sbox-analytics/db": "workspace:*",
         "@sbox-analytics/env": "workspace:*",
+        "@sbox-analytics/events": "workspace:*",
         "dotenv": "catalog:",
         "zod": "catalog:",
       },
@@ -213,6 +215,18 @@
       "dependencies": {
         "@t3-oss/env-core": "^0.13.1",
         "dotenv": "catalog:",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@sbox-analytics/config": "workspace:*",
+        "@types/bun": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
+    "packages/events": {
+      "name": "@sbox-analytics/events",
+      "version": "0.0.0",
+      "dependencies": {
         "zod": "catalog:",
       },
       "devDependencies": {
@@ -810,6 +824,8 @@
     "@sbox-analytics/db": ["@sbox-analytics/db@workspace:packages/db"],
 
     "@sbox-analytics/env": ["@sbox-analytics/env@workspace:packages/env"],
+
+    "@sbox-analytics/events": ["@sbox-analytics/events@workspace:packages/events"],
 
     "@sbox-analytics/ui": ["@sbox-analytics/ui@workspace:packages/ui"],
 
