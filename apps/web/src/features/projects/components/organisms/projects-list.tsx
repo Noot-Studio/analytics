@@ -17,20 +17,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import { FolderPlus } from "lucide-react";
-import { useMemo } from "react";
 import { toast } from "sonner";
 
 import { DataTable } from "@/components/data-table/data-table";
-import { DataTableAdvancedToolbar } from "@/components/data-table/data-table-advanced-toolbar";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
-import { DataTableFilterList } from "@/components/data-table/data-table-filter-list";
-import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
 import { TableSkeleton } from "@/components/table-skeleton";
-import { toApiFilters } from "@/features/analytics/lib/api-filters";
 import { useDataTable } from "@/hooks/use-data-table";
 import { useQueryState } from "@/hooks/use-query-state";
-import { getFiltersStateParser, getSortingStateParser } from "@/lib/parsers";
-import { parseAsInteger, parseAsStringEnum } from "@/lib/query-params";
+import { getSortingStateParser } from "@/lib/parsers";
+import { parseAsInteger } from "@/lib/query-params";
 import { orpc } from "@/utils/orpc";
 
 import { ConfirmButton } from "../atoms/confirm-button";
@@ -48,12 +43,6 @@ interface ProjectRow {
 
 const PROJECT_COLUMN_IDS = ["name", "slug", "environment"] as const;
 type ProjectSortColumn = (typeof PROJECT_COLUMN_IDS)[number];
-
-const ENVIRONMENT_OPTIONS = [
-  { label: "Development", value: "Development" },
-  { label: "Staging", value: "Staging" },
-  { label: "Production", value: "Production" },
-];
 
 // Self-contained so the column lives at module scope (no component defined
 // during ProjectsList's render).
@@ -132,58 +121,38 @@ const columns: ColumnDef<ProjectRow>[] = [
         {row.original.name}
       </Link>
     ),
-    enableColumnFilter: true,
     header: ({ column }) => (
       <DataTableColumnHeader column={column} label="Name" />
     ),
     id: "name",
-    meta: { label: "Name", variant: "text" },
   },
   {
     accessorKey: "slug",
     cell: ({ row }) => (
       <span className="text-muted-foreground">{row.original.slug}</span>
     ),
-    enableColumnFilter: true,
     header: ({ column }) => (
       <DataTableColumnHeader column={column} label="Slug" />
     ),
     id: "slug",
-    meta: { label: "Slug", variant: "text" },
   },
   {
     accessorKey: "environment",
     cell: ({ row }) => (
       <EnvironmentBadge environment={row.original.environment} />
     ),
-    enableColumnFilter: true,
     header: ({ column }) => (
       <DataTableColumnHeader column={column} label="Environment" />
     ),
     id: "environment",
-    meta: {
-      label: "Environment",
-      options: ENVIRONMENT_OPTIONS,
-      variant: "select",
-    },
   },
   {
     cell: ({ row }) => <ProjectActionsCell project={row.original} />,
-    enableColumnFilter: false,
     enableSorting: false,
     header: () => <span className="sr-only">Actions</span>,
     id: "actions",
   },
 ];
-
-// Module-level parsers: stable references prevent useMemo invalidation on every render.
-const projectsFiltersParser = getFiltersStateParser<ProjectRow>([
-  ...PROJECT_COLUMN_IDS,
-]).withDefault([]);
-const joinOperatorParser = parseAsStringEnum([
-  "and",
-  "or",
-] as const).withDefault("and");
 
 export const ProjectsList = () => {
   const [page] = useQueryState("page", parseAsInteger.withDefault(1));
@@ -193,16 +162,10 @@ export const ProjectsList = () => {
     getSortingStateParser<ProjectRow>().withDefault([])
   );
   const sortEntry = sorting[0] ?? null;
-  const [tableFilters] = useQueryState("filters", projectsFiltersParser);
-  const [joinOperator] = useQueryState("joinOperator", joinOperatorParser);
-
-  const apiFilters = useMemo(() => toApiFilters(tableFilters), [tableFilters]);
 
   const listQuery = useQuery(
     orpc.projects.list.queryOptions({
       input: {
-        filters: apiFilters.length > 0 ? apiFilters : undefined,
-        joinOperator,
         page,
         perPage,
         sortBy: sortEntry?.id as ProjectSortColumn | undefined,
@@ -234,7 +197,7 @@ export const ProjectsList = () => {
     );
   }
 
-  if (total === 0 && apiFilters.length === 0) {
+  if (total === 0) {
     return (
       <Empty>
         <EmptyHeader>
@@ -250,12 +213,5 @@ export const ProjectsList = () => {
     );
   }
 
-  return (
-    <DataTable table={table}>
-      <DataTableAdvancedToolbar table={table}>
-        <DataTableFilterList table={table} />
-        <DataTableSortList table={table} />
-      </DataTableAdvancedToolbar>
-    </DataTable>
-  );
+  return <DataTable table={table} />;
 };
