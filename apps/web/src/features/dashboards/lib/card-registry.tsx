@@ -1,7 +1,9 @@
 import type {
   CardSizeValue,
+  CustomCardConfig,
   DashboardCardType,
 } from "@sbox-analytics/api/dashboard-cards";
+import { CUSTOM_CARD_TYPE } from "@sbox-analytics/api/dashboard-cards";
 import type { ComponentType } from "react";
 
 import {
@@ -75,3 +77,9 @@ export const getCardDefinition = (
   Object.hasOwn(CARD_REGISTRY, cardType)
     ? CARD_REGISTRY[cardType as DashboardCardType]
     : undefined;
+
+export { CUSTOM_CARD_TYPE };
+
+/** Timeseries custom cards fill a row; single-number ones take a third. */
+export const customCardSize = (config: CustomCardConfig): CardSizeValue =>
+  config.display === "timeseries" ? "Full" : "Third";

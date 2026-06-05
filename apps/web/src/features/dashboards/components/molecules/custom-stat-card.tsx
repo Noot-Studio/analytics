@@ -1,6 +1,5 @@
 import type { CustomCardConfig } from "@sbox-analytics/api/dashboard-cards";
 import { Area } from "@sbox-analytics/ui/components/chart-series";
-import { useSuspenseQuery } from "@tanstack/react-query";
 import {
   AreaChart,
   ResponsiveContainer,
@@ -10,8 +9,8 @@ import {
 } from "recharts";
 
 import { MetricCard } from "@/features/analytics/components/molecules/metric-card";
-import { orpc } from "@/utils/orpc";
 
+import { useCustomCardQuery } from "../../lib/card-data";
 import type { CardRendererProps } from "../../lib/card-registry";
 
 const CHART_HEIGHT = 240;
@@ -42,29 +41,15 @@ const CustomStatBody = ({
   projectId: string;
   to: string;
 }) => {
-  // Stored query + render-time bindings; rows come back as
-  // { value, time_bucket?, group_col_N? } per the query-builder aliases.
-  const { data: rows } = useSuspenseQuery(
-    orpc.customAnalytics.query.queryOptions({
-      input: {
-        ...config.query,
-        projectId,
-        timeRange: { from, to },
-      },
-    })
-  );
+  const { metricValue, series } = useCustomCardQuery(config, {
+    from,
+    projectId,
+    to,
+  });
 
-  // ClickHouse JSON output serializes 64-bit aggregates as strings.
   if (config.display === "metric") {
-    const raw = rows.at(0)?.value;
-    const value = raw === null || raw === undefined ? undefined : Number(raw);
-    return <MetricCard label={config.title} value={value} />;
+    return <MetricCard label={config.title} value={metricValue} />;
   }
-
-  const series = rows.map((row) => ({
-    bucket: String(row.time_bucket ?? ""),
-    value: Number(row.value ?? 0),
-  }));
 
   if (series.length === 0) {
     return (

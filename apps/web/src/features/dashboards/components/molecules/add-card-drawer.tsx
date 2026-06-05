@@ -29,13 +29,15 @@ import type { ReactNode } from "react";
 
 import { orpc } from "@/utils/orpc";
 
-import { CARD_REGISTRY } from "../../lib/card-registry";
+import {
+  CARD_REGISTRY,
+  CUSTOM_CARD_TYPE,
+  customCardSize,
+} from "../../lib/card-registry";
+import { useCardSourcePin } from "../../lib/use-card-source-pin";
 import type { DashboardScopeValue } from "../../lib/use-dashboard-editor";
 import { CardErrorBoundary } from "../atoms/card-error-boundary";
 import { CustomCardForm } from "./custom-card-form";
-
-const ORG_WIDE = "__org__";
-const PROJECTS_PAGE_SIZE = 100;
 
 interface AddCardDrawerProps {
   from: string;
@@ -69,18 +71,17 @@ export const AddCardDrawer = ({
   to,
 }: AddCardDrawerProps) => {
   const isMobile = useIsMobile();
-  const isOrgScope = scope === "OrgOverview";
   const queryClient = useQueryClient();
-  const [pin, setPin] = useState(ORG_WIDE);
+  const {
+    customProjectId,
+    isOrgScope,
+    pin,
+    pinnedProjectId,
+    setPin,
+    sourceItems,
+  } = useCardSourcePin({ open, projectId, scope });
   const [search, setSearch] = useState("");
   const [isCreating, setIsCreating] = useState(false);
-
-  const { data: projects } = useQuery(
-    orpc.projects.list.queryOptions({
-      enabled: isOrgScope && open,
-      input: { perPage: PROJECTS_PAGE_SIZE },
-    })
-  );
 
   const libraryQueryOptions = orpc.dashboards.libraryList.queryOptions({
     enabled: open,
@@ -102,18 +103,6 @@ export const AddCardDrawer = ({
     })
   );
 
-  // Select renders labels (not raw values) through the items map.
-  const sourceItems: Record<string, string> = {
-    [ORG_WIDE]: "Whole organization",
-    ...Object.fromEntries(
-      (projects?.rows ?? []).map((project) => [project.id, project.name])
-    ),
-  };
-
-  const pinnedProjectId = pin === ORG_WIDE ? undefined : pin;
-  // Custom cards query project-scoped data; org dashboards must pin one.
-  const customProjectId = projectId ?? pinnedProjectId;
-
   const handleOpenChange = (next: boolean) => {
     if (!next) {
       setSearch("");
@@ -133,16 +122,16 @@ export const AddCardDrawer = ({
 
   const addCustom = (config: CustomCardConfig) => {
     onAdd({
-      cardType: "custom.stat",
+      cardType: CUSTOM_CARD_TYPE,
       config,
-      size: config.display === "timeseries" ? "Full" : "Third",
+      size: customCardSize(config),
     });
     handleOpenChange(false);
   };
 
   // Creating saves the definition to the library, then places it.
   const createCustom = (card: DashboardCardInput) => {
-    if (card.cardType !== "custom.stat") {
+    if (card.cardType !== CUSTOM_CARD_TYPE) {
       return;
     }
     createMutation.mutate({
@@ -277,7 +266,7 @@ export const AddCardDrawer = ({
 
               {customs.map((definition) => {
                 const config = definition.config as CustomCardConfig;
-                const { Renderer } = CARD_REGISTRY["custom.stat"];
+                const { Renderer } = CARD_REGISTRY[CUSTOM_CARD_TYPE];
                 return (
                   <div className="flex flex-col gap-2" key={definition.id}>
                     <div className="flex items-center justify-between gap-3">
