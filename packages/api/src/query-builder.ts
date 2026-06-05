@@ -1,3 +1,4 @@
+import { EVENT_COLUMNS, toClickHouseDateTime } from "@sbox-analytics/events";
 import { z } from "zod";
 
 export const filterOperator = z.enum([
@@ -64,23 +65,10 @@ const getPropertyParamName = (
   return paramName;
 };
 
-/**
- * Real top-level columns on `analytics.events`. Filters targeting these
- * reference the column directly; everything else is read out of the JSON
- * `properties` blob via JSONExtract. The set doubles as an allowlist — only
- * these exact identifiers are ever interpolated as raw SQL column names.
- */
-const KNOWN_COLUMNS = new Set([
-  "project_id",
-  "event_type",
-  "timestamp",
-  "session_id",
-  "player_id",
-  "scene",
-  "pos_x",
-  "pos_y",
-  "pos_z",
-]);
+// Allowlist form of the shared event-column metadata: only these exact
+// identifiers are ever interpolated as raw SQL column names; everything else is
+// read out of the JSON `properties` blob via JSONExtract.
+const KNOWN_COLUMNS = new Set<string>(EVENT_COLUMNS);
 
 export const buildPropertyAccessor = (
   property: string,
@@ -382,13 +370,6 @@ export const buildColumnFilters = (
   const glue = joinOperator === "or" ? " OR " : " AND ";
   return `(${conditions.join(glue)})`;
 };
-
-/**
- * ClickHouse can't parse an ISO `Z` suffix as DateTime64(3); it expects
- * `YYYY-MM-DD HH:MM:SS[.mmm]` (UTC is the column timezone already).
- */
-const toClickHouseDateTime = (iso: string): string =>
-  iso.replace("T", " ").replace("Z", "");
 
 export const buildQuery = (config: QueryConfig): QueryResult => {
   const propertyParams = new Map<string, string>();

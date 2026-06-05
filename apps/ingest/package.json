@@ -13,6 +13,7 @@
   "dependencies": {
     "@sbox-analytics/db": "workspace:*",
     "@sbox-analytics/env": "workspace:*",
+    "@sbox-analytics/events": "workspace:*",
     "evlog": "^2.14.1",
     "hono": "catalog:",
     "kafkajs": "^2.2.4",
