@@ -155,8 +155,7 @@ export const AddCardDrawer = ({
 
   const query = search.trim().toLowerCase();
   const matches = (...texts: (string | undefined)[]) =>
-    query === "" ||
-    texts.some((text) => text?.toLowerCase().includes(query));
+    query === "" || texts.some((text) => text?.toLowerCase().includes(query));
 
   const builtins = BUILTIN_CARD_TYPES.filter((cardType) => {
     const definition = CARD_REGISTRY[cardType];
