@@ -6,16 +6,34 @@ import { protectedProcedure } from "../index";
 import { buildBreakdownQuery } from "../queries/breakdown";
 import { buildDailyQuery } from "../queries/daily";
 import {
+  buildFunnelsLevelsQuery,
+  buildFunnelsTrendQuery,
+  DEFAULT_FUNNEL_WINDOW_SECONDS,
+  MAX_FUNNEL_STEPS,
+  MIN_FUNNEL_STEPS,
+} from "../queries/funnels";
+import {
   buildMapsBreakdownQuery,
   buildMapsOverTimeQuery,
   buildMapsTableCountQuery,
   buildMapsTableQuery,
 } from "../queries/maps";
 import {
+  buildPerformanceByMapQuery,
+  buildPerformanceCrashQuery,
+  buildPerformanceFpsQuery,
+  buildPerformanceLoadQuery,
+} from "../queries/performance";
+import {
   buildPlayersDailyQuery,
   buildPlayersTotalsQuery,
 } from "../queries/players";
 import { buildRecentCountQuery, buildRecentRowsQuery } from "../queries/recent";
+import {
+  buildRetentionCurveQuery,
+  buildRetentionTableCountQuery,
+  buildRetentionTableQuery,
+} from "../queries/retention";
 import {
   buildSessionsHeatmapQuery,
   buildSessionsHistogramQuery,
@@ -176,16 +194,6 @@ const retentionCohortRow = z.object({
   size: z.coerce.number(),
 });
 
-// Cohort table columns: cohort_date is the GROUP BY key, the rest are aggregate
-// aliases — all referenced via HAVING / ORDER BY.
-const RETENTION_COHORT_FILTER_COLUMNS: Record<string, ColumnFilterDef> = {
-  cohort_date: { expr: "cohort_date", type: "string" },
-  d1: { expr: "d1", type: "number" },
-  d30: { expr: "d30", type: "number" },
-  d7: { expr: "d7", type: "number" },
-  size: { expr: "size", type: "number" },
-};
-
 const retentionCurveRow = z.object({
   day_offset: z.coerce.number(),
   retained: z.coerce.number(),
@@ -198,10 +206,6 @@ const retentionOutput = z.object({
     total: z.coerce.number(),
   }),
 });
-
-const MIN_FUNNEL_STEPS = 2;
-const MAX_FUNNEL_STEPS = 8;
-const DEFAULT_FUNNEL_WINDOW_SECONDS = 86_400;
 
 const funnelsInput = z.object({
   from: z.iso.date(),
@@ -246,15 +250,6 @@ const performanceInput = z.object({
   projectId: z.string().min(1),
   to: z.iso.date(),
 });
-
-// Filterable columns for the per-map performance table — all are SELECT aliases
-// over aggregates, so they are applied via HAVING alongside the `map != ''` guard.
-const PERFORMANCE_MAP_FILTER_COLUMNS: Record<string, ColumnFilterDef> = {
-  avg_fps: { expr: "avg_fps", type: "number" },
-  crashes: { expr: "crashes", type: "number" },
-  map: { expr: "map", type: "string" },
-  p95_fps: { expr: "p95_fps", type: "number" },
-};
 
 const performanceFpsRow = z.object({
   event_date: z.string(),
@@ -797,120 +792,25 @@ export const analyticsRouter = {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
       const ch = clickhouse();
-      const retentionCte = `
-        WITH cohorts AS (
-          SELECT player_id, minMerge(first_seen) AS cohort_date
-          FROM analytics.player_first_seen
-          WHERE project_id = {projectId:String}
-          GROUP BY player_id
-          HAVING cohort_date BETWEEN {from:Date} AND {to:Date}
-        ),
-        activity AS (
-          SELECT DISTINCT player_id, toDate(timestamp) AS active_date
-          FROM analytics.events
-          WHERE project_id = {projectId:String}
-            AND toDate(timestamp) BETWEEN {from:Date} AND addDays({to:Date}, 30)
-        ),
-        joined AS (
-          SELECT
-            c.cohort_date AS cohort_date,
-            c.player_id   AS player_id,
-            dateDiff('day', c.cohort_date, a.active_date) AS day_offset
-          FROM cohorts AS c
-          INNER JOIN activity AS a USING (player_id)
-          WHERE a.active_date >= c.cohort_date
-            AND dateDiff('day', c.cohort_date, a.active_date) <= 30
-        )
-      `;
-
-      const RETENTION_SORT_COLS = {
-        cohort_date: "cohort_date",
-        d1: "d1",
-        d30: "d30",
-        d7: "d7",
-        size: "size",
-      } as const;
-      const tableSortCol = input.sortBy
-        ? (RETENTION_SORT_COLS[input.sortBy] ?? "cohort_date")
-        : "cohort_date";
-      const tableSortDir = input.sortDesc ? "DESC" : "ASC";
-      const tableOffset = (input.page - 1) * input.perPage;
-
-      // d1/d7/d30 are emitted as whole-percent retention rates so the table
-      // sorts/filters on the same numbers it displays. nullIf guards the
-      // empty-cohort divide.
-      const cohortSelect = `
-        SELECT
-          toString(cohort_date)                            AS cohort_date,
-          toUInt64(uniqExactIf(player_id, day_offset = 0)) AS size,
-          ifNull(round(uniqExactIf(player_id, day_offset = 1)  / nullIf(uniqExactIf(player_id, day_offset = 0), 0) * 100), 0) AS d1,
-          ifNull(round(uniqExactIf(player_id, day_offset = 7)  / nullIf(uniqExactIf(player_id, day_offset = 0), 0) * 100), 0) AS d7,
-          ifNull(round(uniqExactIf(player_id, day_offset = 30) / nullIf(uniqExactIf(player_id, day_offset = 0), 0) * 100), 0) AS d30
-        FROM joined
-        GROUP BY cohort_date`;
-
-      const tableParams: Record<string, unknown> = {
-        from: input.from,
-        offset: tableOffset,
-        perPage: input.perPage,
-        projectId: input.projectId,
-        to: input.to,
-      };
-      const tableFilter = buildColumnFilters(
-        input.filters,
-        RETENTION_COHORT_FILTER_COLUMNS,
-        tableParams,
-        input.joinOperator
-      );
-      const tableHaving = tableFilter ? `HAVING ${tableFilter}` : "";
-
-      const countParams: Record<string, unknown> = {
-        from: input.from,
-        projectId: input.projectId,
-        to: input.to,
-      };
-      const countFilter = buildColumnFilters(
-        input.filters,
-        RETENTION_COHORT_FILTER_COLUMNS,
-        countParams,
-        input.joinOperator
-      );
-      const countHaving = countFilter ? `HAVING ${countFilter}` : "";
+      const tableQuery = buildRetentionTableQuery(input);
+      const countQuery = buildRetentionTableCountQuery(input);
+      const curveQuery = buildRetentionCurveQuery(input);
 
       const [tableResult, tableCountResult, curveResult] = await Promise.all([
         ch.query({
           format: "JSON",
-          query: `${retentionCte}
-            ${cohortSelect}
-            ${tableHaving}
-            ORDER BY ${tableSortCol} ${tableSortDir}
-            LIMIT {perPage:UInt32} OFFSET {offset:UInt32}
-          `,
-          query_params: tableParams,
+          query: tableQuery.query,
+          query_params: tableQuery.params,
         }),
         ch.query({
           format: "JSON",
-          query: `
-            SELECT count() AS total FROM (
-              ${retentionCte}
-              ${cohortSelect}
-              ${countHaving}
-            )
-          `,
-          query_params: countParams,
+          query: countQuery.query,
+          query_params: countQuery.params,
         }),
         ch.query({
           format: "JSON",
-          query: `${retentionCte}
-            SELECT
-              day_offset,
-              toUInt64(uniqExact(player_id)) AS retained
-            FROM joined
-            WHERE cohort_date <= {to:Date} - 30
-            GROUP BY day_offset
-            ORDER BY day_offset
-          `,
-          query_params: input,
+          query: curveQuery.query,
+          query_params: curveQuery.params,
         }),
       ]);
 
@@ -938,60 +838,19 @@ export const analyticsRouter = {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
       const ch = clickhouse();
-      const conditions = input.steps
-        .map((_step, index) => `event_type = {s${index}:String}`)
-        .join(", ");
-      const stepParams = Object.fromEntries(
-        input.steps.map((value, index) => [`s${index}`, value])
-      );
-      const params = {
-        from: input.from,
-        projectId: input.projectId,
-        steps: input.steps,
-        to: input.to,
-        window: input.windowSeconds,
-        ...stepParams,
-      };
-
-      const levelsCte = `
-        WITH levels AS (
-          SELECT
-            player_id,
-            toDate(min(timestamp)) AS first_day,
-            windowFunnel({window:UInt32})(timestamp, ${conditions}) AS level
-          FROM analytics.events
-          WHERE project_id = {projectId:String}
-            AND toDate(timestamp) BETWEEN {from:Date} AND {to:Date}
-            AND event_type IN {steps:Array(String)}
-          GROUP BY player_id
-        )
-      `;
+      const levelsQuery = buildFunnelsLevelsQuery(input);
+      const trendQuery = buildFunnelsTrendQuery(input);
 
       const [levelsResult, trendResult] = await Promise.all([
         ch.query({
           format: "JSON",
-          query: `${levelsCte}
-            SELECT level, toUInt64(count()) AS players
-            FROM levels
-            WHERE level > 0
-            GROUP BY level
-            ORDER BY level
-          `,
-          query_params: params,
+          query: levelsQuery.query,
+          query_params: levelsQuery.params,
         }),
         ch.query({
           format: "JSON",
-          query: `${levelsCte}
-            SELECT
-              toString(first_day)                            AS day,
-              toUInt64(count())                              AS started,
-              toUInt64(countIf(level >= {fullLevel:UInt8}))  AS completed
-            FROM levels
-            WHERE level > 0
-            GROUP BY first_day
-            ORDER BY first_day
-          `,
-          query_params: { ...params, fullLevel: input.steps.length },
+          query: trendQuery.query,
+          query_params: trendQuery.params,
         }),
       ]);
 
@@ -1086,106 +945,33 @@ export const analyticsRouter = {
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
-      const MAP_SORT_COLS = {
-        avg_fps: "avg_fps",
-        crashes: "crashes",
-        map: "map",
-        p95_fps: "p95_fps",
-      } as const;
-      const mapSortCol = input.mapSortBy
-        ? (MAP_SORT_COLS[input.mapSortBy] ?? "avg_fps")
-        : "avg_fps";
-      const mapSortDir = input.mapSortDesc ? "DESC" : "ASC";
-      const chParams = {
-        from: input.from,
-        projectId: input.projectId,
-        to: input.to,
-      };
-
-      // byMap filters apply to aggregate aliases, so they extend the HAVING
-      // clause. Bind into a dedicated param object scoped to that one query.
-      const byMapParams: Record<string, unknown> = { ...chParams };
-      const mapFilterCondition = buildColumnFilters(
-        input.mapFilters,
-        PERFORMANCE_MAP_FILTER_COLUMNS,
-        byMapParams,
-        input.mapJoinOperator
-      );
-      const mapHaving = mapFilterCondition
-        ? `map != '' AND ${mapFilterCondition}`
-        : "map != ''";
-
       const ch = clickhouse();
+      const fpsQuery = buildPerformanceFpsQuery(input);
+      const crashQuery = buildPerformanceCrashQuery(input);
+      const loadQuery = buildPerformanceLoadQuery(input);
+      const byMapQuery = buildPerformanceByMapQuery(input);
+
       const [fpsResult, crashResult, loadResult, byMapResult] =
         await Promise.all([
           ch.query({
             format: "JSON",
-            query: `
-              SELECT
-                toDate(timestamp) AS event_date,
-                round(quantile(0.5)(JSONExtractFloat(properties, 'fps')), 1) AS p50,
-                round(quantile(0.95)(JSONExtractFloat(properties, 'fps')), 1) AS p95,
-                round(quantile(0.99)(JSONExtractFloat(properties, 'fps')), 1) AS p99
-              FROM analytics.events
-              WHERE project_id = {projectId:String}
-                AND event_type = 'fps_sample'
-                AND toDate(timestamp) BETWEEN {from:Date} AND {to:Date}
-              GROUP BY event_date
-              ORDER BY event_date
-            `,
-            query_params: chParams,
+            query: fpsQuery.query,
+            query_params: fpsQuery.params,
           }),
           ch.query({
             format: "JSON",
-            query: `
-              SELECT
-                toDate(timestamp) AS event_date,
-                countIf(event_type = 'crash') AS crashes,
-                uniq(session_id) AS sessions,
-                round(countIf(event_type = 'crash') / uniq(session_id), 4) AS crash_rate
-              FROM analytics.events
-              WHERE project_id = {projectId:String}
-                AND toDate(timestamp) BETWEEN {from:Date} AND {to:Date}
-              GROUP BY event_date
-              ORDER BY event_date
-            `,
-            query_params: chParams,
+            query: crashQuery.query,
+            query_params: crashQuery.params,
           }),
           ch.query({
             format: "JSON",
-            query: `
-              WITH JSONExtractFloat(properties, 'ms') AS ms
-              SELECT
-                multiIf(ms < 100, '<100ms', ms < 250, '100-250ms', ms < 500, '250-500ms', ms < 1000, '500ms-1s', ms < 2000, '1-2s', ms < 5000, '2-5s', '5s+') AS bucket,
-                multiIf(ms < 100, 0, ms < 250, 1, ms < 500, 2, ms < 1000, 3, ms < 2000, 4, ms < 5000, 5, 6) AS bucket_index,
-                count() AS count
-              FROM analytics.events
-              WHERE project_id = {projectId:String}
-                AND event_type = 'load_complete'
-                AND toDate(timestamp) BETWEEN {from:Date} AND {to:Date}
-              GROUP BY bucket, bucket_index
-              ORDER BY bucket_index
-            `,
-            query_params: chParams,
+            query: loadQuery.query,
+            query_params: loadQuery.params,
           }),
           ch.query({
             format: "JSON",
-            query: `
-              SELECT
-                JSONExtractString(properties, 'map') AS map,
-                round(avgIf(JSONExtractFloat(properties, 'fps'), event_type = 'fps_sample'), 1) AS avg_fps,
-                round(quantileIf(0.95)(JSONExtractFloat(properties, 'fps'), event_type = 'fps_sample'), 1) AS p95_fps,
-                countIf(event_type = 'crash') AS crashes
-              FROM analytics.events
-              WHERE project_id = {projectId:String}
-                AND event_type IN ('fps_sample', 'crash')
-                AND toDate(timestamp) BETWEEN {from:Date} AND {to:Date}
-              GROUP BY map
-              HAVING ${mapHaving}
-              ORDER BY ${mapSortCol} ${mapSortDir}
-              LIMIT 50
-            `,
-            query_params: byMapParams,
+            query: byMapQuery.query,
+            query_params: byMapQuery.params,
           }),
         ]);
 
