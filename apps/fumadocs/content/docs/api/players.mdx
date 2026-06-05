@@ -29,6 +29,41 @@ The platform records each player's first-seen date the moment their first event 
 }
 ```
 
+## Player list
+
+Below the charts, the view lists every non-anonymous player (events with an empty `player_id` are excluded) with their first-seen and last-seen dates, session count, and event count. Click a player to open their profile.
+
+## Player profiles
+
+A player's profile page aggregates everything known about one `player_id`:
+
+- **Lifetime stats** — total events, sessions, active days, average session length, and total playtime.
+- **Retention badges** — whether the player was active 1, 7, and 30 days after their first-seen day (D1/D7/D30).
+- **Activity calendar and "when they play" heatmap** — events per day, and per weekday × hour.
+- **Event breakdown and map distribution** — events by type, plus sessions and playtime per map (read from the `map` property of `session_start` events, like the [Maps view](/docs/api/maps)).
+- **Session history and recent events** — the player's sessions (each linking to its [session profile](/docs/api/sessions#session-profiles)) and their latest events.
+
+### Hardware & client specs
+
+The profile's specs panel reads well-known keys from the `properties` of the player's **most recent** `session_start` event. All keys are optional — send the ones you have:
+
+```json title="session_start with spec properties"
+{
+  "type": "session_start",
+  "session_id": "sess_abc123",
+  "player_id": "76561198000000000",
+  "properties": {
+    "platform": "windows",
+    "version": "1.4.2",
+    "os": "Windows 11",
+    "cpu": "AMD Ryzen 7 5800X",
+    "gpu": "NVIDIA RTX 3080",
+    "ram_gb": 32,
+    "resolution": "2560x1440"
+  }
+}
+```
+
 ## Backfill note
 
 The first-seen date is derived from a materialized view that only captures events ingested **after** the view was created. If you have existing historical events, the new-vs-returning split will be inaccurate until those players generate a new event and the first-seen date is re-established. For production deployments a one-time backfill can be requested.
