@@ -1,7 +1,7 @@
 import { env } from "@sbox-analytics/env/web";
 import {
   IconBook,
-  IconDashboard,
+  IconChartBar,
   IconFolder,
   IconUsers,
 } from "@tabler/icons-react";
@@ -16,7 +16,7 @@ export interface NavItem {
 }
 
 export const orgNavMain: NavItem[] = [
-  { icon: IconDashboard, title: "Dashboard", url: "/dashboard" },
+  { icon: IconChartBar, title: "Overview", url: "/dashboard" },
   { icon: IconFolder, title: "Projects", url: "/dashboard/projects" },
   { icon: IconUsers, title: "Team", url: "/dashboard/teams" },
 ];
