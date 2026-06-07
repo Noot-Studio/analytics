@@ -1,0 +1,10 @@
+root = true
+
+[*]
+end_of_line = lf
+insert_final_newline = true
+
+# CLAUDE.md pointer files are committed as symlinks; their checked-out text
+# form has no trailing newline — don't add one on save.
+[CLAUDE.md]
+insert_final_newline = false
