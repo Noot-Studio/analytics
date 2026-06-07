@@ -1,0 +1,98 @@
+---
+title: SDK (s&box)
+description: Drop the s&box Analytics SDK into your game to send events with one component, an attribute, or a line of code.
+icon: Package
+---
+
+The **s&box Analytics SDK** is a C# library you add to your game. It batches events and ships them to the [Ingestion API](/docs/api) for you — handling sessions, batching, retries, and anonymization.
+
+<Callout type="info">
+  All three styles below send to the same place. Use the component for zero-code
+  setup, the attribute for declarative tracking, and `Analytics.Track` for full
+  control.
+</Callout>
+
+## Install
+
+Add the `noot/analytics` library to your project's package references, then use the `Noot.Analytics` namespace.
+
+## 1. Drop-in component (zero code)
+
+Add an **Analytics** component to a GameObject (Editor → `Analytics/Add to scene`), then set your publishable key:
+
+| Field                  | Default                             | Purpose                                                      |
+| ---------------------- | ----------------------------------- | ------------------------------------------------------------ |
+| `ApiKey`               | `""`                                | Your project's publishable `pk_…` key.                       |
+| `IngestUrl`            | `https://ingest.sbox-analytics.com` | Override for self-host / local dev.                          |
+| `TrackSessions`        | `true`                              | Emit `session_start` / `session_end`.                        |
+| `TrackSceneLoads`      | `true`                              | Emit `scene_loaded` on each scene load.                      |
+| `TrackConnections`     | `true`                              | Emit `player_connected` / `player_disconnected` (host only). |
+| `FlushIntervalSeconds` | `10`                                | How often buffered events are sent.                          |
+| `MaxBatchSize`         | `50`                                | Events per request.                                          |
+
+That's it — default events flow automatically.
+
+## 2. The `[Track]` attribute
+
+Mark a method or property and the SDK emits an event for you:
+
+```csharp
+using Noot.Analytics;
+
+[Track( "player_jumped" )]
+public void Jump() { /* ... */ }                 // emits { type: player_jumped }
+
+[Track( "player_jumped", Params = true )]
+public void Jump( float height, string surface ) { /* ... */ }
+// emits { type: player_jumped, properties: { height, surface } }
+
+[Track( "score_changed" )]
+public int Score { get; set; }                   // emits { value } whenever Score changes
+```
+
+<Callout type="warn">
+  `[Track]` wraps the member at compile time. Don't put it on hot per-frame
+  methods.
+</Callout>
+
+## 3. Imperative `Analytics.Track`
+
+Full control — works with **no component** at all:
+
+```csharp
+using Noot.Analytics;
+
+// once, at startup:
+Analytics.Init( "pk_your_publishable_key" );
+
+// anywhere:
+Analytics.Track( "level_complete", new { level = "facility_01", deaths = 2 } );
+
+// on shutdown:
+Analytics.Shutdown();
+```
+
+`Analytics.Init` accepts an `AnalyticsOptions` for `IngestUrl`, `FlushIntervalSeconds`, `MaxBatchSize`, `TrackSessions`, and a `PlayerId` override.
+
+## Default events
+
+| Event                 | When                           | Notes                     |
+| --------------------- | ------------------------------ | ------------------------- |
+| `session_start`       | `Init` / component enable      | Once per session.         |
+| `scene_loaded`        | Scene load                     | Carries the `scene` name. |
+| `player_connected`    | A player joins                 | Host only.                |
+| `player_disconnected` | A player leaves                | Host only.                |
+| `session_end`         | `Shutdown` / component destroy | Final flush.              |
+
+## Privacy
+
+`player_id` is a one-way hash of the SteamID (`AnonymousId.Hash`) — the raw SteamID is **never** sent. See [API Keys](/docs/api-keys) for key handling.
+
+<Cards>
+  <Card title="Ingestion API" href="/docs/api">
+    The HTTP endpoint the SDK posts to.
+  </Card>
+  <Card title="Events reference" href="/docs/api/events">
+    The full wire shape of every event.
+  </Card>
+</Cards>
