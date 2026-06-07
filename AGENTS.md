@@ -77,6 +77,10 @@ Default vocabulary — all five labels (`needs-triage`, `needs-info`, `ready-for
 
 Single-context — one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 
+### SDK source (`apps/sdk`)
+
+The s&box game SDK lives in a **separate git repository**, mounted locally at `apps/sdk` via a symlink/junction (the path is gitignored here). If `apps/sdk` exists in your checkout, refer to that folder — and its own `AGENTS.md` — for all SDK work. If it's absent, the SDK isn't set up locally; don't recreate it inside this repo.
+
 ## Ultracite Code Standards
 
 This project uses **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.
