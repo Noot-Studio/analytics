@@ -6,6 +6,7 @@
     "projects",
     "api-keys",
     "dashboards",
-    "api"
+    "api",
+    "sdk"
   ]
 }
