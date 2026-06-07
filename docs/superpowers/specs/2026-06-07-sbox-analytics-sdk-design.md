@@ -13,12 +13,12 @@ API — both **automatic default events** (session, scene, connect/disconnect) a
 
 ## Decisions (locked)
 
-| #   | Decision          | Choice                                                                                                                                                                   |
-| --- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | Public API shape  | **Drop-in `Component` + static `Analytics` facade.** Config + lifecycle on the component; `Analytics.Track(...)` for custom events anywhere.                             |
-| 2   | Default events    | **Full set**, each toggleable, all on by default: `session_start`, `scene_loaded`, `player_connected`, `player_disconnected`, `session_end`.                             |
-| 3   | Multiplayer scope | **Host-only for default lifecycle events; custom `Track()` is caller-local.** No duplicate session/scene events across peers. Singleplayer = local host, identical path. |
-| 4   | `player_id`       | **Hashed SteamId**: `("sbox-analytics:" + steamId).Md5()` — stable, anonymous, one-way; raw SteamID never sent.                                                          |
+| #   | Decision          | Choice                                                                                                                                                                                                                                                                                       |
+| --- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Public API shape  | **Standalone static `Analytics` core, usable with no component** (`Init`/`Track`/`Flush`/`Shutdown`). `AnalyticsComponent` is an _optional_ drop-in helper that auto-configures the core and auto-tracks scene/network default events. The component depends on the core, never the reverse. |
+| 2   | Default events    | **Full set**, each toggleable, all on by default: `session_start`, `scene_loaded`, `player_connected`, `player_disconnected`, `session_end`.                                                                                                                                                 |
+| 3   | Multiplayer scope | **Host-only for default lifecycle events; custom `Track()` is caller-local.** No duplicate session/scene events across peers. Singleplayer = local host, identical path.                                                                                                                     |
+| 4   | `player_id`       | **Hashed SteamId**: `("sbox-analytics:" + steamId).Md5()` — stable, anonymous, one-way; raw SteamID never sent.                                                                                                                                                                              |
 
 ## Wire contract (source of truth)
 
@@ -54,12 +54,23 @@ Success → `202 { "accepted": n }`. Errors: `400` invalid/oversized props,
 - **Identity:** `Connection.SteamId` (ulong), `Connection.Local` (local connection), `Connection.DisplayName`.
 - **Hashing:** `string.Md5()` extension (`Sandbox.SandboxSystemExtensions.Md5`). `FastHash64` also available.
 - **JSON:** `Sandbox.Json.Serialize(obj)`.
+- **Background timer (no component):** `Sandbox.GameTask.DelayRealtimeSeconds(float, CancellationToken)` — lets the standalone core run its own flush loop without a `Component.OnUpdate`.
 - **Scene name:** resolved from the active `Scene` (`Scene.Title` / scene source) — exact accessor confirmed at implementation.
 
 ## Architecture
 
 Namespace `Noot.Analytics` (matches NuGet ident `Noot.Analytics.Sdk`). Files in
-`apps/sdk/Code/`:
+`apps/sdk/Code/`.
+
+**Two layers, one-directional dependency:**
+
+- **Core** (`Analytics`, `AnalyticsClient`, `AnalyticsOptions`, `AnalyticsEvent`,
+  `EventBuffer`, `EventSender`, `PlayerId`) — the entire SDK. Configured and used
+  from code with **no component**. Owns session, identity, buffering, sending,
+  and its own flush loop.
+- **Helper** (`AnalyticsComponent`) — _optional_ drop-in that auto-configures the
+  core and auto-tracks the default events that need scene/network presence. It
+  calls into the core; the core never references it.
 
 ### `AnalyticsEvent.cs`
 
@@ -93,59 +104,104 @@ live network.
 `static string Hash(ulong steamId)` → `("sbox-analytics:" + steamId).Md5()`.
 `steamId == 0` (no Steam identity) → return `""`. Pure, deterministic, testable.
 
-### `Analytics.cs` — static facade
+### `AnalyticsOptions.cs`
 
-Developer-facing entry point for **custom** events:
+Config passed to `Analytics.Init`. Plain record with defaults:
 
+| Field                  | Default                             | Purpose                             |
+| ---------------------- | ----------------------------------- | ----------------------------------- |
+| `IngestUrl`            | `https://ingest.sbox-analytics.com` | override for self-host/local        |
+| `TrackSessions`        | `true`                              | auto session_start / session_end    |
+| `FlushIntervalSeconds` | `10`                                | background flush cadence            |
+| `MaxBatchSize`         | `50`                                | events per send (capped at 500)     |
+| `PlayerId`             | `null`                              | override; else hashed local SteamId |
+
+(`TrackSceneLoads` / `TrackConnections` are component concerns — scene/network
+events only exist with the component — so they live on `AnalyticsComponent`, not
+here.)
+
+### `Analytics.cs` — static facade (entry point)
+
+Thin static surface over a single `AnalyticsClient` instance. **This is the whole
+SDK from a developer's view; no component required.**
+
+- `Analytics.Init(string apiKey, AnalyticsOptions options = null)` — create the
+  client, generate the process `session_id`, resolve local `player_id`
+  (`PlayerId.Hash(Connection.Local?.SteamId ?? 0)` unless overridden), start the
+  background flush loop, emit `session_start` if `TrackSessions`. Idempotent: a
+  second call while initialized is a no-op + warning.
 - `Analytics.Track(string type, object properties = null, string scene = null, Vector3? position = null)`
-  — tags the event with the caller machine's `session_id` and local `player_id`,
-  enqueues on the active client's buffer.
+  — build an `AnalyticsEvent` tagged with `session_id` + `player_id`, enqueue.
+  Before `Init`: no-op + one-time warning (never throws).
 - `Analytics.Flush()` — force an immediate send.
-- Holds a reference to the active `AnalyticsComponent` (set on its `OnEnabled`,
-  cleared on `OnDisabled`). If no active client, `Track` is a no-op + one-time
-  warning (SDK not installed in scene).
-- Holds the **process-scoped** `session_id` (GUID, created once, survives scene
-  reloads) and the cached local `player_id`.
+- `Analytics.Shutdown()` — emit `session_end`, final flush, cancel the loop, clear
+  the client.
+- `Analytics.IsInitialized` — lets the helper component avoid double-init.
 
-### `AnalyticsComponent.cs` — drop-in component
+`Track` accepts an explicit `playerId` overload too, so server-authoritative code
+can attribute an event to a specific (already-hashed) player.
 
-`Component`, implements `INetworkListener`. Editor-exposed `[Property]` fields:
+### `AnalyticsClient.cs` — core instance
 
-| Property               | Default                             | Purpose                              |
-| ---------------------- | ----------------------------------- | ------------------------------------ |
-| `ApiKey`               | `""`                                | publishable `pk_…` key               |
-| `IngestUrl`            | `https://ingest.sbox-analytics.com` | override for self-host/local         |
-| `TrackSessions`        | `true`                              | toggle session_start/session_end     |
-| `TrackSceneLoads`      | `true`                              | toggle scene_loaded                  |
-| `TrackConnections`     | `true`                              | toggle player_connected/disconnected |
-| `FlushIntervalSeconds` | `10`                                | periodic flush cadence               |
-| `MaxBatchSize`         | `50`                                | events per send (capped at 500)      |
+Owns everything stateful: `AnalyticsOptions`, the process-scoped `session_id`
+(GUID, created once, survives scene reloads), cached local `player_id`,
+`EventBuffer`, `EventSender`, and the flush loop:
+
+```
+async loop while !cancelled:
+    await GameTask.DelayRealtimeSeconds( FlushIntervalSeconds, ct )
+    if buffer not empty → send a batch
+```
+
+Size-triggered flush: when `EventBuffer` reaches `MaxBatchSize`, kick an
+immediate send instead of waiting for the timer. Single owner of send semantics
+(re-queue on failure, bounded capacity).
+
+### `AnalyticsComponent.cs` — optional drop-in helper
+
+`Component`, implements `INetworkListener`. Auto-tracks the default events that
+require a scene/network presence. Editor-exposed `[Property]` fields:
+
+| Property               | Default                             | Purpose                            |
+| ---------------------- | ----------------------------------- | ---------------------------------- |
+| `ApiKey`               | `""`                                | publishable `pk_…` key             |
+| `IngestUrl`            | `https://ingest.sbox-analytics.com` | override for self-host/local       |
+| `TrackSessions`        | `true`                              | maps to `AnalyticsOptions`         |
+| `TrackSceneLoads`      | `true`                              | emit scene_loaded                  |
+| `TrackConnections`     | `true`                              | emit player_connected/disconnected |
+| `FlushIntervalSeconds` | `10`                                | maps to `AnalyticsOptions`         |
+| `MaxBatchSize`         | `50`                                | maps to `AnalyticsOptions`         |
 
 Behavior:
 
-- `OnEnabled` → register as active client in `Analytics`; ensure process
-  `session_id` + local `player_id` exist; emit `session_start` **once per
-  process** (static guard) if `TrackSessions`.
+- `OnEnabled` → if `!Analytics.IsInitialized`, call `Analytics.Init(ApiKey, …)`
+  built from the editor fields, and remember it was the initializer
+  (`_ownsClient = true`). If the core was already inited from code, just attach —
+  do not re-init.
 - `OnStart` → emit `scene_loaded` (with current scene name) if `TrackSceneLoads`.
   `OnStart` fires once after enable, so a scene change (new component instance)
   yields exactly one `scene_loaded`, unlike `OnEnabled` which re-fires on toggle.
-- `OnUpdate` → if `RealTimeSince(lastFlush) ≥ FlushIntervalSeconds` or buffer ≥
-  `MaxBatchSize`, fire async flush.
-- `INetworkListener.OnActive(conn)` → emit `player_connected` with
-  `PlayerId.Hash(conn.SteamId)` in properties/player_id (host-only by engine).
-- `INetworkListener.OnDisconnected(conn)` → emit `player_disconnected`.
-- `OnDisabled` / `OnDestroy` → emit `session_end` (process-scoped, best-effort),
-  **force-flush** so buffered events are not lost.
+- `INetworkListener.OnActive(conn)` → if `TrackConnections`, emit
+  `player_connected` with `playerId = PlayerId.Hash(conn.SteamId)` (host-only by
+  engine).
+- `INetworkListener.OnDisconnected(conn)` → if `TrackConnections`, emit
+  `player_disconnected` likewise.
+- `OnDestroy` → if `_ownsClient`, `Analytics.Shutdown()` (emits session_end +
+  final flush). If the core was code-owned, leave it running — the component only
+  tears down what it started.
+
+Periodic flushing is driven by the **core's** loop, not the component — so it
+keeps working when no component is present.
 
 ### Default-event → type mapping
 
-| Default event  | `type` sent           | When                                 | Emitter   |
-| -------------- | --------------------- | ------------------------------------ | --------- |
-| Session begins | `session_start`       | first SDK init in process            | local     |
-| Scene loads    | `scene_loaded`        | component `OnStart`, carries `scene` | local     |
-| Player joins   | `player_connected`    | `INetworkListener.OnActive`          | host only |
-| Player leaves  | `player_disconnected` | `INetworkListener.OnDisconnected`    | host only |
-| Session ends   | `session_end`         | teardown / quit                      | local     |
+| Default event  | `type` sent           | When                                 | Source    | Emitter   |
+| -------------- | --------------------- | ------------------------------------ | --------- | --------- |
+| Session begins | `session_start`       | `Analytics.Init`                     | core      | local     |
+| Scene loads    | `scene_loaded`        | component `OnStart`, carries `scene` | component | local     |
+| Player joins   | `player_connected`    | `INetworkListener.OnActive`          | component | host only |
+| Player leaves  | `player_disconnected` | `INetworkListener.OnDisconnected`    | component | host only |
+| Session ends   | `session_end`         | `Analytics.Shutdown`                 | core      | local     |
 
 `session_start`, `session_end` map to canonical `CORE_EVENT_TYPES`.
 `scene_loaded`, `player_connected`, `player_disconnected` are custom names — the
@@ -163,21 +219,24 @@ discoverable. Editor-only; never referenced by runtime code.
 
 ```
 gameplay code ── Analytics.Track(type, props) ─┐
-AnalyticsComponent default events ─────────────┤→ EventBuffer (queue, 16KB guard)
-                                                          │ flush (timer / size / teardown)
-                                                          ▼
-                                                   EventSender ── Http POST /v1/events
-                                                          │ 202 ok → done
-                                                          │ fail → re-queue (bounded) + log
+AnalyticsComponent default events ─────────────┤→ AnalyticsClient
+(scene_loaded, player_connected/disconnected)   │    └─ EventBuffer (queue, 16KB guard)
+                                                 │         │ flush (core loop / size / Shutdown)
+                                                 │         ▼
+                                                 │   EventSender ── Http POST /v1/events
+                                                 │         │ 202 ok → done
+                                                 │         │ fail → re-queue (bounded) + log
+core (Init/session_start, Shutdown/session_end)─┘
 ```
 
 ## Error handling
 
-- Missing/empty `ApiKey` → SDK disabled, one-time warning, `Track` no-ops. Never
-  throws into game code.
+- `Track` / `Flush` before `Analytics.Init` → no-op + one-time warning. Never
+  throws into game code. (Component auto-inits, so component users never hit this.)
+- Missing/empty `ApiKey` at `Init` → core stays disabled, one-time warning,
+  `Track` no-ops.
 - Send failure → events re-queued (bounded); retried on next flush. No crash.
 - Oversized `properties` (>16 KB) → that event dropped + logged; batch continues.
-- No active component → `Analytics.Track` no-op + one-time warning.
 - All network work is async/fire-and-forget; never blocks the game thread.
 
 ## Testing (`UnitTests/`, MSTest)
@@ -189,6 +248,9 @@ AnalyticsComponent default events ─────────────┤→ 
   `position`); optional empties omitted; `position` only when set.
 - `PlayerId.Hash`: deterministic for same input; differs from raw SteamId;
   `0 → ""`.
+- `Analytics` core lifecycle **with no component**: `Init` emits `session_start`
+  and enqueues; `Track` before `Init` no-ops; `Shutdown` emits `session_end` +
+  flushes. Verifies the SDK is fully usable standalone (uses a fake sender).
 - HTTP not unit-tested (sender kept thin behind an interface; buffer/flush tested
   with a fake sender).
 
@@ -197,18 +259,20 @@ AnalyticsComponent default events ─────────────┤→ 
 1. `apps/sdk/CLAUDE.md` + `apps/sdk/AGENTS.md` — replace the "fresh template"
    note with the real API: file map, drop-in usage, default events, `Track`,
    config fields, `player_id` privacy model.
-2. `apps/fumadocs/content/docs/` — new **SDK** page (install, drop-in component,
-   default events table, custom events, config, host-only/privacy notes). Wire
-   into `meta.json` nav and link from `index.mdx`. Match existing MDX style
-   (frontmatter `title`/`description`/`icon`, tables, `Callout`/`Cards`, fenced
-   code).
+2. `apps/fumadocs/content/docs/` — new **SDK** page covering **both usage paths**:
+   (a) drop-in component (zero code), (b) standalone `Analytics.Init`/`Track` from
+   code. Plus default events table, custom events, config, host-only/privacy
+   notes. Wire into `meta.json` nav and link from `index.mdx`. Match existing MDX
+   style (frontmatter `title`/`description`/`icon`, tables, `Callout`/`Cards`,
+   fenced code).
 
 ## Known constraints / non-goals
 
 - **Session boundaries are process-scoped, best-effort.** s&box has no reliable
-  app-quit hook distinct from scene-unload; `session_id` is held statically so
-  it survives scene reloads, and `session_end` is emitted on teardown with a
-  forced flush. We do not attempt perfect quit detection in v1.
+  app-quit hook distinct from scene-unload; `session_id` is held statically so it
+  survives scene reloads. `session_end` is emitted from `Analytics.Shutdown` —
+  called automatically by the component it owns on `OnDestroy`, or manually by
+  code-only users. We do not attempt perfect quit detection in v1.
 - **Host-only defaults** mean a non-hosting client's session lifecycle is
   represented by the host's `player_connected`/`player_disconnected` events, not
   its own `session_start`. This is intentional (avoids duplicates).
