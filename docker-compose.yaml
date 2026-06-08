@@ -1,0 +1,211 @@
+# s&box Analytics — self-host deployment.
+#
+# Two modes, switched with COMPOSE_PROFILES (set in .env):
+#   COMPOSE_PROFILES=infra   -> apps + bundled Postgres/Redis/Redpanda/ClickHouse (default)
+#   COMPOSE_PROFILES=        -> apps only; point *_HOST env at your managed services
+#
+#   docker compose up -d --build
+#
+# Images are stateless and 12-factor (all config via env), so the same images
+# run on plain Docker, Swarm, Nomad, or Kubernetes. For >1 replica per app,
+# drop the published `ports` below and route traffic through your own load balancer.
+
+name: sbox-analytics
+
+x-app-env: &app-env
+  NODE_ENV: production
+  # Connection strings are built from host + credential parts so a stray full URL
+  # in a local .env (used for `bun run dev`) can't leak localhost into a container.
+  # Bundled infra: defaults point at the compose service DNS names.
+  # Managed infra: set *_HOST (and the credential vars) to your external services.
+  DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@${POSTGRES_HOST:-postgres}:${POSTGRES_DB_PORT:-5432}/${POSTGRES_DB:-sbox-analytics}
+  REDIS_URL: redis://${REDIS_HOST:-redis}:${REDIS_DB_PORT:-6379}
+  KAFKA_BROKERS: ${KAFKA_HOST:-redpanda}:${KAFKA_DB_PORT:-9092}
+  KAFKA_EVENTS_TOPIC: ${KAFKA_EVENTS_TOPIC:-events}
+  CLICKHOUSE_URL: http://${CLICKHOUSE_HOST:-clickhouse}:${CLICKHOUSE_DB_PORT:-8123}
+  CLICKHOUSE_DATABASE: ${CLICKHOUSE_DATABASE:-analytics}
+  CLICKHOUSE_USER: ${CLICKHOUSE_USER:-analytics}
+  CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-analytics}
+  # Required — no default. `docker compose up` fails fast if unset.
+  BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET (min 32 chars, e.g. openssl rand -hex 32)}
+  STEAM_API_KEY: ${STEAM_API_KEY:?set STEAM_API_KEY (https://steamcommunity.com/dev/apikey)}
+  BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+  CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3001}
+  RESEND_API_KEY: ${RESEND_API_KEY:-}
+  EMAIL_FROM: ${EMAIL_FROM:-}
+
+x-restart: &restart unless-stopped
+
+services:
+  # ---- One-shot: push the Prisma schema to Postgres, then exit. ----
+  # Runs in both modes. Retries until the database accepts connections.
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+      target: build
+    image: ${IMAGE_PREFIX:-sbox-analytics}/migrate:${IMAGE_TAG:-latest}
+    environment: *app-env
+    command:
+      [
+        "sh",
+        "-c",
+        "cd packages/db && until bunx prisma db push; do echo 'waiting for postgres...'; sleep 3; done",
+      ]
+    restart: "no"
+
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    image: ${IMAGE_PREFIX:-sbox-analytics}/server:${IMAGE_TAG:-latest}
+    environment:
+      <<: *app-env
+      SERVER_PORT: 3000
+    ports:
+      - "${SERVER_PORT:-3000}:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: *restart
+
+  ingest:
+    build:
+      context: .
+      dockerfile: apps/ingest/Dockerfile
+    image: ${IMAGE_PREFIX:-sbox-analytics}/ingest:${IMAGE_TAG:-latest}
+    environment:
+      <<: *app-env
+      INGEST_PORT: 8080
+    ports:
+      - "${INGEST_PORT:-8080}:8080"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: *restart
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_SERVER_URL: ${VITE_SERVER_URL:-http://localhost:3000}
+        VITE_DOCS_URL: ${VITE_DOCS_URL:-http://localhost:3002}
+    image: ${IMAGE_PREFIX:-sbox-analytics}/web:${IMAGE_TAG:-latest}
+    ports:
+      - "${WEB_PORT:-3001}:80"
+    restart: *restart
+
+  docs:
+    build:
+      context: .
+      dockerfile: apps/fumadocs/Dockerfile
+      # The TanStack Start prerender boots a server and crawls it during build;
+      # host networking lets the crawler reach it (standalone: --network=host).
+      network: host
+    image: ${IMAGE_PREFIX:-sbox-analytics}/docs:${IMAGE_TAG:-latest}
+    ports:
+      - "${FUMADOCS_PORT:-3002}:80"
+    restart: *restart
+
+  # ---- Bundled infrastructure (profile: infra) ----
+  # Not published to the host — apps reach them over the compose network.
+  postgres:
+    image: postgres:17-alpine
+    profiles: ["infra"]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-sbox-analytics}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: *restart
+
+  redis:
+    image: redis:8-alpine
+    profiles: ["infra"]
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: *restart
+
+  redpanda:
+    image: redpandadata/redpanda:v24.3.1
+    profiles: ["infra"]
+    command:
+      - redpanda
+      - start
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:19092
+      - --rpc-addr=redpanda:33145
+      - --advertise-rpc-addr=redpanda:33145
+      - --mode=dev-container
+      - --smp=1
+      - --default-log-level=warn
+    volumes:
+      - redpanda_data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    restart: *restart
+
+  redpanda-init:
+    image: redpandadata/redpanda:v24.3.1
+    profiles: ["infra"]
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - "rpk topic create ${KAFKA_EVENTS_TOPIC:-events} --brokers=redpanda:9092 --partitions ${KAFKA_PARTITIONS:-3} --replicas 1 || true"
+    restart: "no"
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.10-alpine
+    profiles: ["infra"]
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    environment:
+      CLICKHOUSE_DB: ${CLICKHOUSE_DATABASE:-analytics}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-analytics}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-analytics}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./packages/db/clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      # Force IPv4 listening so ClickHouse starts on IPv6-disabled hosts.
+      - ./packages/db/clickhouse/listen.xml:/etc/clickhouse-server/config.d/listen.xml:ro
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://127.0.0.1:8123/ping",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    restart: *restart
+
+volumes:
+  postgres_data:
+  redpanda_data:
+  clickhouse_data:
