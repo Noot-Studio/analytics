@@ -22,6 +22,8 @@ env:
   IMAGE_PREFIX: ghcr.io/noot-studio/sbox-analytics
 
 jobs:
+  # Bun/Hono + Vite/nginx apps. Built with the docker-container driver for
+  # layer caching across runs.
   build:
     name: ${{ matrix.app }}
     runs-on: ubuntu-latest
@@ -38,19 +40,10 @@ jobs:
             build-args: |
               VITE_SERVER_URL=http://localhost:3000
               VITE_DOCS_URL=http://localhost:3002
-          # fumadocs prerender boots a server and crawls it during build; the
-          # crawler needs host networking to reach it (see apps/fumadocs/Dockerfile).
-          - app: docs
-            dockerfile: apps/fumadocs/Dockerfile
-            network: host
-            allow: network.host
     steps:
       - uses: actions/checkout@v4
 
       - uses: docker/setup-buildx-action@v3
-        with:
-          # Permit the docs build to use --network=host.
-          buildkitd-flags: --allow-insecure-entitlement network.host
 
       - name: Log in to GHCR
         if: github.event_name != 'pull_request'
@@ -78,11 +71,57 @@ jobs:
           context: .
           file: ${{ matrix.dockerfile }}
           build-args: ${{ matrix.build-args }}
-          network: ${{ matrix.network }}
-          allow: ${{ matrix.allow }}
-          # Publish on branch/tag pushes; build-only for PRs.
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+
+  # Docs (fumadocs) is built separately with the classic `docker` driver.
+  # Its TanStack Start prerender boots a loopback server and crawls it during
+  # the build; the buildx docker-container driver's network sandbox can't reach
+  # that server even with host networking, while the docker driver can. The
+  # docker driver doesn't support GHA layer cache, but the docs build is fast.
+  docs:
+    name: docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_PREFIX }}/docs
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/fumadocs/Dockerfile
+          # Prerender boots a server and crawls it; the docker driver gives the
+          # build a working loopback over host networking.
+          network: host
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # docker driver supports neither GHA cache export nor provenance attestations.
+          provenance: false
