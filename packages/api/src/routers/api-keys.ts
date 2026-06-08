@@ -15,15 +15,14 @@ const API_KEY_FILTER_COLUMNS = new Set(["name"]);
 // Active (non-revoked) keys per project; matches the dashboard's unpaginated list cap.
 const MAX_ACTIVE_KEYS_PER_PROJECT = 100;
 
-function hashSecret(secret: string): string {
-  return createHash("sha256").update(secret).digest("hex");
-}
+const hashSecret = (secret: string): string =>
+  createHash("sha256").update(secret).digest("hex");
 
-function generateKeyPair() {
+const generateKeyPair = () => {
   const publishableKey = `pk_${randomUUID().replaceAll("-", "")}`;
   const secretKey = `sk_${randomUUID().replaceAll("-", "")}`;
   return { publishableKey, secretHash: hashSecret(secretKey), secretKey };
-}
+};
 
 export const apiKeysRouter = {
   create: protectedProcedure

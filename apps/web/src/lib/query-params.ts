@@ -23,14 +23,14 @@ export interface QueryParser<T> extends QueryParserOptions {
 
 export type SingleParser<T> = QueryParser<T>;
 
-function makeParser<T>(
+const makeParser = <T>(
   base: {
     parse: (value: string) => T | null;
     serialize: (value: T) => string;
     eq?: (a: T, b: T) => boolean;
     defaultValue?: T;
   } & QueryParserOptions
-): QueryParser<T> {
+): QueryParser<T> => {
   const parser: QueryParser<T> = {
     ...base,
     withDefault(value: T) {
@@ -43,20 +43,18 @@ function makeParser<T>(
     },
   };
   return parser;
-}
+};
 
-export function createParser<T>(impl: {
+export const createParser = <T>(impl: {
   parse: (value: string) => T | null;
   serialize: (value: T) => string;
   eq?: (a: T, b: T) => boolean;
-}): QueryParser<T> {
-  return makeParser(impl);
-}
+}): QueryParser<T> => makeParser(impl);
 
 export const parseAsInteger: QueryParser<number> = makeParser({
   parse: (value) => {
     const n = Number.parseInt(value, 10);
-    return isNaN(n) ? null : n;
+    return Number.isNaN(n) ? null : n;
   },
   serialize: (value) => value.toString(),
 });
@@ -66,11 +64,11 @@ export const parseAsString: QueryParser<string> = makeParser({
   serialize: (value) => value,
 });
 
-export function parseAsArrayOf<T>(
+export const parseAsArrayOf = <T>(
   parser: QueryParser<T>,
   separator = ","
-): QueryParser<T[]> {
-  return makeParser({
+): QueryParser<T[]> =>
+  makeParser({
     eq: (a, b) => a.length === b.length && a.every((item, i) => item === b[i]),
     parse: (value) => {
       if (!value) {
@@ -83,13 +81,11 @@ export function parseAsArrayOf<T>(
     },
     serialize: (value) => value.map((v) => parser.serialize(v)).join(separator),
   });
-}
 
-export function parseAsStringEnum<T extends string>(
+export const parseAsStringEnum = <T extends string>(
   values: readonly T[]
-): QueryParser<T> {
-  return makeParser({
+): QueryParser<T> =>
+  makeParser({
     parse: (value) => (values.includes(value as T) ? (value as T) : null),
     serialize: (value) => value,
   });
-}

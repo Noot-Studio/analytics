@@ -8,13 +8,7 @@ import { CreateProjectDialog } from "@/features/projects/components/molecules/cr
 import { ProjectsList } from "@/features/projects/components/organisms/projects-list";
 import { orpc } from "@/utils/orpc";
 
-export const Route = createFileRoute("/dashboard/projects/")({
-  component: ProjectsIndexPage,
-  // Passthrough so the projects data-table's page/sort/filter search params persist.
-  validateSearch: (search: Record<string, unknown>) => search,
-});
-
-function ProjectsIndexPage() {
+const ProjectsIndexPage = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const queryClient = useQueryClient();
 
@@ -50,4 +44,10 @@ function ProjectsIndexPage() {
       />
     </div>
   );
-}
+};
+
+export const Route = createFileRoute("/dashboard/projects/")({
+  component: ProjectsIndexPage,
+  // Passthrough so the projects data-table's page/sort/filter search params persist.
+  validateSearch: (search: Record<string, unknown>) => search,
+});

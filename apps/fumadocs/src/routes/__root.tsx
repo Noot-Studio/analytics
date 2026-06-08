@@ -11,6 +11,20 @@ import SearchDialog from "@/components/search";
 
 import appCss from "@/styles/app.css?url";
 
+const RootComponent = () => (
+  <html suppressHydrationWarning>
+    <head>
+      <HeadContent />
+    </head>
+    <body className="flex flex-col min-h-screen">
+      <RootProvider search={{ SearchDialog }}>
+        <Outlet />
+      </RootProvider>
+      <Scripts />
+    </body>
+  </html>
+);
+
 export const Route = createRootRoute({
   component: RootComponent,
   head: () => ({
@@ -29,19 +43,3 @@ export const Route = createRootRoute({
     ],
   }),
 });
-
-function RootComponent() {
-  return (
-    <html suppressHydrationWarning>
-      <head>
-        <HeadContent />
-      </head>
-      <body className="flex flex-col min-h-screen">
-        <RootProvider search={{ SearchDialog }}>
-          <Outlet />
-        </RootProvider>
-        <Scripts />
-      </body>
-    </html>
-  );
-}

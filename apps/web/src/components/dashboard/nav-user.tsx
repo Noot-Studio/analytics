@@ -23,7 +23,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { UserAvatar } from "@/components/user-avatar";
 import { authClient } from "@/lib/auth-client";
 
-export function NavUser() {
+export const NavUser = () => {
   const { isMobile } = useSidebar();
   const navigate = useNavigate();
   const { data: session } = authClient.useSession();
@@ -114,4 +114,4 @@ export function NavUser() {
       </SidebarMenuItem>
     </SidebarMenu>
   );
-}
+};

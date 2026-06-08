@@ -16,7 +16,7 @@ export interface KeyResolver {
   resolve(publishableKey: string): Promise<string>;
 }
 
-export function createKeyResolver(redisUrl: string): KeyResolver {
+export const createKeyResolver = (redisUrl: string): KeyResolver => {
   const redis = new RedisClient(redisUrl);
 
   return {
@@ -58,4 +58,4 @@ export function createKeyResolver(redisUrl: string): KeyResolver {
       return row.projectId;
     },
   };
-}
+};

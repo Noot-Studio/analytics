@@ -30,16 +30,16 @@ const MAP_SORT_COLS = {
   p95_fps: "p95_fps",
 } as const;
 
-function windowParams(input: PerformanceInput): Record<string, unknown> {
-  return {
-    from: input.from,
-    projectId: input.projectId,
-    to: input.to,
-  };
-}
+const windowParams = (input: PerformanceInput): Record<string, unknown> => ({
+  from: input.from,
+  projectId: input.projectId,
+  to: input.to,
+});
 
 // Daily FPS percentiles (p50/p95/p99) from fps_sample events.
-export function buildPerformanceFpsQuery(input: PerformanceInput): BuiltQuery {
+export const buildPerformanceFpsQuery = (
+  input: PerformanceInput
+): BuiltQuery => {
   const query = `
               SELECT
                 toDate(timestamp) AS event_date,
@@ -55,12 +55,12 @@ export function buildPerformanceFpsQuery(input: PerformanceInput): BuiltQuery {
             `;
 
   return { params: windowParams(input), query };
-}
+};
 
 // Daily crash counts, sessions, and crash rate.
-export function buildPerformanceCrashQuery(
+export const buildPerformanceCrashQuery = (
   input: PerformanceInput
-): BuiltQuery {
+): BuiltQuery => {
   const query = `
               SELECT
                 toDate(timestamp) AS event_date,
@@ -75,10 +75,12 @@ export function buildPerformanceCrashQuery(
             `;
 
   return { params: windowParams(input), query };
-}
+};
 
 // Load-time histogram bucketed by load_complete `ms`.
-export function buildPerformanceLoadQuery(input: PerformanceInput): BuiltQuery {
+export const buildPerformanceLoadQuery = (
+  input: PerformanceInput
+): BuiltQuery => {
   const query = `
               WITH JSONExtractFloat(properties, 'ms') AS ms
               SELECT
@@ -94,12 +96,12 @@ export function buildPerformanceLoadQuery(input: PerformanceInput): BuiltQuery {
             `;
 
   return { params: windowParams(input), query };
-}
+};
 
 // Per-map FPS and crash aggregates, filtered/sorted server-side.
-export function buildPerformanceByMapQuery(
+export const buildPerformanceByMapQuery = (
   input: PerformanceInput
-): BuiltQuery {
+): BuiltQuery => {
   const mapSortCol = input.mapSortBy
     ? (MAP_SORT_COLS[input.mapSortBy] ?? "avg_fps")
     : "avg_fps";
@@ -135,4 +137,4 @@ export function buildPerformanceByMapQuery(
             `;
 
   return { params, query };
-}
+};

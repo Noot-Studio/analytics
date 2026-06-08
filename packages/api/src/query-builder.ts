@@ -391,7 +391,10 @@ export const buildQuery = (config: QueryConfig): QueryResult => {
   // Group by properties
   if (config.groupBy) {
     for (let i = 0; i < config.groupBy.length; i += 1) {
-      const property = config.groupBy[i]!;
+      const property = config.groupBy[i];
+      if (property === undefined) {
+        continue;
+      }
       const paramName = getPropertyParamName(property, propertyParams);
       const alias = `group_col_${i}`;
       selectColumns.push(

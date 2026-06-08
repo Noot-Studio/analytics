@@ -29,13 +29,13 @@ interface CreateApiKeyDialogProps {
   createdKey: CreatedKey | null;
 }
 
-export function CreateApiKeyDialog({
+export const CreateApiKeyDialog = ({
   createdKey,
   isPending,
   onOpenChange,
   onCreate,
   open,
-}: CreateApiKeyDialogProps) {
+}: CreateApiKeyDialogProps) => {
   const [name, setName] = useState("");
 
   const handleSubmit = (e: { preventDefault(): void }) => {
@@ -112,4 +112,4 @@ export function CreateApiKeyDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};

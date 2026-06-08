@@ -7,12 +7,17 @@ export interface SessionProfileInput {
   sessionId: string;
 }
 
-function profileParams(input: SessionProfileInput): Record<string, unknown> {
-  return { projectId: input.projectId, sessionId: input.sessionId };
-}
+const profileParams = (
+  input: SessionProfileInput
+): Record<string, unknown> => ({
+  projectId: input.projectId,
+  sessionId: input.sessionId,
+});
 
 // Session meta header: player, start/end, duration, event count, and map.
-export function buildSessionMetaQuery(input: SessionProfileInput): BuiltQuery {
+export const buildSessionMetaQuery = (
+  input: SessionProfileInput
+): BuiltQuery => {
   const query = `
             SELECT
               argMin(player_id, timestamp) AS player_id,
@@ -27,11 +32,13 @@ export function buildSessionMetaQuery(input: SessionProfileInput): BuiltQuery {
           `;
 
   return { params: profileParams(input), query };
-}
+};
 
 // In-session performance digest: FPS from fps_sample events, load time from
 // load_complete, deaths/crashes from their respective event types.
-export function buildSessionPerfQuery(input: SessionProfileInput): BuiltQuery {
+export const buildSessionPerfQuery = (
+  input: SessionProfileInput
+): BuiltQuery => {
   const query = `
             SELECT
               toUInt64(round(ifNotFinite(avgIf(JSONExtractFloat(properties, 'fps'), event_type = 'fps_sample'), 0))) AS avg_fps,
@@ -47,10 +54,12 @@ export function buildSessionPerfQuery(input: SessionProfileInput): BuiltQuery {
           `;
 
   return { params: profileParams(input), query };
-}
+};
 
 // FPS samples positioned by seconds since session start.
-export function buildSessionFpsQuery(input: SessionProfileInput): BuiltQuery {
+export const buildSessionFpsQuery = (
+  input: SessionProfileInput
+): BuiltQuery => {
   const query = `
             WITH (
               SELECT min(timestamp) FROM analytics.events
@@ -68,12 +77,12 @@ export function buildSessionFpsQuery(input: SessionProfileInput): BuiltQuery {
           `;
 
   return { params: profileParams(input), query };
-}
+};
 
 // Per-event-type totals for the session.
-export function buildSessionBreakdownQuery(
+export const buildSessionBreakdownQuery = (
   input: SessionProfileInput
-): BuiltQuery {
+): BuiltQuery => {
   const query = `
             SELECT
               event_type,
@@ -86,10 +95,12 @@ export function buildSessionBreakdownQuery(
           `;
 
   return { params: profileParams(input), query };
-}
+};
 
 // Hardware/client specs reported on this session's session_start.
-export function buildSessionSpecsQuery(input: SessionProfileInput): BuiltQuery {
+export const buildSessionSpecsQuery = (
+  input: SessionProfileInput
+): BuiltQuery => {
   const query = `
             SELECT
               argMin(JSONExtractString(properties, 'platform'), timestamp)   AS platform,
@@ -107,4 +118,4 @@ export function buildSessionSpecsQuery(input: SessionProfileInput): BuiltQuery {
           `;
 
   return { params: profileParams(input), query };
-}
+};

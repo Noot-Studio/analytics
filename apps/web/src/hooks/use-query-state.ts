@@ -5,11 +5,11 @@ import type { QueryParser } from "@/lib/query-params";
 
 type SetterArg<T> = T | null | ((prev: T) => T | null);
 
-function parseFromSearch<T>(
+const parseFromSearch = <T>(
   search: Record<string, unknown>,
   key: string,
   parser: QueryParser<T> & { defaultValue: T }
-): T {
+): T => {
   const raw = search[key];
   if (raw === null || raw === undefined) {
     return parser.defaultValue;
@@ -17,9 +17,9 @@ function parseFromSearch<T>(
   // TanStack Router JSON-parses URL values; convert non-strings back to JSON string for parsers
   const strValue = typeof raw === "string" ? raw : JSON.stringify(raw);
   return parser.parse(strValue) ?? parser.defaultValue;
-}
+};
 
-function serializeForSearch(serialized: string): unknown {
+const serializeForSearch = (serialized: string): unknown => {
   // Store as a parsed value so TanStack Router doesn't double-encode JSON strings.
   // If the serialized form is valid JSON, store the parsed object directly.
   try {
@@ -27,12 +27,12 @@ function serializeForSearch(serialized: string): unknown {
   } catch {
     return serialized;
   }
-}
+};
 
-export function useQueryState<T>(
+export const useQueryState = <T>(
   key: string,
   parser: QueryParser<T> & { defaultValue: T }
-): [T, (value: SetterArg<T>) => Promise<void>] {
+): [T, (value: SetterArg<T>) => Promise<void>] => {
   const location = useLocation();
   const navigate = useNavigate();
   const router = useRouter();
@@ -80,7 +80,7 @@ export function useQueryState<T>(
               : newValue === parser.defaultValue);
 
           if (newValue === null || equalsDefault) {
-            delete next[key];
+            Reflect.deleteProperty(next, key);
           } else {
             next[key] = serializeForSearch(parser.serialize(newValue));
           }
@@ -93,14 +93,14 @@ export function useQueryState<T>(
   );
 
   return [value, setValue];
-}
+};
 
-export function useQueryStates(
+export const useQueryStates = (
   parsers: Record<string, QueryParser<string> | QueryParser<string[]>>
 ): [
   Record<string, string | string[] | null>,
   (values: Partial<Record<string, string | string[] | null>>) => Promise<void>,
-] {
+] => {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -136,7 +136,7 @@ export function useQueryStates(
               continue;
             }
             if (newValue === null || newValue === undefined) {
-              delete next[key];
+              Reflect.deleteProperty(next, key);
             } else {
               next[key] = serializeForSearch(
                 (parser as QueryParser<string | string[]>).serialize(newValue)
@@ -150,4 +150,4 @@ export function useQueryStates(
   );
 
   return [values, setValues];
-}
+};

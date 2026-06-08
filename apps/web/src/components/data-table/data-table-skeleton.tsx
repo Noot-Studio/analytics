@@ -19,17 +19,19 @@ interface DataTableSkeletonProps extends React.ComponentProps<"div"> {
   shrinkZero?: boolean;
 }
 
-export function DataTableSkeleton({
+const DEFAULT_CELL_WIDTHS = ["auto"];
+
+export const DataTableSkeleton = ({
   columnCount,
   rowCount = 10,
   filterCount = 0,
-  cellWidths = ["auto"],
+  cellWidths = DEFAULT_CELL_WIDTHS,
   withViewOptions = true,
   withPagination = true,
   shrinkZero = false,
   className,
   ...props
-}: DataTableSkeletonProps) {
+}: DataTableSkeletonProps) => {
   const cozyCellWidths = Array.from(
     { length: columnCount },
     (_, index) => cellWidths[index % cellWidths.length] ?? "auto"
@@ -57,7 +59,7 @@ export function DataTableSkeleton({
           <TableHeader>
             {Array.from({ length: 1 }).map((_, i) => (
               <TableRow key={i} className="hover:bg-transparent">
-                {Array.from({ length: columnCount }).map((_, j) => (
+                {Array.from({ length: columnCount }).map((__, j) => (
                   <TableHead
                     key={j}
                     style={{
@@ -74,7 +76,7 @@ export function DataTableSkeleton({
           <TableBody>
             {Array.from({ length: rowCount }).map((_, i) => (
               <TableRow key={i} className="hover:bg-transparent">
-                {Array.from({ length: columnCount }).map((_, j) => (
+                {Array.from({ length: columnCount }).map((__, j) => (
                   <TableCell
                     key={j}
                     style={{
@@ -112,4 +114,4 @@ export function DataTableSkeleton({
       ) : null}
     </div>
   );
-}
+};

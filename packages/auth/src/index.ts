@@ -11,7 +11,7 @@ import {
 } from "./emails";
 import { steam } from "./steam";
 
-export function createAuth() {
+export const createAuth = () => {
   const prisma = createPrismaClient();
 
   return betterAuth({
@@ -61,6 +61,6 @@ export function createAuth() {
 
     trustedOrigins: [env.CORS_ORIGIN],
   });
-}
+};
 
 export const auth = createAuth();

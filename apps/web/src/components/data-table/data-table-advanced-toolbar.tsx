@@ -12,26 +12,24 @@ interface DataTableAdvancedToolbarProps<
   table: Table<TData>;
 }
 
-export function DataTableAdvancedToolbar<TData>({
+export const DataTableAdvancedToolbar = <TData,>({
   table,
   children,
   className,
   ...props
-}: DataTableAdvancedToolbarProps<TData>) {
-  return (
-    <div
-      role="toolbar"
-      aria-orientation="horizontal"
-      className={cn(
-        "flex w-full items-start justify-between gap-2 p-1",
-        className
-      )}
-      {...props}
-    >
-      <div className="flex flex-1 flex-wrap items-center gap-2">{children}</div>
-      <div className="flex items-center gap-2">
-        <DataTableViewOptions table={table} align="end" />
-      </div>
+}: DataTableAdvancedToolbarProps<TData>) => (
+  <div
+    role="toolbar"
+    aria-orientation="horizontal"
+    className={cn(
+      "flex w-full items-start justify-between gap-2 p-1",
+      className
+    )}
+    {...props}
+  >
+    <div className="flex flex-1 flex-wrap items-center gap-2">{children}</div>
+    <div className="flex items-center gap-2">
+      <DataTableViewOptions table={table} align="end" />
     </div>
-  );
-}
+  </div>
+);

@@ -54,18 +54,16 @@ type ApiKeySortColumn = (typeof API_KEY_COLUMN_IDS)[number];
 // Server-side cap on perPage; fetched as a single page since the table is unpaginated.
 const MAX_ROWS = 100;
 
-function formatDate(date: Date | null) {
+const formatDate = (date: Date | null) => {
   if (!date) {
     return "Never";
   }
   return new Intl.DateTimeFormat("en-US", {
     dateStyle: "medium",
   }).format(new Date(date));
-}
+};
 
-function truncateKey(key: string) {
-  return `${key.slice(0, 12)}…`;
-}
+const truncateKey = (key: string) => `${key.slice(0, 12)}…`;
 
 const invalidateKeys = (queryClient: ReturnType<typeof useQueryClient>) =>
   queryClient.invalidateQueries({ queryKey: orpc.apiKeys.list.key() });
@@ -188,7 +186,7 @@ const columns: ColumnDef<ApiKeyRow>[] = [
   },
 ];
 
-export function ApiKeysSection({ projectId }: ApiKeysSectionProps) {
+export const ApiKeysSection = ({ projectId }: ApiKeysSectionProps) => {
   const queryClient = useQueryClient();
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -283,4 +281,4 @@ export function ApiKeysSection({ projectId }: ApiKeysSectionProps) {
       />
     </section>
   );
-}
+};

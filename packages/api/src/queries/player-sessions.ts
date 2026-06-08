@@ -26,10 +26,10 @@ const PLAYER_SESSION_FILTER_COLUMNS: Record<string, ColumnFilterDef> = {
 
 // Shared params + HAVING construction so the page and count queries filter the
 // same per-session aggregate aliases. `extra` adds the rows-only pagination.
-function buildHaving(
+const buildHaving = (
   input: PlayerSessionsInput,
   extra: Record<string, unknown>
-): { havingClause: string; params: Record<string, unknown> } {
+): { havingClause: string; params: Record<string, unknown> } => {
   const params: Record<string, unknown> = {
     playerId: input.playerId,
     projectId: input.projectId,
@@ -45,12 +45,12 @@ function buildHaving(
     havingClause: filterCondition ? `HAVING ${filterCondition}` : "",
     params,
   };
-}
+};
 
 // One page of a player's session history.
-export function buildPlayerSessionsQuery(
+export const buildPlayerSessionsQuery = (
   input: PlayerSessionsInput
-): BuiltQuery {
+): BuiltQuery => {
   const sortColumn = input.sortBy ?? "started_at";
   const sortDir = input.sortDesc ? "DESC" : "ASC";
   const offset = (input.page - 1) * input.perPage;
@@ -79,12 +79,12 @@ export function buildPlayerSessionsQuery(
             `;
 
   return { params, query };
-}
+};
 
 // Count of filtered sessions, so pagination reflects the filtered total.
-export function buildPlayerSessionsCountQuery(
+export const buildPlayerSessionsCountQuery = (
   input: PlayerSessionsInput
-): BuiltQuery {
+): BuiltQuery => {
   const { havingClause, params } = buildHaving(input, {});
 
   const query = `
@@ -105,4 +105,4 @@ export function buildPlayerSessionsCountQuery(
             `;
 
   return { params, query };
-}
+};

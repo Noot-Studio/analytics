@@ -67,16 +67,14 @@ const MAPS_TABLE_SELECT = `
         WHERE m.map != ''
         GROUP BY m.map`;
 
-function windowParams(input: MapsInput): Record<string, unknown> {
-  return {
-    from: input.from,
-    projectId: input.projectId,
-    to: input.to,
-  };
-}
+const windowParams = (input: MapsInput): Record<string, unknown> => ({
+  from: input.from,
+  projectId: input.projectId,
+  to: input.to,
+});
 
 // Top-N maps by sessions, unaffected by table paging — drives the charts.
-export function buildMapsBreakdownQuery(input: MapsInput): BuiltQuery {
+export const buildMapsBreakdownQuery = (input: MapsInput): BuiltQuery => {
   const query = `${MAPS_CTE}
             SELECT
               m.map                            AS map,
@@ -92,10 +90,10 @@ export function buildMapsBreakdownQuery(input: MapsInput): BuiltQuery {
           `;
 
   return { params: windowParams(input), query };
-}
+};
 
 // Per-day sessions per map for the stacked over-time chart.
-export function buildMapsOverTimeQuery(input: MapsInput): BuiltQuery {
+export const buildMapsOverTimeQuery = (input: MapsInput): BuiltQuery => {
   const query = `${MAPS_CTE}
             SELECT
               toString(event_date)         AS event_date,
@@ -108,10 +106,10 @@ export function buildMapsOverTimeQuery(input: MapsInput): BuiltQuery {
           `;
 
   return { params: windowParams(input), query };
-}
+};
 
 // Server-side filtered/sorted/paginated rows for the data-table.
-export function buildMapsTableQuery(input: MapsInput): BuiltQuery {
+export const buildMapsTableQuery = (input: MapsInput): BuiltQuery => {
   const tableSortCol = input.sortBy
     ? (MAPS_SORT_COLS[input.sortBy] ?? "sessions")
     : "sessions";
@@ -141,10 +139,10 @@ export function buildMapsTableQuery(input: MapsInput): BuiltQuery {
           `;
 
   return { params, query };
-}
+};
 
 // Count of filtered table rows, so pagination reflects the filtered total.
-export function buildMapsTableCountQuery(input: MapsInput): BuiltQuery {
+export const buildMapsTableCountQuery = (input: MapsInput): BuiltQuery => {
   const params: Record<string, unknown> = {
     from: input.from,
     projectId: input.projectId,
@@ -167,4 +165,4 @@ export function buildMapsTableCountQuery(input: MapsInput): BuiltQuery {
           `;
 
   return { params, query };
-}
+};

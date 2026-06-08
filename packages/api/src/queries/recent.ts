@@ -26,10 +26,10 @@ const ISO_Z_SUFFIX = /Z$/u;
 
 // Shared WHERE/params construction so the rows and count queries filter the
 // same window. `extra` adds the rows-only pagination params.
-function buildWhere(
+const buildWhere = (
   input: RecentInput,
   extra: Record<string, unknown>
-): { whereClause: string; params: Record<string, unknown> } {
+): { whereClause: string; params: Record<string, unknown> } => {
   const params: Record<string, unknown> = {
     projectId: input.projectId,
     ...extra,
@@ -48,10 +48,10 @@ function buildWhere(
     conditions.push(condition);
   }
   return { params, whereClause: conditions.join(" AND ") };
-}
+};
 
 // Most recent raw events page for the dashboard's live stream view.
-export function buildRecentRowsQuery(input: RecentInput): BuiltQuery {
+export const buildRecentRowsQuery = (input: RecentInput): BuiltQuery => {
   const sortCol =
     input.sortBy && SAFE_SORT_COLUMNS.has(input.sortBy)
       ? input.sortBy
@@ -78,10 +78,10 @@ export function buildRecentRowsQuery(input: RecentInput): BuiltQuery {
           `;
 
   return { params, query };
-}
+};
 
 // Total matching events, so pagination reflects the filtered total.
-export function buildRecentCountQuery(input: RecentInput): BuiltQuery {
+export const buildRecentCountQuery = (input: RecentInput): BuiltQuery => {
   const { params, whereClause } = buildWhere(input, {});
 
   const query = `
@@ -91,4 +91,4 @@ export function buildRecentCountQuery(input: RecentInput): BuiltQuery {
           `;
 
   return { params, query };
-}
+};

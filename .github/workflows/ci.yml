@@ -1,0 +1,54 @@
+name: CI
+
+# Code-quality gate. Runs on every branch push and every pull request.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+# Cancel superseded runs for the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Lint & type-check
+    runs-on: ubuntu-latest
+    env:
+      # Bypass @t3-oss/env-core runtime validation; CI only compiles, never runs.
+      SKIP_ENV_VALIDATION: "true"
+      # Prisma generate (db's postinstall) resolves DATABASE_URL via prisma.config;
+      # a placeholder satisfies it — generate never connects.
+      DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+      # web's `check-types` runs `vite build`, which bakes these VITE_* values.
+      VITE_SERVER_URL: http://localhost:3000
+      VITE_DOCS_URL: http://localhost:3002
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.5
+
+      # Cache Turbo's local task outputs across runs.
+      - uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Lint & format check
+        run: bun run check
+
+      - name: Type-check
+        run: bun run check-types
+
+      - name: Test
+        run: bun test

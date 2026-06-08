@@ -45,11 +45,10 @@ export interface BuiltQuery {
 }
 
 /** World-space center of voxel grid index `g` for a cube edge of `voxelSize`. */
-export function voxelCenter(g: number, voxelSize: number): number {
-  return (g + 0.5) * voxelSize;
-}
+export const voxelCenter = (g: number, voxelSize: number): number =>
+  (g + 0.5) * voxelSize;
 
-export function buildVoxelsQuery(input: VoxelsInput): BuiltQuery {
+export const buildVoxelsQuery = (input: VoxelsInput): BuiltQuery => {
   const params: Record<string, unknown> = {
     from: input.from,
     limitPlusOne: input.limit + 1,
@@ -103,9 +102,9 @@ export function buildVoxelsQuery(input: VoxelsInput): BuiltQuery {
   `;
 
   return { params, query };
-}
+};
 
-export function buildScenesQuery(input: ScenesInput): BuiltQuery {
+export const buildScenesQuery = (input: ScenesInput): BuiltQuery => {
   const params: Record<string, unknown> = {
     from: input.from,
     projectId: input.projectId,
@@ -131,4 +130,4 @@ export function buildScenesQuery(input: ScenesInput): BuiltQuery {
   `;
 
   return { params, query };
-}
+};

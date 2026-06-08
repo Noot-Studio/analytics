@@ -216,9 +216,9 @@ export function useDotMatrixPhases({
 
   const phase: DotMatrixPhase = autoRun
     ? "loadingRipple"
-    : (hoverAnimated
+    : hoverAnimated
       ? hoverPhase
-      : "idle");
+      : "idle";
 
   return useMemo(
     () => ({

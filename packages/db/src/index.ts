@@ -3,12 +3,12 @@ import { env } from "@sbox-analytics/env/server";
 
 import { PrismaClient } from "../prisma/generated/client";
 
-export function createPrismaClient() {
+export const createPrismaClient = () => {
   const adapter = new PrismaPg({
     connectionString: env.DATABASE_URL,
   });
   return new PrismaClient({ adapter });
-}
+};
 
 export {
   CardSize,

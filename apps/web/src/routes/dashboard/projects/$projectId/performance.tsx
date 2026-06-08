@@ -1,10 +1,17 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 
 import { PerformanceView } from "@/features/analytics/components/organisms/performance-view";
 import {
   analyticsSearchSchema,
   resolveRange,
 } from "@/features/analytics/lib/filters";
+
+const PerformancePage = () => {
+  const { projectId } = useParams({
+    from: "/dashboard/projects/$projectId/performance",
+  });
+  return <PerformanceView projectId={projectId} />;
+};
 
 export const Route = createFileRoute(
   "/dashboard/projects/$projectId/performance"
@@ -39,8 +46,3 @@ export const Route = createFileRoute(
   }),
   validateSearch: analyticsSearchSchema,
 });
-
-function PerformancePage() {
-  const { projectId } = Route.useParams();
-  return <PerformanceView projectId={projectId} />;
-}
