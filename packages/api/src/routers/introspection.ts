@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 import { assertProjectAccess } from "../access";
-import { clickhouse } from "../clickhouse";
 import { protectedProcedure } from "../index";
+import { runQuery } from "../run-query";
 
 // Bounded sample of recent events scanned for property keys.
 const PROPERTY_KEY_SAMPLE = 1000;
@@ -23,19 +23,20 @@ export const introspectionRouter = {
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
-      const result = await clickhouse().query({
-        format: "JSON",
-        query: `
+      const rows = await runQuery(
+        context.ch,
+        {
+          params: { projectId: input.projectId },
+          query: `
           SELECT DISTINCT event_type
           FROM analytics.events_daily
           WHERE project_id = {projectId:String}
           ORDER BY event_type
         `,
-        query_params: { projectId: input.projectId },
-      });
-
-      const json = await result.json<{ event_type: string }>();
-      return json.data.map((row) => row.event_type);
+        },
+        z.object({ event_type: z.string() })
+      );
+      return rows.map((row) => row.event_type);
     }),
 
   // Property keys observed on recent events of one type (bounded sample).
@@ -44,9 +45,15 @@ export const introspectionRouter = {
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
-      const result = await clickhouse().query({
-        format: "JSON",
-        query: `
+      const rows = await runQuery(
+        context.ch,
+        {
+          params: {
+            eventType: input.eventType,
+            projectId: input.projectId,
+            sampleSize: PROPERTY_KEY_SAMPLE,
+          },
+          query: `
           SELECT DISTINCT arrayJoin(JSONExtractKeys(properties)) AS key
           FROM (
             SELECT properties
@@ -58,14 +65,9 @@ export const introspectionRouter = {
           )
           ORDER BY key
         `,
-        query_params: {
-          eventType: input.eventType,
-          projectId: input.projectId,
-          sampleSize: PROPERTY_KEY_SAMPLE,
         },
-      });
-
-      const json = await result.json<{ key: string }>();
-      return json.data.map((row) => row.key);
+        z.object({ key: z.string() })
+      );
+      return rows.map((row) => row.key);
     }),
 };

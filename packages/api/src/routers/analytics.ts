@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import { assertProjectAccess } from "../access";
-import { clickhouse } from "../clickhouse";
 import { protectedProcedure } from "../index";
 import { buildBreakdownQuery } from "../queries/breakdown";
 import { buildDailyQuery } from "../queries/daily";
@@ -74,6 +73,7 @@ import {
   buildSessionsListQuery,
 } from "../queries/sessions-list";
 import { filterSchema } from "../query-builder";
+import { paginated, runQueries, runQuery } from "../run-query";
 import {
   buildScenesQuery,
   buildVoxelsQuery,
@@ -98,6 +98,14 @@ const eventsRow = z.object({
   event_count: z.coerce.number(),
   event_type: z.string(),
   unique_players: z.coerce.number(),
+});
+
+const recentRow = z.object({
+  event_type: z.string(),
+  player_id: z.string(),
+  properties: z.string(),
+  session_id: z.string(),
+  timestamp: z.string(),
 });
 
 const breakdownInput = z.object({
@@ -632,15 +640,7 @@ export const analyticsRouter = {
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
-      const { query, params } = buildDailyQuery(input);
-      const result = await clickhouse().query({
-        format: "JSON",
-        query,
-        query_params: params,
-      });
-
-      const json = await result.json<z.infer<typeof dailyRow>>();
-      return z.array(dailyRow).parse(json.data);
+      return runQuery(context.ch, buildDailyQuery(input), dailyRow);
     }),
 
   // DAU + new-vs-returning daily series, plus trailing WAU/MAU.
@@ -649,35 +649,24 @@ export const analyticsRouter = {
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
-      const ch = clickhouse();
+      const { daily, totals } = await runQueries(context.ch, {
+        daily: {
+          query: buildPlayersDailyQuery(input),
+          schema: playersDailyRow,
+        },
+        totals: {
+          query: buildPlayersTotalsQuery(input),
+          schema: playersTotalsRow,
+        },
+      });
 
-      const dailyQuery = buildPlayersDailyQuery(input);
-      const totalsQuery = buildPlayersTotalsQuery(input);
-      const [dailyResult, totalsResult] = await Promise.all([
-        ch.query({
-          format: "JSON",
-          query: dailyQuery.query,
-          query_params: dailyQuery.params,
-        }),
-        ch.query({
-          format: "JSON",
-          query: totalsQuery.query,
-          query_params: totalsQuery.params,
-        }),
-      ]);
+      const totalsRow = totals[0] ?? { mau: 0, wau: 0 };
 
-      const dailyJson =
-        await dailyResult.json<z.infer<typeof playersDailyRow>>();
-      const daily = z.array(playersDailyRow).parse(dailyJson.data);
-
-      const totalsJson =
-        await totalsResult.json<z.infer<typeof playersTotalsRow>>();
-      const totals = z.array(playersTotalsRow).parse(totalsJson.data)[0] ?? {
-        mau: 0,
-        wau: 0,
-      };
-
-      return playersOutput.parse({ daily, mau: totals.mau, wau: totals.wau });
+      return playersOutput.parse({
+        daily,
+        mau: totalsRow.mau,
+        wau: totalsRow.wau,
+      });
     }),
 
   // Session duration histogram, avg-duration trend, and time-of-day heatmap.
@@ -686,40 +675,20 @@ export const analyticsRouter = {
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
-      const ch = clickhouse();
-
-      const histogramQuery = buildSessionsHistogramQuery(input);
-      const trendQuery = buildSessionsTrendQuery(input);
-      const heatmapQuery = buildSessionsHeatmapQuery(input);
-      const [histogramResult, trendResult, heatmapResult] = await Promise.all([
-        ch.query({
-          format: "JSON",
-          query: histogramQuery.query,
-          query_params: histogramQuery.params,
-        }),
-        ch.query({
-          format: "JSON",
-          query: trendQuery.query,
-          query_params: trendQuery.params,
-        }),
-        ch.query({
-          format: "JSON",
-          query: heatmapQuery.query,
-          query_params: heatmapQuery.params,
-        }),
-      ]);
-
-      const histogramJson =
-        await histogramResult.json<z.infer<typeof sessionsHistogramRow>>();
-      const histogram = z.array(sessionsHistogramRow).parse(histogramJson.data);
-
-      const trendJson =
-        await trendResult.json<z.infer<typeof sessionsTrendRow>>();
-      const trend = z.array(sessionsTrendRow).parse(trendJson.data);
-
-      const heatmapJson =
-        await heatmapResult.json<z.infer<typeof sessionsHeatmapRow>>();
-      const heatmap = z.array(sessionsHeatmapRow).parse(heatmapJson.data);
+      const { heatmap, histogram, trend } = await runQueries(context.ch, {
+        heatmap: {
+          query: buildSessionsHeatmapQuery(input),
+          schema: sessionsHeatmapRow,
+        },
+        histogram: {
+          query: buildSessionsHistogramQuery(input),
+          schema: sessionsHistogramRow,
+        },
+        trend: {
+          query: buildSessionsTrendQuery(input),
+          schema: sessionsTrendRow,
+        },
+      });
 
       return sessionsOutput.parse({ heatmap, histogram, trend });
     }),
@@ -730,55 +699,29 @@ export const analyticsRouter = {
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
-      const ch = clickhouse();
-
-      const breakdownQuery = buildMapsBreakdownQuery(input);
-      const overTimeQuery = buildMapsOverTimeQuery(input);
-      const tableQuery = buildMapsTableQuery(input);
-      const tableCountQuery = buildMapsTableCountQuery(input);
-
-      const [breakdownResult, overTimeResult, tableResult, tableCountResult] =
-        await Promise.all([
-          ch.query({
-            format: "JSON",
-            query: breakdownQuery.query,
-            query_params: breakdownQuery.params,
-          }),
-          ch.query({
-            format: "JSON",
-            query: overTimeQuery.query,
-            query_params: overTimeQuery.params,
-          }),
-          ch.query({
-            format: "JSON",
-            query: tableQuery.query,
-            query_params: tableQuery.params,
-          }),
-          ch.query({
-            format: "JSON",
-            query: tableCountQuery.query,
-            query_params: tableCountQuery.params,
-          }),
-        ]);
-
-      const breakdownJson =
-        await breakdownResult.json<z.infer<typeof mapsBreakdownRow>>();
-      const breakdown = z.array(mapsBreakdownRow).parse(breakdownJson.data);
-
-      const overTimeJson =
-        await overTimeResult.json<z.infer<typeof mapsOverTimeRow>>();
-      const overTime = z.array(mapsOverTimeRow).parse(overTimeJson.data);
-
-      const tableJson =
-        await tableResult.json<z.infer<typeof mapsBreakdownRow>>();
-      const tableRows = z.array(mapsBreakdownRow).parse(tableJson.data);
-      const tableCountJson = await tableCountResult.json<{ total: string }>();
-      const tableTotal = Number(tableCountJson.data[0]?.total ?? 0);
+      const [charts, table] = await Promise.all([
+        runQueries(context.ch, {
+          breakdown: {
+            query: buildMapsBreakdownQuery(input),
+            schema: mapsBreakdownRow,
+          },
+          overTime: {
+            query: buildMapsOverTimeQuery(input),
+            schema: mapsOverTimeRow,
+          },
+        }),
+        paginated(
+          context.ch,
+          buildMapsTableQuery(input),
+          buildMapsTableCountQuery(input),
+          mapsBreakdownRow
+        ),
+      ]);
 
       return mapsOutput.parse({
-        breakdown,
-        overTime,
-        table: { rows: tableRows, total: tableTotal },
+        breakdown: charts.breakdown,
+        overTime: charts.overTime,
+        table,
       });
     }),
 
@@ -790,42 +733,21 @@ export const analyticsRouter = {
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
-      const ch = clickhouse();
-      const tableQuery = buildRetentionTableQuery(input);
-      const countQuery = buildRetentionTableCountQuery(input);
-      const curveQuery = buildRetentionCurveQuery(input);
-
-      const [tableResult, tableCountResult, curveResult] = await Promise.all([
-        ch.query({
-          format: "JSON",
-          query: tableQuery.query,
-          query_params: tableQuery.params,
-        }),
-        ch.query({
-          format: "JSON",
-          query: countQuery.query,
-          query_params: countQuery.params,
-        }),
-        ch.query({
-          format: "JSON",
-          query: curveQuery.query,
-          query_params: curveQuery.params,
-        }),
+      const [curve, table] = await Promise.all([
+        runQuery(
+          context.ch,
+          buildRetentionCurveQuery(input),
+          retentionCurveRow
+        ),
+        paginated(
+          context.ch,
+          buildRetentionTableQuery(input),
+          buildRetentionTableCountQuery(input),
+          retentionCohortRow
+        ),
       ]);
 
-      const tableJson =
-        await tableResult.json<z.infer<typeof retentionCohortRow>>();
-      const tableRows = z.array(retentionCohortRow).parse(tableJson.data);
-      const tableCountJson = await tableCountResult.json<{ total: string }>();
-      const tableTotal = Number(tableCountJson.data[0]?.total ?? 0);
-      const curveJson =
-        await curveResult.json<z.infer<typeof retentionCurveRow>>();
-      const curve = z.array(retentionCurveRow).parse(curveJson.data);
-
-      return retentionOutput.parse({
-        curve,
-        table: { rows: tableRows, total: tableTotal },
-      });
+      return retentionOutput.parse({ curve, table });
     }),
 
   // Ad-hoc funnel over user-defined ordered event steps. windowFunnel returns
@@ -836,29 +758,16 @@ export const analyticsRouter = {
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
-      const ch = clickhouse();
-      const levelsQuery = buildFunnelsLevelsQuery(input);
-      const trendQuery = buildFunnelsTrendQuery(input);
-
-      const [levelsResult, trendResult] = await Promise.all([
-        ch.query({
-          format: "JSON",
-          query: levelsQuery.query,
-          query_params: levelsQuery.params,
-        }),
-        ch.query({
-          format: "JSON",
-          query: trendQuery.query,
-          query_params: trendQuery.params,
-        }),
-      ]);
-
-      const levelsJson =
-        await levelsResult.json<z.infer<typeof funnelsLevelRow>>();
-      const levelCounts = z.array(funnelsLevelRow).parse(levelsJson.data);
-      const trendJson =
-        await trendResult.json<z.infer<typeof funnelsTrendRow>>();
-      const trend = z.array(funnelsTrendRow).parse(trendJson.data);
+      const { levelCounts, trend } = await runQueries(context.ch, {
+        levelCounts: {
+          query: buildFunnelsLevelsQuery(input),
+          schema: funnelsLevelRow,
+        },
+        trend: {
+          query: buildFunnelsTrendQuery(input),
+          schema: funnelsTrendRow,
+        },
+      });
 
       // Players reaching step i (0-indexed) are those whose funnel level is at
       // least i + 1, since windowFunnel uses 1-indexed levels.
@@ -879,15 +788,7 @@ export const analyticsRouter = {
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
-      const { query, params } = buildBreakdownQuery(input);
-      const result = await clickhouse().query({
-        format: "JSON",
-        query,
-        query_params: params,
-      });
-
-      const json = await result.json<z.infer<typeof eventsRow>>();
-      return z.array(eventsRow).parse(json.data);
+      return runQuery(context.ch, buildBreakdownQuery(input), eventsRow);
     }),
 
   // Most recent raw events — for the dashboard's live stream view.
@@ -907,36 +808,14 @@ export const analyticsRouter = {
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
-      const rowsQuery = buildRecentRowsQuery(input);
-      const countQuery = buildRecentCountQuery(input);
-      const ch = clickhouse();
+      const { rows, total } = await paginated(
+        context.ch,
+        buildRecentRowsQuery(input),
+        buildRecentCountQuery(input),
+        recentRow
+      );
 
-      const [result, countResult] = await Promise.all([
-        ch.query({
-          format: "JSON",
-          query: rowsQuery.query,
-          query_params: rowsQuery.params,
-        }),
-        ch.query({
-          format: "JSON",
-          query: countQuery.query,
-          query_params: countQuery.params,
-        }),
-      ]);
-
-      const json = await result.json<{
-        event_type: string;
-        timestamp: string;
-        session_id: string;
-        player_id: string;
-        properties: string;
-      }>();
-      const countJson = await countResult.json<{ total: string }>();
-
-      return {
-        rows: json.data,
-        total: Number(countJson.data[0]?.total ?? 0),
-      };
+      return { rows, total };
     }),
 
   performance: protectedProcedure
@@ -944,49 +823,29 @@ export const analyticsRouter = {
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
-      const ch = clickhouse();
-      const fpsQuery = buildPerformanceFpsQuery(input);
-      const crashQuery = buildPerformanceCrashQuery(input);
-      const loadQuery = buildPerformanceLoadQuery(input);
-      const byMapQuery = buildPerformanceByMapQuery(input);
+      const { byMap, crashes, fps, loadHistogram } = await runQueries(
+        context.ch,
+        {
+          byMap: {
+            query: buildPerformanceByMapQuery(input),
+            schema: performanceMapRow,
+          },
+          crashes: {
+            query: buildPerformanceCrashQuery(input),
+            schema: performanceCrashRow,
+          },
+          fps: {
+            query: buildPerformanceFpsQuery(input),
+            schema: performanceFpsRow,
+          },
+          loadHistogram: {
+            query: buildPerformanceLoadQuery(input),
+            schema: performanceLoadBucketRow,
+          },
+        }
+      );
 
-      const [fpsResult, crashResult, loadResult, byMapResult] =
-        await Promise.all([
-          ch.query({
-            format: "JSON",
-            query: fpsQuery.query,
-            query_params: fpsQuery.params,
-          }),
-          ch.query({
-            format: "JSON",
-            query: crashQuery.query,
-            query_params: crashQuery.params,
-          }),
-          ch.query({
-            format: "JSON",
-            query: loadQuery.query,
-            query_params: loadQuery.params,
-          }),
-          ch.query({
-            format: "JSON",
-            query: byMapQuery.query,
-            query_params: byMapQuery.params,
-          }),
-        ]);
-
-      const [fpsJson, crashJson, loadJson, byMapJson] = await Promise.all([
-        fpsResult.json<z.infer<typeof performanceFpsRow>>(),
-        crashResult.json<z.infer<typeof performanceCrashRow>>(),
-        loadResult.json<z.infer<typeof performanceLoadBucketRow>>(),
-        byMapResult.json<z.infer<typeof performanceMapRow>>(),
-      ]);
-
-      return performanceOutput.parse({
-        byMap: byMapJson.data,
-        crashes: crashJson.data,
-        fps: fpsJson.data,
-        loadHistogram: loadJson.data,
-      });
+      return performanceOutput.parse({ byMap, crashes, fps, loadHistogram });
     }),
 
   playerProfile: protectedProcedure
@@ -994,115 +853,69 @@ export const analyticsRouter = {
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
-      const ch = clickhouse();
-
-      const lifetimeQuery = buildPlayerLifetimeQuery(input);
-      const activityQuery = buildPlayerActivityQuery(input);
-      const hourGridQuery = buildPlayerHourGridQuery(input);
-      const breakdownQuery = buildPlayerEventBreakdownQuery(input);
-      const mapsQuery = buildPlayerMapsQuery(input);
-      const histogramQuery = buildPlayerHistogramQuery(input);
-      const specsQuery = buildPlayerSpecsQuery(input);
-      const timelineQuery = buildPlayerTimelineQuery(input);
-      const retentionQuery = buildPlayerRetentionQuery(input);
-
-      const [
-        lifetimeResult,
-        activityResult,
-        hourGridResult,
-        breakdownResult,
-        mapsResult,
-        histogramResult,
-        specsResult,
-        timelineResult,
-        retentionResult,
-      ] = await Promise.all([
-        ch.query({
-          format: "JSON",
-          query: lifetimeQuery.query,
-          query_params: lifetimeQuery.params,
-        }),
-        ch.query({
-          format: "JSON",
-          query: activityQuery.query,
-          query_params: activityQuery.params,
-        }),
-        ch.query({
-          format: "JSON",
-          query: hourGridQuery.query,
-          query_params: hourGridQuery.params,
-        }),
-        ch.query({
-          format: "JSON",
-          query: breakdownQuery.query,
-          query_params: breakdownQuery.params,
-        }),
-        ch.query({
-          format: "JSON",
-          query: mapsQuery.query,
-          query_params: mapsQuery.params,
-        }),
-        ch.query({
-          format: "JSON",
-          query: histogramQuery.query,
-          query_params: histogramQuery.params,
-        }),
-        ch.query({
-          format: "JSON",
-          query: specsQuery.query,
-          query_params: specsQuery.params,
-        }),
-        ch.query({
-          format: "JSON",
-          query: timelineQuery.query,
-          query_params: timelineQuery.params,
-        }),
-        ch.query({
-          format: "JSON",
-          query: retentionQuery.query,
-          query_params: retentionQuery.params,
-        }),
-      ]);
-
-      const [
-        lifetimeJson,
-        activityJson,
-        hourGridJson,
-        breakdownJson,
-        mapsJson,
-        histogramJson,
-        specsJson,
-        timelineJson,
-        retentionJson,
-      ] = await Promise.all([
-        lifetimeResult.json<z.infer<typeof playerLifetimeRow>>(),
-        activityResult.json<z.infer<typeof playerActivityRow>>(),
-        hourGridResult.json<z.infer<typeof playerHourGridRow>>(),
-        breakdownResult.json<z.infer<typeof playerEventBreakdownRow>>(),
-        mapsResult.json<z.infer<typeof playerMapRow>>(),
-        histogramResult.json<z.infer<typeof sessionsHistogramRow>>(),
-        specsResult.json<z.infer<typeof playerSpecsRow>>(),
-        timelineResult.json<z.infer<typeof playerTimelineRow>>(),
-        retentionResult.json<z.infer<typeof playerRetentionRow>>(),
-      ]);
+      const {
+        activity,
+        durationHistogram,
+        eventBreakdown,
+        hourGrid,
+        lifetime,
+        maps,
+        retention,
+        specs,
+        timeline,
+      } = await runQueries(context.ch, {
+        activity: {
+          query: buildPlayerActivityQuery(input),
+          schema: playerActivityRow,
+        },
+        durationHistogram: {
+          query: buildPlayerHistogramQuery(input),
+          schema: sessionsHistogramRow,
+        },
+        eventBreakdown: {
+          query: buildPlayerEventBreakdownQuery(input),
+          schema: playerEventBreakdownRow,
+        },
+        hourGrid: {
+          query: buildPlayerHourGridQuery(input),
+          schema: playerHourGridRow,
+        },
+        lifetime: {
+          query: buildPlayerLifetimeQuery(input),
+          schema: playerLifetimeRow,
+        },
+        maps: { query: buildPlayerMapsQuery(input), schema: playerMapRow },
+        retention: {
+          query: buildPlayerRetentionQuery(input),
+          schema: playerRetentionRow,
+        },
+        specs: {
+          query: buildPlayerSpecsQuery(input),
+          schema: playerSpecsRow,
+        },
+        timeline: {
+          query: buildPlayerTimelineQuery(input),
+          schema: playerTimelineRow,
+        },
+      });
 
       // A player with no session_start (or one that never reported hardware)
       // yields an all-empty aggregate row — collapse it to "no specs".
-      const [specsRow] = specsJson.data;
+      const [specsRow] = specs;
       const hasSpecs = Boolean(
         specsRow && (specsRow.os || specsRow.gpu || specsRow.platform)
       );
 
       return playerProfileOutput.parse({
-        activity: activityJson.data,
-        durationHistogram: histogramJson.data,
-        eventBreakdown: breakdownJson.data,
-        hourGrid: hourGridJson.data,
-        lifetime: lifetimeJson.data[0],
-        maps: mapsJson.data,
-        retention: retentionJson.data[0],
+        activity,
+        durationHistogram,
+        eventBreakdown,
+        hourGrid,
+        lifetime: lifetime[0],
+        maps,
+        retention: retention[0],
         specs: hasSpecs ? specsRow : null,
-        timeline: timelineJson.data,
+        timeline,
       });
     }),
 
@@ -1113,33 +926,14 @@ export const analyticsRouter = {
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
-      const ch = clickhouse();
+      const { rows, total } = await paginated(
+        context.ch,
+        buildPlayerSessionsQuery(input),
+        buildPlayerSessionsCountQuery(input),
+        playerSessionRow
+      );
 
-      const sessionsQuery = buildPlayerSessionsQuery(input);
-      const countQuery = buildPlayerSessionsCountQuery(input);
-
-      const [sessionsResult, countResult] = await Promise.all([
-        ch.query({
-          format: "JSON",
-          query: sessionsQuery.query,
-          query_params: sessionsQuery.params,
-        }),
-        ch.query({
-          format: "JSON",
-          query: countQuery.query,
-          query_params: countQuery.params,
-        }),
-      ]);
-
-      const [sessionsJson, countJson] = await Promise.all([
-        sessionsResult.json<z.infer<typeof playerSessionRow>>(),
-        countResult.json<{ total: number }>(),
-      ]);
-
-      return playerSessionsOutput.parse({
-        rows: sessionsJson.data,
-        total: countJson.data[0]?.total ?? 0,
-      });
+      return playerSessionsOutput.parse({ rows, total });
     }),
 
   // Browsable, paginated list of players active in the range — powers the
@@ -1149,30 +943,14 @@ export const analyticsRouter = {
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
-      const ch = clickhouse();
-      const rowsQuery = buildPlayersListQuery(input);
-      const countQuery = buildPlayersListCountQuery(input);
+      const { rows, total } = await paginated(
+        context.ch,
+        buildPlayersListQuery(input),
+        buildPlayersListCountQuery(input),
+        playersListRow
+      );
 
-      const [result, countResult] = await Promise.all([
-        ch.query({
-          format: "JSON",
-          query: rowsQuery.query,
-          query_params: rowsQuery.params,
-        }),
-        ch.query({
-          format: "JSON",
-          query: countQuery.query,
-          query_params: countQuery.params,
-        }),
-      ]);
-
-      const json = await result.json<z.infer<typeof playersListRow>>();
-      const countJson = await countResult.json<{ total: string }>();
-
-      return playersListOutput.parse({
-        rows: json.data,
-        total: Number(countJson.data[0]?.total ?? 0),
-      });
+      return playersListOutput.parse({ rows, total });
     }),
 
   // Browsable, paginated list of sessions in the range — powers the clickable
@@ -1182,30 +960,14 @@ export const analyticsRouter = {
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
-      const ch = clickhouse();
-      const rowsQuery = buildSessionsListQuery(input);
-      const countQuery = buildSessionsListCountQuery(input);
+      const { rows, total } = await paginated(
+        context.ch,
+        buildSessionsListQuery(input),
+        buildSessionsListCountQuery(input),
+        sessionsListRow
+      );
 
-      const [result, countResult] = await Promise.all([
-        ch.query({
-          format: "JSON",
-          query: rowsQuery.query,
-          query_params: rowsQuery.params,
-        }),
-        ch.query({
-          format: "JSON",
-          query: countQuery.query,
-          query_params: countQuery.params,
-        }),
-      ]);
-
-      const json = await result.json<z.infer<typeof sessionsListRow>>();
-      const countJson = await countResult.json<{ total: string }>();
-
-      return sessionsListOutput.parse({
-        rows: json.data,
-        total: Number(countJson.data[0]?.total ?? 0),
-      });
+      return sessionsListOutput.parse({ rows, total });
     }),
 
   // Single-session detail: meta header + the session's paginated event stream.
@@ -1214,63 +976,44 @@ export const analyticsRouter = {
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
-      const ch = clickhouse();
-      const metaQuery = buildSessionMetaQuery(input);
-      const perfQuery = buildSessionPerfQuery(input);
-      const fpsQuery = buildSessionFpsQuery(input);
-      const breakdownQuery = buildSessionBreakdownQuery(input);
-      const specsQuery = buildSessionSpecsQuery(input);
-
-      const [metaResult, perfResult, fpsResult, breakdownResult, specsResult] =
-        await Promise.all([
-          ch.query({
-            format: "JSON",
-            query: metaQuery.query,
-            query_params: metaQuery.params,
-          }),
-          ch.query({
-            format: "JSON",
-            query: perfQuery.query,
-            query_params: perfQuery.params,
-          }),
-          ch.query({
-            format: "JSON",
-            query: fpsQuery.query,
-            query_params: fpsQuery.params,
-          }),
-          ch.query({
-            format: "JSON",
-            query: breakdownQuery.query,
-            query_params: breakdownQuery.params,
-          }),
-          ch.query({
-            format: "JSON",
-            query: specsQuery.query,
-            query_params: specsQuery.params,
-          }),
-        ]);
-
-      const [metaJson, perfJson, fpsJson, breakdownJson, specsJson] =
-        await Promise.all([
-          metaResult.json<Omit<z.infer<typeof sessionMetaRow>, "session_id">>(),
-          perfResult.json<z.infer<typeof sessionPerfRow>>(),
-          fpsResult.json<z.infer<typeof sessionFpsPointRow>>(),
-          breakdownResult.json<z.infer<typeof playerEventBreakdownRow>>(),
-          specsResult.json<z.infer<typeof playerSpecsRow>>(),
-        ]);
+      const { eventBreakdown, fpsSeries, meta, perf, specs } = await runQueries(
+        context.ch,
+        {
+          eventBreakdown: {
+            query: buildSessionBreakdownQuery(input),
+            schema: playerEventBreakdownRow,
+          },
+          fpsSeries: {
+            query: buildSessionFpsQuery(input),
+            schema: sessionFpsPointRow,
+          },
+          meta: {
+            query: buildSessionMetaQuery(input),
+            schema: sessionMetaRow.omit({ session_id: true }),
+          },
+          perf: {
+            query: buildSessionPerfQuery(input),
+            schema: sessionPerfRow,
+          },
+          specs: {
+            query: buildSessionSpecsQuery(input),
+            schema: playerSpecsRow,
+          },
+        }
+      );
 
       // A session with no session_start (or one that never reported hardware)
       // yields an all-empty aggregate row — collapse it to "no specs".
-      const [specsRow] = specsJson.data;
+      const [specsRow] = specs;
       const hasSpecs = Boolean(
         specsRow && (specsRow.os || specsRow.gpu || specsRow.platform)
       );
 
       return sessionProfileOutput.parse({
-        eventBreakdown: breakdownJson.data,
-        fpsSeries: fpsJson.data,
-        meta: { ...metaJson.data[0], session_id: input.sessionId },
-        perf: perfJson.data[0],
+        eventBreakdown,
+        fpsSeries,
+        meta: { ...meta[0], session_id: input.sessionId },
+        perf: perf[0],
         specs: hasSpecs ? specsRow : null,
       });
     }),
@@ -1282,47 +1025,25 @@ export const analyticsRouter = {
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
-      const ch = clickhouse();
-      const eventsQuery = buildSessionEventsQuery(input);
-      const countQuery = buildSessionEventsCountQuery(input);
+      const { rows, total } = await paginated(
+        context.ch,
+        buildSessionEventsQuery(input),
+        buildSessionEventsCountQuery(input),
+        sessionEventRow
+      );
 
-      const [eventsResult, countResult] = await Promise.all([
-        ch.query({
-          format: "JSON",
-          query: eventsQuery.query,
-          query_params: eventsQuery.params,
-        }),
-        ch.query({
-          format: "JSON",
-          query: countQuery.query,
-          query_params: countQuery.params,
-        }),
-      ]);
-
-      const [eventsJson, countJson] = await Promise.all([
-        eventsResult.json<z.infer<typeof sessionEventRow>>(),
-        countResult.json<{ total: number }>(),
-      ]);
-
-      return sessionEventsOutput.parse({
-        rows: eventsJson.data,
-        total: countJson.data[0]?.total ?? 0,
-      });
+      return sessionEventsOutput.parse({ rows, total });
     }),
   spatial: {
     scenes: protectedProcedure
       .input(spatialScenesInput)
       .handler(async ({ context, input }) => {
         await assertProjectAccess(input.projectId, context.session.user.id);
-        const { query, params } = buildScenesQuery(input);
-        const ch = clickhouse();
-        const result = await ch.query({
-          format: "JSON",
-          query,
-          query_params: params,
-        });
-        const json = await result.json<z.infer<typeof spatialSceneRow>>();
-        const rows = z.array(spatialSceneRow).parse(json.data);
+        const rows = await runQuery(
+          context.ch,
+          buildScenesQuery(input),
+          spatialSceneRow
+        );
         return spatialScenesOutput.parse({
           scenes: rows.map((r) => ({
             bounds: {
@@ -1342,15 +1063,11 @@ export const analyticsRouter = {
       .input(spatialVoxelsInput)
       .handler(async ({ context, input }) => {
         await assertProjectAccess(input.projectId, context.session.user.id);
-        const { query, params } = buildVoxelsQuery(input);
-        const ch = clickhouse();
-        const result = await ch.query({
-          format: "JSON",
-          query,
-          query_params: params,
-        });
-        const json = await result.json<z.infer<typeof voxelRow>>();
-        const rows = z.array(voxelRow).parse(json.data);
+        const rows = await runQuery(
+          context.ch,
+          buildVoxelsQuery(input),
+          voxelRow
+        );
         const truncated = rows.length > input.limit;
         const voxels = rows.slice(0, input.limit).map((r) => ({
           count: r.count,

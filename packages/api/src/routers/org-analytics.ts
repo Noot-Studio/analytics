@@ -2,8 +2,8 @@ import prisma from "@sbox-analytics/db";
 import { z } from "zod";
 
 import { assertOrgAccess, requireActiveOrg } from "../access";
-import { clickhouse } from "../clickhouse";
 import { protectedProcedure } from "../index";
+import { runQuery } from "../run-query";
 
 const dailyInput = z.object({
   from: z.iso.date(),
@@ -38,9 +38,15 @@ export const orgAnalyticsRouter = {
         return [];
       }
 
-      const result = await clickhouse().query({
-        format: "JSON",
-        query: `
+      return runQuery(
+        context.ch,
+        {
+          params: {
+            from: input.from,
+            projectIds: projects.map((project) => project.id),
+            to: input.to,
+          },
+          query: `
           SELECT
             event_date                           AS event_date,
             event_type                           AS event_type,
@@ -53,14 +59,8 @@ export const orgAnalyticsRouter = {
           GROUP BY event_date, event_type
           ORDER BY event_date, event_type
         `,
-        query_params: {
-          from: input.from,
-          projectIds: projects.map((project) => project.id),
-          to: input.to,
         },
-      });
-
-      const json = await result.json<z.infer<typeof dailyRow>>();
-      return z.array(dailyRow).parse(json.data);
+        dailyRow
+      );
     }),
 };

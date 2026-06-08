@@ -1,6 +1,7 @@
 // Pure ClickHouse query builders for spatial (voxel) analytics.
 // No DB/network access — fully unit-testable. The router layer feeds the
-// returned { query, params } straight into clickhouse().query({ query_params: params }).
+// returned { query, params } into runQuery (see ../run-query), which executes it
+// across the ChClient seam and validates the rows.
 
 const AGG_FUNCTIONS = {
   avg: "avg",

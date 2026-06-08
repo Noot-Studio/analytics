@@ -1,7 +1,9 @@
+import { z } from "zod";
+
 import { assertProjectAccess } from "../access";
-import { clickhouse } from "../clickhouse";
 import { protectedProcedure } from "../index";
 import { buildQuery, queryConfigSchema } from "../query-builder";
+import { runQuery } from "../run-query";
 
 export const customAnalyticsRouter = {
   query: protectedProcedure
@@ -9,15 +11,12 @@ export const customAnalyticsRouter = {
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
-      const { query, params } = buildQuery(input);
-
-      const result = await clickhouse().query({
-        format: "JSON",
-        query,
-        query_params: params,
-      });
-
-      const json = await result.json<Record<string, unknown>>();
-      return json.data;
+      // The shape is user-defined (arbitrary aggregation/group-by), so rows pass
+      // through a permissive object schema rather than a fixed row schema.
+      return runQuery(
+        context.ch,
+        buildQuery(input),
+        z.record(z.string(), z.unknown())
+      );
     }),
 };
