@@ -1,0 +1,36 @@
+# Keep the build context small and secret-free.
+# Everything needed is reinstalled/regenerated inside the image.
+
+**/node_modules
+node_modules
+
+**/dist
+dist
+**/.turbo
+.turbo
+.nx
+
+# Secrets — never bake env into image layers. Build-time config is passed
+# via --build-arg (see apps/web/Dockerfile), runtime config via compose.
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Prisma client is regenerated during build (db:generate).
+packages/db/prisma/generated
+
+# SDK lives in a separate repo, mounted via a (possibly absent) symlink.
+apps/sdk
+
+.git
+.github
+.kiro
+.agents
+.codegraph
+.claude
+
+**/*.tsbuildinfo
+coverage
+*.log
+.DS_Store

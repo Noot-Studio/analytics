@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<!-- Listen on IPv4 so ClickHouse starts on hosts where IPv6 is disabled.
+     (The default `[::]` bind fails with "Address family not supported" there.) -->
+<clickhouse>
+    <listen_host>0.0.0.0</listen_host>
+</clickhouse>
