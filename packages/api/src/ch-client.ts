@@ -12,16 +12,14 @@ export interface ChClient {
 
 // Production adapter: the real ClickHouse HTTP client. Returns the JSON `data`
 // array verbatim; callers validate it with their own row schema.
-export function createChClient(): ChClient {
-  return {
-    async query(sql, params) {
-      const result = await clickhouse().query({
-        format: "JSON",
-        query: sql,
-        query_params: params,
-      });
-      const json = await result.json<{ data: unknown[] }>();
-      return json.data;
-    },
-  };
-}
+export const createChClient = (): ChClient => ({
+  async query(sql, params) {
+    const result = await clickhouse().query({
+      format: "JSON",
+      query: sql,
+      query_params: params,
+    });
+    const json = await result.json<{ data: unknown[] }>();
+    return json.data;
+  },
+});

@@ -4,7 +4,7 @@ import { env } from "@sbox-analytics/env/server";
 
 let client: ClickHouseClient | undefined;
 
-export function clickhouse(): ClickHouseClient {
+export const clickhouse = (): ClickHouseClient => {
   if (!client) {
     client = createClient({
       clickhouse_settings: {
@@ -18,4 +18,4 @@ export function clickhouse(): ClickHouseClient {
     });
   }
   return client;
-}
+};

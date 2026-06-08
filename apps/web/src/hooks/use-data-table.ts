@@ -39,6 +39,8 @@ const JOIN_OPERATOR_KEY = "joinOperator";
 const ARRAY_SEPARATOR = ",";
 const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;
+const NON_ALPHANUMERIC = /[^a-zA-Z0-9]/u;
+const NON_ALPHANUMERIC_SPLIT = /[^a-zA-Z0-9]+/u;
 
 interface UseDataTableProps<TData>
   extends
@@ -66,7 +68,15 @@ interface UseDataTableProps<TData>
   startTransition?: React.TransitionStartFunction;
 }
 
-export function useDataTable<TData>(props: UseDataTableProps<TData>) {
+const resolveQueryKeys = (queryKeys?: Partial<QueryKeys>) => ({
+  filtersKey: queryKeys?.filters ?? FILTERS_KEY,
+  joinOperatorKey: queryKeys?.joinOperator ?? JOIN_OPERATOR_KEY,
+  pageKey: queryKeys?.page ?? PAGE_KEY,
+  perPageKey: queryKeys?.perPage ?? PER_PAGE_KEY,
+  sortKey: queryKeys?.sort ?? SORT_KEY,
+});
+
+export const useDataTable = <TData>(props: UseDataTableProps<TData>) => {
   const {
     columns,
     pageCount = -1,
@@ -82,11 +92,8 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
     startTransition,
     ...tableProps
   } = props;
-  const pageKey = queryKeys?.page ?? PAGE_KEY;
-  const perPageKey = queryKeys?.perPage ?? PER_PAGE_KEY;
-  const sortKey = queryKeys?.sort ?? SORT_KEY;
-  const filtersKey = queryKeys?.filters ?? FILTERS_KEY;
-  const joinOperatorKey = queryKeys?.joinOperator ?? JOIN_OPERATOR_KEY;
+  const { pageKey, perPageKey, sortKey, filtersKey, joinOperatorKey } =
+    resolveQueryKeys(queryKeys);
 
   const queryStateOptions = React.useMemo<QueryParserOptions>(
     () => ({
@@ -128,7 +135,8 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
 
   const pagination: PaginationState = React.useMemo(
     () => ({
-      pageIndex: page - 1, // zero-based index -> one-based index
+      // zero-based index -> one-based index
+      pageIndex: page - 1,
       pageSize: perPage,
     }),
     [page, perPage]
@@ -193,9 +201,8 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
       return {};
     }
 
-    return filterableColumns.reduce<
-      Record<string, QueryParser<string> | QueryParser<string[]>>
-    >((acc, column) => {
+    const acc: Record<string, QueryParser<string> | QueryParser<string[]>> = {};
+    for (const column of filterableColumns) {
       if (column.meta?.options) {
         acc[column.id ?? ""] = parseAsArrayOf(
           parseAsString,
@@ -204,8 +211,8 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
       } else {
         acc[column.id ?? ""] = parseAsString.withOptions(queryStateOptions);
       }
-      return acc;
-    }, {});
+    }
+    return acc;
   }, [filterableColumns, queryStateOptions, enableAdvancedFilter]);
 
   const [filterValues, setFilterValues] = useQueryStates(filterParsers);
@@ -223,24 +230,27 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
       return [];
     }
 
-    return Object.entries(filterValues).reduce<ColumnFiltersState>(
-      (filters, [key, value]) => {
-        if (value !== null) {
-          const processedValue = Array.isArray(value)
-            ? value
-            : (typeof value === "string" && /[^a-zA-Z0-9]/.test(value)
-              ? value.split(/[^a-zA-Z0-9]+/).filter(Boolean)
-              : [value]);
+    const filters: ColumnFiltersState = [];
+    for (const [key, value] of Object.entries(filterValues)) {
+      if (value === null) {
+        continue;
+      }
 
-          filters.push({
-            id: key,
-            value: processedValue,
-          });
-        }
-        return filters;
-      },
-      []
-    );
+      let processedValue: string | string[];
+      if (Array.isArray(value)) {
+        processedValue = value;
+      } else if (typeof value === "string" && NON_ALPHANUMERIC.test(value)) {
+        processedValue = value.split(NON_ALPHANUMERIC_SPLIT).filter(Boolean);
+      } else {
+        processedValue = [value];
+      }
+
+      filters.push({
+        id: key,
+        value: processedValue,
+      });
+    }
+    return filters;
   }, [filterValues, enableAdvancedFilter]);
 
   const [columnFilters, setColumnFilters] =
@@ -258,14 +268,12 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
             ? updaterOrValue(prev)
             : updaterOrValue;
 
-        const filterUpdates = next.reduce<
-          Record<string, string | string[] | null>
-        >((acc, filter) => {
-          if (filterableColumns.find((column) => column.id === filter.id)) {
-            acc[filter.id] = filter.value as string | string[];
+        const filterUpdates: Record<string, string | string[] | null> = {};
+        for (const filter of next) {
+          if (filterableColumns.some((column) => column.id === filter.id)) {
+            filterUpdates[filter.id] = filter.value as string | string[];
           }
-          return acc;
-        }, {});
+        }
 
         for (const prevFilter of prev) {
           if (!next.some((filter) => filter.id === prevFilter.id)) {
@@ -328,4 +336,4 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
     () => ({ debounceMs, shallow, table, throttleMs }),
     [table, shallow, debounceMs, throttleMs]
   );
-}
+};

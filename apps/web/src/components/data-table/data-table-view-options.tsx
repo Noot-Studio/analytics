@@ -26,11 +26,11 @@ interface DataTableViewOptionsProps<TData> extends React.ComponentProps<
   disabled?: boolean;
 }
 
-export function DataTableViewOptions<TData>({
+export const DataTableViewOptions = <TData,>({
   table,
   disabled,
   ...props
-}: DataTableViewOptionsProps<TData>) {
+}: DataTableViewOptionsProps<TData>) => {
   const columns = React.useMemo(
     () =>
       table
@@ -88,4 +88,4 @@ export function DataTableViewOptions<TData>({
       </PopoverContent>
     </Popover>
   );
-}
+};

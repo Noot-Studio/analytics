@@ -634,6 +634,15 @@ const spatialVoxelsOutput = z.object({
 });
 
 export const analyticsRouter = {
+  // Aggregated event-type totals over a date window — backs the Events table.
+  breakdown: protectedProcedure
+    .input(breakdownInput)
+    .handler(async ({ context, input }) => {
+      await assertProjectAccess(input.projectId, context.session.user.id);
+
+      return runQuery(context.ch, buildBreakdownQuery(input), eventsRow);
+    }),
+
   // Daily rollup powered by the AggregatingMergeTree in ClickHouse.
   daily: protectedProcedure
     .input(dailyInput)
@@ -641,113 +650,6 @@ export const analyticsRouter = {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
       return runQuery(context.ch, buildDailyQuery(input), dailyRow);
-    }),
-
-  // DAU + new-vs-returning daily series, plus trailing WAU/MAU.
-  players: protectedProcedure
-    .input(playersInput)
-    .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.projectId, context.session.user.id);
-
-      const { daily, totals } = await runQueries(context.ch, {
-        daily: {
-          query: buildPlayersDailyQuery(input),
-          schema: playersDailyRow,
-        },
-        totals: {
-          query: buildPlayersTotalsQuery(input),
-          schema: playersTotalsRow,
-        },
-      });
-
-      const totalsRow = totals[0] ?? { mau: 0, wau: 0 };
-
-      return playersOutput.parse({
-        daily,
-        mau: totalsRow.mau,
-        wau: totalsRow.wau,
-      });
-    }),
-
-  // Session duration histogram, avg-duration trend, and time-of-day heatmap.
-  sessions: protectedProcedure
-    .input(sessionsInput)
-    .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.projectId, context.session.user.id);
-
-      const { heatmap, histogram, trend } = await runQueries(context.ch, {
-        heatmap: {
-          query: buildSessionsHeatmapQuery(input),
-          schema: sessionsHeatmapRow,
-        },
-        histogram: {
-          query: buildSessionsHistogramQuery(input),
-          schema: sessionsHistogramRow,
-        },
-        trend: {
-          query: buildSessionsTrendQuery(input),
-          schema: sessionsTrendRow,
-        },
-      });
-
-      return sessionsOutput.parse({ heatmap, histogram, trend });
-    }),
-
-  // Per-map/mode breakdown derived from session_start events.
-  maps: protectedProcedure
-    .input(mapsInput)
-    .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.projectId, context.session.user.id);
-
-      const [charts, table] = await Promise.all([
-        runQueries(context.ch, {
-          breakdown: {
-            query: buildMapsBreakdownQuery(input),
-            schema: mapsBreakdownRow,
-          },
-          overTime: {
-            query: buildMapsOverTimeQuery(input),
-            schema: mapsOverTimeRow,
-          },
-        }),
-        paginated(
-          context.ch,
-          buildMapsTableQuery(input),
-          buildMapsTableCountQuery(input),
-          mapsBreakdownRow
-        ),
-      ]);
-
-      return mapsOutput.parse({
-        breakdown: charts.breakdown,
-        overTime: charts.overTime,
-        table,
-      });
-    }),
-
-  // Cohort retention: day-1/7/30 per first-seen cohort plus a maturity-gated
-  // average retention curve. Cohort date comes from player_first_seen; return
-  // activity comes from raw events.
-  retention: protectedProcedure
-    .input(retentionInput)
-    .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.projectId, context.session.user.id);
-
-      const [curve, table] = await Promise.all([
-        runQuery(
-          context.ch,
-          buildRetentionCurveQuery(input),
-          retentionCurveRow
-        ),
-        paginated(
-          context.ch,
-          buildRetentionTableQuery(input),
-          buildRetentionTableCountQuery(input),
-          retentionCohortRow
-        ),
-      ]);
-
-      return retentionOutput.parse({ curve, table });
     }),
 
   // Ad-hoc funnel over user-defined ordered event steps. windowFunnel returns
@@ -782,40 +684,36 @@ export const analyticsRouter = {
       return funnelsOutput.parse({ steps, trend });
     }),
 
-  // Aggregated event-type totals over a date window — backs the Events table.
-  breakdown: protectedProcedure
-    .input(breakdownInput)
+  // Per-map/mode breakdown derived from session_start events.
+  maps: protectedProcedure
+    .input(mapsInput)
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
-      return runQuery(context.ch, buildBreakdownQuery(input), eventsRow);
-    }),
+      const [charts, table] = await Promise.all([
+        runQueries(context.ch, {
+          breakdown: {
+            query: buildMapsBreakdownQuery(input),
+            schema: mapsBreakdownRow,
+          },
+          overTime: {
+            query: buildMapsOverTimeQuery(input),
+            schema: mapsOverTimeRow,
+          },
+        }),
+        paginated(
+          context.ch,
+          buildMapsTableQuery(input),
+          buildMapsTableCountQuery(input),
+          mapsBreakdownRow
+        ),
+      ]);
 
-  // Most recent raw events — for the dashboard's live stream view.
-  recent: protectedProcedure
-    .input(
-      z.object({
-        filters: z.array(filterSchema).max(10).optional(),
-        from: z.iso.datetime().optional(),
-        page: z.number().int().min(1).default(1),
-        perPage: z.number().int().min(1).max(100).default(20),
-        projectId: z.string().min(1),
-        sortBy: z.string().optional(),
-        sortDesc: z.boolean().default(false),
-        to: z.iso.datetime().optional(),
-      })
-    )
-    .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.projectId, context.session.user.id);
-
-      const { rows, total } = await paginated(
-        context.ch,
-        buildRecentRowsQuery(input),
-        buildRecentCountQuery(input),
-        recentRow
-      );
-
-      return { rows, total };
+      return mapsOutput.parse({
+        breakdown: charts.breakdown,
+        overTime: charts.overTime,
+        table,
+      });
     }),
 
   performance: protectedProcedure
@@ -936,6 +834,32 @@ export const analyticsRouter = {
       return playerSessionsOutput.parse({ rows, total });
     }),
 
+  // DAU + new-vs-returning daily series, plus trailing WAU/MAU.
+  players: protectedProcedure
+    .input(playersInput)
+    .handler(async ({ context, input }) => {
+      await assertProjectAccess(input.projectId, context.session.user.id);
+
+      const { daily, totals } = await runQueries(context.ch, {
+        daily: {
+          query: buildPlayersDailyQuery(input),
+          schema: playersDailyRow,
+        },
+        totals: {
+          query: buildPlayersTotalsQuery(input),
+          schema: playersTotalsRow,
+        },
+      });
+
+      const totalsRow = totals[0] ?? { mau: 0, wau: 0 };
+
+      return playersOutput.parse({
+        daily,
+        mau: totalsRow.mau,
+        wau: totalsRow.wau,
+      });
+    }),
+
   // Browsable, paginated list of players active in the range — powers the
   // clickable players table on the Engagement → Players page.
   playersList: protectedProcedure
@@ -953,21 +877,73 @@ export const analyticsRouter = {
       return playersListOutput.parse({ rows, total });
     }),
 
-  // Browsable, paginated list of sessions in the range — powers the clickable
-  // sessions table on the Engagement → Sessions page.
-  sessionsList: protectedProcedure
-    .input(sessionsListInput)
+  // Most recent raw events — for the dashboard's live stream view.
+  recent: protectedProcedure
+    .input(
+      z.object({
+        filters: z.array(filterSchema).max(10).optional(),
+        from: z.iso.datetime().optional(),
+        page: z.number().int().min(1).default(1),
+        perPage: z.number().int().min(1).max(100).default(20),
+        projectId: z.string().min(1),
+        sortBy: z.string().optional(),
+        sortDesc: z.boolean().default(false),
+        to: z.iso.datetime().optional(),
+      })
+    )
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
       const { rows, total } = await paginated(
         context.ch,
-        buildSessionsListQuery(input),
-        buildSessionsListCountQuery(input),
-        sessionsListRow
+        buildRecentRowsQuery(input),
+        buildRecentCountQuery(input),
+        recentRow
       );
 
-      return sessionsListOutput.parse({ rows, total });
+      return { rows, total };
+    }),
+
+  // Cohort retention: day-1/7/30 per first-seen cohort plus a maturity-gated
+  // average retention curve. Cohort date comes from player_first_seen; return
+  // activity comes from raw events.
+  retention: protectedProcedure
+    .input(retentionInput)
+    .handler(async ({ context, input }) => {
+      await assertProjectAccess(input.projectId, context.session.user.id);
+
+      const [curve, table] = await Promise.all([
+        runQuery(
+          context.ch,
+          buildRetentionCurveQuery(input),
+          retentionCurveRow
+        ),
+        paginated(
+          context.ch,
+          buildRetentionTableQuery(input),
+          buildRetentionTableCountQuery(input),
+          retentionCohortRow
+        ),
+      ]);
+
+      return retentionOutput.parse({ curve, table });
+    }),
+
+  // Paginated, filterable event log for one session — kept separate from
+  // sessionProfile so table interactions don't refetch the aggregate queries.
+  sessionEvents: protectedProcedure
+    .input(sessionEventsInput)
+    .handler(async ({ context, input }) => {
+      await assertProjectAccess(input.projectId, context.session.user.id);
+
+      const { rows, total } = await paginated(
+        context.ch,
+        buildSessionEventsQuery(input),
+        buildSessionEventsCountQuery(input),
+        sessionEventRow
+      );
+
+      return sessionEventsOutput.parse({ rows, total });
     }),
 
   // Single-session detail: meta header + the session's paginated event stream.
@@ -1018,21 +994,45 @@ export const analyticsRouter = {
       });
     }),
 
-  // Paginated, filterable event log for one session — kept separate from
-  // sessionProfile so table interactions don't refetch the aggregate queries.
-  sessionEvents: protectedProcedure
-    .input(sessionEventsInput)
+  // Session duration histogram, avg-duration trend, and time-of-day heatmap.
+  sessions: protectedProcedure
+    .input(sessionsInput)
+    .handler(async ({ context, input }) => {
+      await assertProjectAccess(input.projectId, context.session.user.id);
+
+      const { heatmap, histogram, trend } = await runQueries(context.ch, {
+        heatmap: {
+          query: buildSessionsHeatmapQuery(input),
+          schema: sessionsHeatmapRow,
+        },
+        histogram: {
+          query: buildSessionsHistogramQuery(input),
+          schema: sessionsHistogramRow,
+        },
+        trend: {
+          query: buildSessionsTrendQuery(input),
+          schema: sessionsTrendRow,
+        },
+      });
+
+      return sessionsOutput.parse({ heatmap, histogram, trend });
+    }),
+
+  // Browsable, paginated list of sessions in the range — powers the clickable
+  // sessions table on the Engagement → Sessions page.
+  sessionsList: protectedProcedure
+    .input(sessionsListInput)
     .handler(async ({ context, input }) => {
       await assertProjectAccess(input.projectId, context.session.user.id);
 
       const { rows, total } = await paginated(
         context.ch,
-        buildSessionEventsQuery(input),
-        buildSessionEventsCountQuery(input),
-        sessionEventRow
+        buildSessionsListQuery(input),
+        buildSessionsListCountQuery(input),
+        sessionsListRow
       );
 
-      return sessionEventsOutput.parse({ rows, total });
+      return sessionsListOutput.parse({ rows, total });
     }),
   spatial: {
     scenes: protectedProcedure

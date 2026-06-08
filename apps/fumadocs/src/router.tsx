@@ -4,11 +4,10 @@ import { NotFound } from "@/components/not-found";
 
 import { routeTree } from "./routeTree.gen";
 
-export function getRouter() {
-  return createTanStackRouter({
+export const getRouter = () =>
+  createTanStackRouter({
     defaultNotFoundComponent: NotFound,
     defaultPreload: "intent",
     routeTree,
     scrollRestoration: true,
   });
-}

@@ -174,7 +174,8 @@ export const buildDensityGrid = (
   return { center, data, dims, size };
 };
 
-const VERTEX_SHADER = /* glsl */ `
+/* glsl */
+const VERTEX_SHADER = `
 out vec3 vOrigin;
 out vec3 vDirection;
 
@@ -187,7 +188,8 @@ void main() {
 }
 `;
 
-const FRAGMENT_SHADER = /* glsl */ `
+/* glsl */
+const FRAGMENT_SHADER = `
 precision highp float;
 precision highp sampler3D;
 

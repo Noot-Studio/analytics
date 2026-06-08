@@ -47,6 +47,7 @@ app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
 export const apiHandler = new OpenAPIHandler(appRouter, {
   interceptors: [
+    // oxlint-disable-next-line promise/prefer-await-to-callbacks -- oRPC interceptor API takes a synchronous error callback
     onError((error) => {
       console.error(error);
     }),
@@ -60,6 +61,7 @@ export const apiHandler = new OpenAPIHandler(appRouter, {
 
 export const rpcHandler = new RPCHandler(appRouter, {
   interceptors: [
+    // oxlint-disable-next-line promise/prefer-await-to-callbacks -- oRPC interceptor API takes a synchronous error callback
     onError((error) => {
       console.error(error);
     }),

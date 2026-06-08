@@ -25,16 +25,16 @@ export const SESSIONS_CTE = `
           GROUP BY session_id, event_date
         )`;
 
-function sessionsParams(input: SessionsInput): Record<string, unknown> {
-  return {
-    from: input.from,
-    projectId: input.projectId,
-    to: input.to,
-  };
-}
+const sessionsParams = (input: SessionsInput): Record<string, unknown> => ({
+  from: input.from,
+  projectId: input.projectId,
+  to: input.to,
+});
 
 // Session duration histogram, bucketed by duration ranges.
-export function buildSessionsHistogramQuery(input: SessionsInput): BuiltQuery {
+export const buildSessionsHistogramQuery = (
+  input: SessionsInput
+): BuiltQuery => {
   const query = `${SESSIONS_CTE}
             SELECT
               multiIf(duration < 60, '0-1m',
@@ -52,10 +52,10 @@ export function buildSessionsHistogramQuery(input: SessionsInput): BuiltQuery {
           `;
 
   return { params: sessionsParams(input), query };
-}
+};
 
 // Average session duration trend per day.
-export function buildSessionsTrendQuery(input: SessionsInput): BuiltQuery {
+export const buildSessionsTrendQuery = (input: SessionsInput): BuiltQuery => {
   const query = `${SESSIONS_CTE}
             SELECT
               toString(event_date)        AS event_date,
@@ -66,10 +66,10 @@ export function buildSessionsTrendQuery(input: SessionsInput): BuiltQuery {
           `;
 
   return { params: sessionsParams(input), query };
-}
+};
 
 // Time-of-day heatmap of session starts, by weekday and hour.
-export function buildSessionsHeatmapQuery(input: SessionsInput): BuiltQuery {
+export const buildSessionsHeatmapQuery = (input: SessionsInput): BuiltQuery => {
   const query = `${SESSIONS_CTE}
             SELECT
               toUInt8(toDayOfWeek(started_at)) AS weekday,
@@ -81,4 +81,4 @@ export function buildSessionsHeatmapQuery(input: SessionsInput): BuiltQuery {
           `;
 
   return { params: sessionsParams(input), query };
-}
+};

@@ -8,5 +8,7 @@ export const env = createEnv({
   },
   clientPrefix: "VITE_",
   emptyStringAsUndefined: true,
-  runtimeEnv: (import.meta as any).env,
+  runtimeEnv: (
+    import.meta as unknown as { env: Record<string, string | undefined> }
+  ).env,
 });

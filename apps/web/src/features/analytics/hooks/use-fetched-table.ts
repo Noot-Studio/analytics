@@ -69,7 +69,7 @@ const isPaginatedResult = <TRow>(
  * pagination math, and `useDataTable` wiring. Callers supply only the columns,
  * a key prefix, and a route-bound query builder.
  */
-export function useFetchedTable<TRow, TSortBy extends string = string>(
+export const useFetchedTable = <TRow, TSortBy extends string = string>(
   options: UseFetchedTableOptions<TRow, TSortBy>
 ): {
   table: Table<TRow>;
@@ -77,7 +77,7 @@ export function useFetchedTable<TRow, TSortBy extends string = string>(
   total: number;
   query: UseQueryResult<TRow[] | { rows: TRow[]; total: number }>;
   apiFilters: Filter[];
-} {
+} => {
   const {
     columns,
     queryKeyPrefix,
@@ -168,4 +168,4 @@ export function useFetchedTable<TRow, TSortBy extends string = string>(
   });
 
   return { apiFilters, query, rows, table, total };
-}
+};

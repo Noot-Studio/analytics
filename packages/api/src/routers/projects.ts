@@ -26,13 +26,12 @@ const PROJECT_FILTER_COLUMNS = new Set(["name", "slug", "environment"]);
 // Projects per organization; matches the dashboard's unpaginated list cap.
 const MAX_PROJECTS_PER_ORG = 100;
 
-function generateSlug(name: string): string {
-  return name
+const generateSlug = (name: string): string =>
+  name
     .toLowerCase()
-    .replaceAll(/[^a-z0-9]+/g, "-")
-    .replaceAll(/^-|-$/g, "")
+    .replaceAll(/[^a-z0-9]+/gu, "-")
+    .replaceAll(/^-|-$/gu, "")
     .slice(0, 64);
-}
 
 export const projectsRouter = {
   create: protectedProcedure

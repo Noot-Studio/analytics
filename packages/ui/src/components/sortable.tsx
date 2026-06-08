@@ -261,7 +261,7 @@ function SortableRoot<T>(props: SortableRootProps<T>) {
     () => ({
       draggable: `
         To pick up a sortable item, press space or enter.
-        While dragging, use the ${orientation === "vertical" ? "up and down" : (orientation === "horizontal" ? "left and right" : "arrow")} keys to move the item.
+        While dragging, use the ${orientation === "vertical" ? "up and down" : orientation === "horizontal" ? "left and right" : "arrow"} keys to move the item.
         Press space or enter again to drop the item in its new position, or press escape to cancel.
       `,
     }),
@@ -576,9 +576,9 @@ function SortableOverlay(props: SortableOverlayProps) {
     >
       <SortableOverlayContext.Provider value={true}>
         {context.activeId
-          ? (typeof children === "function"
+          ? typeof children === "function"
             ? children({ value: context.activeId })
-            : children)
+            : children
           : null}
       </SortableOverlayContext.Provider>
     </DragOverlay>,

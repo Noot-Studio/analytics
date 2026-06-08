@@ -9,7 +9,7 @@ export interface DailyInput {
 }
 
 // Daily rollup powered by the AggregatingMergeTree in ClickHouse.
-export function buildDailyQuery(input: DailyInput): BuiltQuery {
+export const buildDailyQuery = (input: DailyInput): BuiltQuery => {
   const params: Record<string, unknown> = {
     from: input.from,
     projectId: input.projectId,
@@ -31,4 +31,4 @@ export function buildDailyQuery(input: DailyInput): BuiltQuery {
         `;
 
   return { params, query };
-}
+};

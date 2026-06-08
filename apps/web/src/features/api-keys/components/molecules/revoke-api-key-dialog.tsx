@@ -17,47 +17,44 @@ interface RevokeApiKeyDialogProps {
   isPending: boolean;
 }
 
-export function RevokeApiKeyDialog({
+export const RevokeApiKeyDialog = ({
   isPending,
   keyName,
   onConfirm,
   onOpenChange,
   open,
-}: RevokeApiKeyDialogProps) {
-  return (
-    <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Revoke API Key</DialogTitle>
-          <DialogDescription>
-            Revoke{" "}
-            <span className="font-medium text-foreground">{keyName}</span>? Any
-            game client using this key will stop working immediately. This
-            cannot be undone.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button
-            onClick={() => onOpenChange(false)}
-            type="button"
-            variant="outline"
-          >
-            Cancel
-          </Button>
-          <Button
-            disabled={isPending}
-            onClick={onConfirm}
-            type="button"
-            variant="destructive"
-          >
-            {isPending ? (
-              <DotmSquare4 ariaLabel="Revoking" dotSize={2} size={18} />
-            ) : (
-              "Revoke"
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
+}: RevokeApiKeyDialogProps) => (
+  <Dialog onOpenChange={onOpenChange} open={open}>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Revoke API Key</DialogTitle>
+        <DialogDescription>
+          Revoke <span className="font-medium text-foreground">{keyName}</span>?
+          Any game client using this key will stop working immediately. This
+          cannot be undone.
+        </DialogDescription>
+      </DialogHeader>
+      <DialogFooter>
+        <Button
+          onClick={() => onOpenChange(false)}
+          type="button"
+          variant="outline"
+        >
+          Cancel
+        </Button>
+        <Button
+          disabled={isPending}
+          onClick={onConfirm}
+          type="button"
+          variant="destructive"
+        >
+          {isPending ? (
+            <DotmSquare4 ariaLabel="Revoking" dotSize={2} size={18} />
+          ) : (
+            "Revoke"
+          )}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+);

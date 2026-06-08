@@ -10,20 +10,20 @@ export const source = loader({
   source: docs.toFumadocsSource(),
 });
 
-export function markdownPathToSlugs(segs: string[]) {
+export const markdownPathToSlugs = (segs: string[]) => {
   if (segs.length === 0) {
     return [];
   }
 
   const out = [...segs];
-  out[out.length - 1] = out.at(-1).replace(/\.md$/, "");
+  out[out.length - 1] = out.at(-1).replace(/\.md$/u, "");
   if (out.length === 1 && out[0] === "index") {
     out.pop();
   }
   return out;
-}
+};
 
-export function slugsToMarkdownPath(slugs: string[]) {
+export const slugsToMarkdownPath = (slugs: string[]) => {
   const segments = [...slugs];
   if (segments.length === 0) {
     segments.push("index.md");
@@ -35,9 +35,9 @@ export function slugsToMarkdownPath(slugs: string[]) {
     segments,
     url: `${docsRoute}/${segments.join("/")}`,
   };
-}
+};
 
-export function getPageMarkdownUrl(slugs: string[]) {
+export const getPageMarkdownUrl = (slugs: string[]) => {
   const segments = [...slugs];
   if (segments.length === 0) {
     segments.push("index.md");
@@ -49,12 +49,12 @@ export function getPageMarkdownUrl(slugs: string[]) {
     segments,
     url: `${docsRoute}/${segments.join("/")}`,
   };
-}
+};
 
-export async function getLLMText(page: (typeof source)["$inferPage"]) {
+export const getLLMText = async (page: (typeof source)["$inferPage"]) => {
   const processed = await page.data.getText("processed");
 
   return `# ${page.data.title} (${page.url})
 
 ${processed}`;
-}
+};

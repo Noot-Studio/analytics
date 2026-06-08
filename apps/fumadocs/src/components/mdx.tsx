@@ -3,13 +3,11 @@ import type { MDXComponents } from "mdx/types";
 
 import { Hoppscotch } from "./hoppscotch";
 
-export function getMDXComponents(components?: MDXComponents) {
-  return {
-    ...defaultMdxComponents,
-    Hoppscotch,
-    ...components,
-  } satisfies MDXComponents;
-}
+export const getMDXComponents = (components?: MDXComponents) => ({
+  ...defaultMdxComponents,
+  Hoppscotch,
+  ...components,
+});
 
 export const useMDXComponents = getMDXComponents;
 

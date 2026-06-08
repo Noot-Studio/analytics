@@ -8,13 +8,13 @@ import * as React from "react";
  * A custom hook that converts a callback to a ref to avoid triggering re-renders when passed as a
  * prop or avoid re-executing effects when passed as a dependency
  */
-function useCallbackRef<T extends (...args: never[]) => unknown>(
-  callback: T | undefined
-): T {
-  const callbackRef = React.useRef(callback);
+const useCallbackRef = <T extends (...args: never[]) => unknown>(
+  callbackFn: T | undefined
+): T => {
+  const callbackRef = React.useRef(callbackFn);
 
   React.useEffect(() => {
-    callbackRef.current = callback;
+    callbackRef.current = callbackFn;
   });
 
   // https://github.com/facebook/react/issues/19240
@@ -22,6 +22,6 @@ function useCallbackRef<T extends (...args: never[]) => unknown>(
     () => ((...args) => callbackRef.current?.(...args)) as T,
     []
   );
-}
+};
 
 export { useCallbackRef };

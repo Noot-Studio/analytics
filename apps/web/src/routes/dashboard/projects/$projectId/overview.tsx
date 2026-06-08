@@ -1,11 +1,41 @@
 import { Skeleton } from "@sbox-analytics/ui/components/skeleton";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 
 import {
   analyticsSearchSchema,
   resolveRange,
 } from "@/features/analytics/lib/filters";
 import { DashboardGrid } from "@/features/dashboards/components/organisms/dashboard-grid";
+
+const OverviewPage = () => {
+  const { projectId } = useParams({
+    from: "/dashboard/projects/$projectId/overview",
+  });
+  return <DashboardGrid projectId={projectId} scope="ProjectOverview" />;
+};
+
+const OverviewPending = () => {
+  const cardKeys = Array.from({ length: 3 }, (_, index) => `card-${index}`);
+
+  return (
+    <div className="flex flex-col gap-6 p-4 lg:p-6">
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-7 w-40" />
+        <Skeleton className="h-4 w-28" />
+      </div>
+      <div className="grid gap-4 md:grid-cols-3">
+        {cardKeys.map((key) => (
+          <Skeleton className="h-24 w-full" key={key} />
+        ))}
+      </div>
+      <Skeleton className="h-64 w-full" />
+    </div>
+  );
+};
+
+const OverviewError = () => (
+  <div className="p-4 text-destructive lg:p-6">Failed to load analytics.</div>
+);
 
 export const Route = createFileRoute("/dashboard/projects/$projectId/overview")(
   {
@@ -47,33 +77,3 @@ export const Route = createFileRoute("/dashboard/projects/$projectId/overview")(
     validateSearch: analyticsSearchSchema,
   }
 );
-
-function OverviewPage() {
-  const { projectId } = Route.useParams();
-  return <DashboardGrid projectId={projectId} scope="ProjectOverview" />;
-}
-
-function OverviewPending() {
-  const cardKeys = Array.from({ length: 3 }, (_, index) => `card-${index}`);
-
-  return (
-    <div className="flex flex-col gap-6 p-4 lg:p-6">
-      <div className="flex flex-col gap-2">
-        <Skeleton className="h-7 w-40" />
-        <Skeleton className="h-4 w-28" />
-      </div>
-      <div className="grid gap-4 md:grid-cols-3">
-        {cardKeys.map((key) => (
-          <Skeleton className="h-24 w-full" key={key} />
-        ))}
-      </div>
-      <Skeleton className="h-64 w-full" />
-    </div>
-  );
-}
-
-function OverviewError() {
-  return (
-    <div className="p-4 text-destructive lg:p-6">Failed to load analytics.</div>
-  );
-}
