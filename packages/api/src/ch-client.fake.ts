@@ -16,9 +16,9 @@ export interface FakeChClient extends ChClient {
 // by SQL string, so a parallel batch disambiguates without relying on call
 // order. An unmatched query throws, surfacing a missing fixture instead of
 // silently returning nothing.
-export function createFakeChClient(
+export const createFakeChClient = (
   responses: { query: string; rows: unknown[] }[]
-): FakeChClient {
+): FakeChClient => {
   const calls: FakeChClientCall[] = [];
   return {
     calls,
@@ -33,4 +33,4 @@ export function createFakeChClient(
       return Promise.resolve(match.rows);
     },
   };
-}
+};

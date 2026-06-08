@@ -20,12 +20,14 @@ interface DataTablePaginationProps<TData> extends React.ComponentProps<"div"> {
   pageSizeOptions?: number[];
 }
 
-export function DataTablePagination<TData>({
+const DEFAULT_PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
+
+export const DataTablePagination = <TData,>({
   table,
-  pageSizeOptions = [10, 20, 30, 40, 50],
+  pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
   className,
   ...props
-}: DataTablePaginationProps<TData>) {
+}: DataTablePaginationProps<TData>) => {
   // getPageCount() returns -1 when the count is unknown (manual pagination with
   // no server total) and 0 when empty. Clamp to at least one page so the label
   // never reads "of -1" / "of 0".
@@ -113,4 +115,4 @@ export function DataTablePagination<TData>({
       </div>
     </div>
   );
-}
+};

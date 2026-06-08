@@ -20,11 +20,11 @@ interface HoppscotchProps {
  * Hoppscotch. Create the share link in Hoppscotch (Share → copy link), then
  * pass it as `runUrl`.
  */
-export function Hoppscotch({
+export const Hoppscotch = ({
   runUrl,
   title,
   badgeSrc = DEFAULT_BADGE_SRC,
-}: HoppscotchProps) {
+}: HoppscotchProps) => {
   if (!runUrl || runUrl === PLACEHOLDER) {
     return (
       <div className="rounded-lg border border-dashed border-fd-border bg-fd-muted/40 p-4 text-fd-muted-foreground text-sm">
@@ -45,4 +45,4 @@ export function Hoppscotch({
       <img alt={title} className="my-0 h-8 w-auto" src={badgeSrc} />
     </a>
   );
-}
+};

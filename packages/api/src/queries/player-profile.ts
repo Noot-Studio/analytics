@@ -7,9 +7,10 @@ export interface PlayerProfileInput {
   playerId: string;
 }
 
-function profileParams(input: PlayerProfileInput): Record<string, unknown> {
-  return { playerId: input.playerId, projectId: input.projectId };
-}
+const profileParams = (input: PlayerProfileInput): Record<string, unknown> => ({
+  playerId: input.playerId,
+  projectId: input.projectId,
+});
 
 // Per-session durations for one player — shared by the lifetime stats, map
 // distribution, and duration histogram queries.
@@ -26,9 +27,9 @@ const PLAYER_SESSIONS_CTE = `
 
 // Lifetime stats: first/last seen, totals, plus per-session aggregates derived
 // from the shared player_sessions CTE.
-export function buildPlayerLifetimeQuery(
+export const buildPlayerLifetimeQuery = (
   input: PlayerProfileInput
-): BuiltQuery {
+): BuiltQuery => {
   const query = `${PLAYER_SESSIONS_CTE}
               SELECT
                 toString(min(timestamp)) AS first_seen,
@@ -46,12 +47,12 @@ export function buildPlayerLifetimeQuery(
             `;
 
   return { params: profileParams(input), query };
-}
+};
 
 // Last 12 weeks of daily activity — the profile's calendar window.
-export function buildPlayerActivityQuery(
+export const buildPlayerActivityQuery = (
   input: PlayerProfileInput
-): BuiltQuery {
+): BuiltQuery => {
   const query = `
               SELECT
                 toString(toDate(timestamp)) AS day,
@@ -66,12 +67,12 @@ export function buildPlayerActivityQuery(
             `;
 
   return { params: profileParams(input), query };
-}
+};
 
 // Event density per weekday × hour — feeds the "when they play" heatmap.
-export function buildPlayerHourGridQuery(
+export const buildPlayerHourGridQuery = (
   input: PlayerProfileInput
-): BuiltQuery {
+): BuiltQuery => {
   const query = `
               SELECT
                 toUInt8(toDayOfWeek(timestamp)) AS weekday,
@@ -85,12 +86,12 @@ export function buildPlayerHourGridQuery(
             `;
 
   return { params: profileParams(input), query };
-}
+};
 
 // Per-event-type totals for the player.
-export function buildPlayerEventBreakdownQuery(
+export const buildPlayerEventBreakdownQuery = (
   input: PlayerProfileInput
-): BuiltQuery {
+): BuiltQuery => {
   const query = `
               SELECT
                 event_type,
@@ -103,10 +104,10 @@ export function buildPlayerEventBreakdownQuery(
             `;
 
   return { params: profileParams(input), query };
-}
+};
 
 // Per-map session counts and playtime, map taken from each session's first event.
-export function buildPlayerMapsQuery(input: PlayerProfileInput): BuiltQuery {
+export const buildPlayerMapsQuery = (input: PlayerProfileInput): BuiltQuery => {
   const query = `${PLAYER_SESSIONS_CTE}
               SELECT
                 map,
@@ -118,12 +119,12 @@ export function buildPlayerMapsQuery(input: PlayerProfileInput): BuiltQuery {
             `;
 
   return { params: profileParams(input), query };
-}
+};
 
 // Session duration histogram — same buckets as the project-wide sessions histogram.
-export function buildPlayerHistogramQuery(
+export const buildPlayerHistogramQuery = (
   input: PlayerProfileInput
-): BuiltQuery {
+): BuiltQuery => {
   const query = `${PLAYER_SESSIONS_CTE}
               SELECT
                 multiIf(duration_seconds < 60, '0-1m',
@@ -141,10 +142,12 @@ export function buildPlayerHistogramQuery(
             `;
 
   return { params: profileParams(input), query };
-}
+};
 
 // Latest hardware/client specs reported on the player's session_start events.
-export function buildPlayerSpecsQuery(input: PlayerProfileInput): BuiltQuery {
+export const buildPlayerSpecsQuery = (
+  input: PlayerProfileInput
+): BuiltQuery => {
   const query = `
               SELECT
                 argMax(JSONExtractString(properties, 'platform'), timestamp)   AS platform,
@@ -162,12 +165,12 @@ export function buildPlayerSpecsQuery(input: PlayerProfileInput): BuiltQuery {
             `;
 
   return { params: profileParams(input), query };
-}
+};
 
 // Most recent 100 raw events for the player's timeline.
-export function buildPlayerTimelineQuery(
+export const buildPlayerTimelineQuery = (
   input: PlayerProfileInput
-): BuiltQuery {
+): BuiltQuery => {
   const query = `
               SELECT
                 event_type,
@@ -182,13 +185,13 @@ export function buildPlayerTimelineQuery(
             `;
 
   return { params: profileParams(input), query };
-}
+};
 
 // Per-player retention: cohort = first-seen day; retained_dN is 1 when the
 // player had any activity exactly N days after their cohort day.
-export function buildPlayerRetentionQuery(
+export const buildPlayerRetentionQuery = (
   input: PlayerProfileInput
-): BuiltQuery {
+): BuiltQuery => {
   const query = `
               WITH (
                 SELECT min(toDate(timestamp))
@@ -207,4 +210,4 @@ export function buildPlayerRetentionQuery(
             `;
 
   return { params: profileParams(input), query };
-}
+};

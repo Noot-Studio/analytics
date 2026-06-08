@@ -7,7 +7,7 @@ import { routeTree } from "./routeTree.gen";
 import { orpc, queryClient } from "./utils/orpc";
 
 const router = createRouter({
-  Wrap: function WrapComponent({ children }: { children: React.ReactNode }) {
+  Wrap: function Wrap({ children }: { children: React.ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );

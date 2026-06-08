@@ -1,6 +1,13 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 
 import { PlayerProfileView } from "@/features/analytics/components/organisms/player-profile-view";
+
+const PlayerProfilePage = () => {
+  const { playerId, projectId } = useParams({
+    from: "/dashboard/projects/$projectId/players_/$playerId",
+  });
+  return <PlayerProfileView playerId={playerId} projectId={projectId} />;
+};
 
 export const Route = createFileRoute(
   "/dashboard/projects/$projectId/players_/$playerId"
@@ -39,8 +46,3 @@ export const Route = createFileRoute(
     }
   },
 });
-
-function PlayerProfilePage() {
-  const { playerId, projectId } = Route.useParams();
-  return <PlayerProfileView playerId={playerId} projectId={projectId} />;
-}

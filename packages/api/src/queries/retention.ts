@@ -76,7 +76,7 @@ const RETENTION_COHORT_SELECT = `
         GROUP BY cohort_date`;
 
 // Server-side filtered/sorted/paginated cohort rows for the data-table.
-export function buildRetentionTableQuery(input: RetentionInput): BuiltQuery {
+export const buildRetentionTableQuery = (input: RetentionInput): BuiltQuery => {
   const tableSortCol = input.sortBy
     ? (RETENTION_SORT_COLS[input.sortBy] ?? "cohort_date")
     : "cohort_date";
@@ -106,12 +106,12 @@ export function buildRetentionTableQuery(input: RetentionInput): BuiltQuery {
           `;
 
   return { params, query };
-}
+};
 
 // Count of filtered cohort rows, so pagination reflects the filtered total.
-export function buildRetentionTableCountQuery(
+export const buildRetentionTableCountQuery = (
   input: RetentionInput
-): BuiltQuery {
+): BuiltQuery => {
   const params: Record<string, unknown> = {
     from: input.from,
     projectId: input.projectId,
@@ -134,11 +134,11 @@ export function buildRetentionTableCountQuery(
           `;
 
   return { params, query };
-}
+};
 
 // Aggregate retention curve — retained players per day_offset, over cohorts old
 // enough to have a full 30-day window.
-export function buildRetentionCurveQuery(input: RetentionInput): BuiltQuery {
+export const buildRetentionCurveQuery = (input: RetentionInput): BuiltQuery => {
   const params: Record<string, unknown> = {
     from: input.from,
     projectId: input.projectId,
@@ -156,4 +156,4 @@ export function buildRetentionCurveQuery(input: RetentionInput): BuiltQuery {
           `;
 
   return { params, query };
-}
+};

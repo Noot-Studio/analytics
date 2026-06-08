@@ -190,9 +190,9 @@ function StepperItem({
   const state: StepState =
     completed || step < activeStep
       ? "completed"
-      : (activeStep === step
+      : activeStep === step
         ? "active"
-        : "inactive");
+        : "inactive";
 
   const isLoading = loading && step === activeStep;
 
@@ -319,7 +319,7 @@ function StepperTrigger({
       id={id}
       aria-selected={isSelected}
       aria-controls={panelId}
-      tabIndex={typeof tabIndex === "number" ? tabIndex : (isSelected ? 0 : -1)}
+      tabIndex={typeof tabIndex === "number" ? tabIndex : isSelected ? 0 : -1}
       data-slot="stepper-trigger"
       data-state={state}
       data-loading={isLoading}

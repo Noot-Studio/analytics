@@ -9,7 +9,7 @@ export interface PlayersInput {
 }
 
 // DAU + new-vs-returning daily series.
-export function buildPlayersDailyQuery(input: PlayersInput): BuiltQuery {
+export const buildPlayersDailyQuery = (input: PlayersInput): BuiltQuery => {
   const params: Record<string, unknown> = {
     from: input.from,
     projectId: input.projectId,
@@ -44,10 +44,10 @@ export function buildPlayersDailyQuery(input: PlayersInput): BuiltQuery {
         `;
 
   return { params, query };
-}
+};
 
 // Trailing WAU/MAU totals over the 30-day window ending at `to`.
-export function buildPlayersTotalsQuery(input: PlayersInput): BuiltQuery {
+export const buildPlayersTotalsQuery = (input: PlayersInput): BuiltQuery => {
   const params: Record<string, unknown> = {
     from: input.from,
     projectId: input.projectId,
@@ -64,4 +64,4 @@ export function buildPlayersTotalsQuery(input: PlayersInput): BuiltQuery {
         `;
 
   return { params, query };
-}
+};

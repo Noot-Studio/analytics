@@ -1,7 +1,14 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 
 import { RetentionView } from "@/features/analytics/components/organisms/retention-view";
 import { analyticsSearchSchema } from "@/features/analytics/lib/filters";
+
+const RetentionPage = () => {
+  const { projectId } = useParams({
+    from: "/dashboard/projects/$projectId/retention",
+  });
+  return <RetentionView projectId={projectId} />;
+};
 
 export const Route = createFileRoute(
   "/dashboard/projects/$projectId/retention"
@@ -9,8 +16,3 @@ export const Route = createFileRoute(
   component: RetentionPage,
   validateSearch: analyticsSearchSchema,
 });
-
-function RetentionPage() {
-  const { projectId } = Route.useParams();
-  return <RetentionView projectId={projectId} />;
-}

@@ -1,6 +1,13 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 
 import { ProjectSettingsView } from "@/features/projects/components/organisms/project-settings-view";
+
+const SettingsPage = () => {
+  const { projectId } = useParams({
+    from: "/dashboard/projects/$projectId/settings",
+  });
+  return <ProjectSettingsView projectId={projectId} />;
+};
 
 export const Route = createFileRoute("/dashboard/projects/$projectId/settings")(
   {
@@ -9,8 +16,3 @@ export const Route = createFileRoute("/dashboard/projects/$projectId/settings")(
     validateSearch: (search: Record<string, unknown>) => search,
   }
 );
-
-function SettingsPage() {
-  const { projectId } = Route.useParams();
-  return <ProjectSettingsView projectId={projectId} />;
-}

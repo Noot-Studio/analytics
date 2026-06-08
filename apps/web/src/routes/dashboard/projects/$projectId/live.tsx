@@ -1,6 +1,13 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 
 import { LiveEventsView } from "@/features/analytics/components/organisms/live-events-view";
+
+const LivePage = () => {
+  const { projectId } = useParams({
+    from: "/dashboard/projects/$projectId/live",
+  });
+  return <LiveEventsView projectId={projectId} />;
+};
 
 export const Route = createFileRoute("/dashboard/projects/$projectId/live")({
   component: LivePage,
@@ -18,8 +25,3 @@ export const Route = createFileRoute("/dashboard/projects/$projectId/live")({
     }
   },
 });
-
-function LivePage() {
-  const { projectId } = Route.useParams();
-  return <LiveEventsView projectId={projectId} />;
-}

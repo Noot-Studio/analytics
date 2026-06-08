@@ -1,6 +1,13 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 
 import { SessionProfileView } from "@/features/analytics/components/organisms/session-profile-view";
+
+const SessionProfilePage = () => {
+  const { projectId, sessionId } = useParams({
+    from: "/dashboard/projects/$projectId/sessions_/$sessionId",
+  });
+  return <SessionProfileView projectId={projectId} sessionId={sessionId} />;
+};
 
 export const Route = createFileRoute(
   "/dashboard/projects/$projectId/sessions_/$sessionId"
@@ -39,8 +46,3 @@ export const Route = createFileRoute(
     }
   },
 });
-
-function SessionProfilePage() {
-  const { projectId, sessionId } = Route.useParams();
-  return <SessionProfileView projectId={projectId} sessionId={sessionId} />;
-}

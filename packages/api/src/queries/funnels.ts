@@ -18,10 +18,12 @@ export interface FunnelsInput {
 
 // One {s0…sN}=event_type binding plus the windowFunnel CTE shared by both
 // queries; conditions interpolate the ordered step params 1:1.
-function funnelsBase(input: FunnelsInput): {
+const funnelsBase = (
+  input: FunnelsInput
+): {
   levelsCte: string;
   params: Record<string, unknown>;
-} {
+} => {
   const conditions = input.steps
     .map((_step, index) => `event_type = {s${index}:String}`)
     .join(", ");
@@ -52,10 +54,10 @@ function funnelsBase(input: FunnelsInput): {
       `;
 
   return { levelsCte, params };
-}
+};
 
 // Player counts per furthest funnel level reached (1-indexed; 0 = no entry).
-export function buildFunnelsLevelsQuery(input: FunnelsInput): BuiltQuery {
+export const buildFunnelsLevelsQuery = (input: FunnelsInput): BuiltQuery => {
   const { levelsCte, params } = funnelsBase(input);
 
   const query = `${levelsCte}
@@ -67,10 +69,10 @@ export function buildFunnelsLevelsQuery(input: FunnelsInput): BuiltQuery {
           `;
 
   return { params, query };
-}
+};
 
 // First-touch conversion trend: started vs fully-completed players per day.
-export function buildFunnelsTrendQuery(input: FunnelsInput): BuiltQuery {
+export const buildFunnelsTrendQuery = (input: FunnelsInput): BuiltQuery => {
   const { levelsCte, params } = funnelsBase(input);
 
   const query = `${levelsCte}
@@ -88,4 +90,4 @@ export function buildFunnelsTrendQuery(input: FunnelsInput): BuiltQuery {
     params: { ...params, fullLevel: input.steps.length },
     query,
   };
-}
+};

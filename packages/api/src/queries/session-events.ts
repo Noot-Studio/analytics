@@ -19,10 +19,10 @@ const SAFE_SORT_COLUMNS = new Set(["timestamp", "event_type"]);
 
 // Shared WHERE/params construction so the rows and count queries filter the
 // same session. `extra` adds the rows-only pagination params.
-function buildWhere(
+const buildWhere = (
   input: SessionEventsInput,
   extra: Record<string, unknown>
-): { whereClause: string; params: Record<string, unknown> } {
+): { whereClause: string; params: Record<string, unknown> } => {
   const params: Record<string, unknown> = {
     projectId: input.projectId,
     sessionId: input.sessionId,
@@ -36,10 +36,12 @@ function buildWhere(
     conditions.push(condition);
   }
   return { params, whereClause: conditions.join(" AND ") };
-}
+};
 
 // One page of a session's event log.
-export function buildSessionEventsQuery(input: SessionEventsInput): BuiltQuery {
+export const buildSessionEventsQuery = (
+  input: SessionEventsInput
+): BuiltQuery => {
   const sortCol =
     input.sortBy && SAFE_SORT_COLUMNS.has(input.sortBy)
       ? input.sortBy
@@ -64,12 +66,12 @@ export function buildSessionEventsQuery(input: SessionEventsInput): BuiltQuery {
           `;
 
   return { params, query };
-}
+};
 
 // Count of matching events, so pagination reflects the filtered total.
-export function buildSessionEventsCountQuery(
+export const buildSessionEventsCountQuery = (
   input: SessionEventsInput
-): BuiltQuery {
+): BuiltQuery => {
   const { params, whereClause } = buildWhere(input, {});
 
   const query = `
@@ -79,4 +81,4 @@ export function buildSessionEventsCountQuery(
           `;
 
   return { params, query };
-}
+};

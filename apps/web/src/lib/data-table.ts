@@ -7,28 +7,31 @@ import type {
   FilterVariant,
 } from "@/types/data-table";
 
-export function getColumnPinningStyle<TData>({
+export const getColumnPinningStyle = <TData>({
   column,
   withBorder = false,
 }: {
   column: Column<TData>;
   withBorder?: boolean;
-}): React.CSSProperties {
+}): React.CSSProperties => {
   const isPinned = column.getIsPinned();
   const isLastLeftPinnedColumn =
     isPinned === "left" && column.getIsLastColumn("left");
   const isFirstRightPinnedColumn =
     isPinned === "right" && column.getIsFirstColumn("right");
 
+  let boxShadow: string | undefined;
+  if (withBorder) {
+    if (isLastLeftPinnedColumn) {
+      boxShadow = "-4px 0 4px -4px var(--border) inset";
+    } else if (isFirstRightPinnedColumn) {
+      boxShadow = "4px 0 4px -4px var(--border) inset";
+    }
+  }
+
   return {
     background: isPinned ? "var(--background)" : "var(--background)",
-    boxShadow: withBorder
-      ? isLastLeftPinnedColumn
-        ? "-4px 0 4px -4px var(--border) inset"
-        : isFirstRightPinnedColumn
-          ? "4px 0 4px -4px var(--border) inset"
-          : undefined
-      : undefined,
+    boxShadow,
     left: isPinned === "left" ? `${column.getStart("left")}px` : undefined,
     opacity: isPinned ? 0.97 : 1,
     position: isPinned ? "sticky" : "relative",
@@ -36,9 +39,9 @@ export function getColumnPinningStyle<TData>({
     width: column.getSize(),
     zIndex: isPinned ? 1 : undefined,
   };
-}
+};
 
-export function getFilterOperators(filterVariant: FilterVariant) {
+export const getFilterOperators = (filterVariant: FilterVariant) => {
   const operatorMap: Record<
     FilterVariant,
     { label: string; value: FilterOperator }[]
@@ -54,18 +57,18 @@ export function getFilterOperators(filterVariant: FilterVariant) {
   };
 
   return operatorMap[filterVariant] ?? dataTableConfig.textOperators;
-}
+};
 
-export function getDefaultFilterOperator(filterVariant: FilterVariant) {
+export const getDefaultFilterOperator = (filterVariant: FilterVariant) => {
   const operators = getFilterOperators(filterVariant);
 
   return operators[0]?.value ?? (filterVariant === "text" ? "iLike" : "eq");
-}
+};
 
-export function getValidFilters<TData>(
+export const getValidFilters = <TData>(
   filters: ExtendedColumnFilter<TData>[]
-): ExtendedColumnFilter<TData>[] {
-  return filters.filter(
+): ExtendedColumnFilter<TData>[] =>
+  filters.filter(
     (filter) =>
       filter.operator === "isEmpty" ||
       filter.operator === "isNotEmpty" ||
@@ -75,4 +78,3 @@ export function getValidFilters<TData>(
           filter.value !== null &&
           filter.value !== undefined)
   );
-}

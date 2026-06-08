@@ -22,16 +22,13 @@ interface Range {
 
 type RangeValue = [number, number];
 
-function getIsValidRange(value: unknown): value is RangeValue {
-  return (
-    Array.isArray(value) &&
-    value.length === 2 &&
-    typeof value[0] === "number" &&
-    typeof value[1] === "number"
-  );
-}
+const getIsValidRange = (value: unknown): value is RangeValue =>
+  Array.isArray(value) &&
+  value.length === 2 &&
+  typeof value[0] === "number" &&
+  typeof value[1] === "number";
 
-function parseValuesAsNumbers(value: unknown): RangeValue | undefined {
+const parseValuesAsNumbers = (value: unknown): RangeValue | undefined => {
   if (
     Array.isArray(value) &&
     value.length === 2 &&
@@ -44,17 +41,17 @@ function parseValuesAsNumbers(value: unknown): RangeValue | undefined {
   }
 
   return undefined;
-}
+};
 
 interface DataTableSliderFilterProps<TData> {
   column: Column<TData, unknown>;
   title?: string;
 }
 
-export function DataTableSliderFilter<TData>({
+export const DataTableSliderFilter = <TData,>({
   column,
   title,
-}: DataTableSliderFilterProps<TData>) {
+}: DataTableSliderFilterProps<TData>) => {
   const id = React.useId();
 
   const columnFilterValue = parseValuesAsNumbers(column.getFilterValue());
@@ -83,14 +80,14 @@ export function DataTableSliderFilter<TData>({
     }
 
     const rangeSize = maxValue - minValue;
-    const step =
-      rangeSize <= 20
-        ? 1
-        : (rangeSize <= 100
-          ? Math.ceil(rangeSize / 20)
-          : Math.ceil(rangeSize / 50));
+    let stepValue = 1;
+    if (rangeSize > 20 && rangeSize <= 100) {
+      stepValue = Math.ceil(rangeSize / 20);
+    } else if (rangeSize > 100) {
+      stepValue = Math.ceil(rangeSize / 50);
+    }
 
-    return { max: maxValue, min: minValue, step };
+    return { max: maxValue, min: minValue, step: stepValue };
   }, [column, defaultRange]);
 
   const range = React.useMemo(
@@ -260,4 +257,4 @@ export function DataTableSliderFilter<TData>({
       </PopoverContent>
     </Popover>
   );
-}
+};

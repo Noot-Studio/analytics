@@ -28,7 +28,7 @@ const BREAKDOWN_SORT_COLS = {
   unique_players: "unique_players",
 } as const;
 
-export function buildBreakdownQuery(input: BreakdownInput): BuiltQuery {
+export const buildBreakdownQuery = (input: BreakdownInput): BuiltQuery => {
   const sortCol = BREAKDOWN_SORT_COLS[input.sortBy] ?? "event_count";
   const sortDir = input.sortDesc ? "DESC" : "ASC";
 
@@ -59,4 +59,4 @@ export function buildBreakdownQuery(input: BreakdownInput): BuiltQuery {
         `;
 
   return { params, query };
-}
+};

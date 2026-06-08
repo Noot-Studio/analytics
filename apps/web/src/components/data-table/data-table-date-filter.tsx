@@ -17,32 +17,30 @@ import { formatDate } from "@/lib/format";
 
 type DateSelection = Date[] | DateRange;
 
-function getIsDateRange(value: DateSelection): value is DateRange {
-  return value && typeof value === "object" && !Array.isArray(value);
-}
+const getIsDateRange = (value: DateSelection): value is DateRange =>
+  value && typeof value === "object" && !Array.isArray(value);
 
-function parseAsDate(timestamp: number | string | undefined): Date | undefined {
+const parseAsDate = (
+  timestamp: number | string | undefined
+): Date | undefined => {
   if (!timestamp) {
     return undefined;
   }
   const numericTimestamp =
     typeof timestamp === "string" ? Number(timestamp) : timestamp;
   const date = new Date(numericTimestamp);
-  return !Number.isNaN(date.getTime()) ? date : undefined;
-}
+  return Number.isNaN(date.getTime()) ? undefined : date;
+};
 
-function parseColumnFilterValue(value: unknown) {
+const parseColumnFilterValue = (value: unknown) => {
   if (value === null || value === undefined) {
     return [];
   }
 
   if (Array.isArray(value)) {
-    return value.map((item) => {
-      if (typeof item === "number" || typeof item === "string") {
-        return item;
-      }
-      return;
-    });
+    return value.map((item) =>
+      typeof item === "number" || typeof item === "string" ? item : undefined
+    );
   }
 
   if (typeof value === "string" || typeof value === "number") {
@@ -50,7 +48,7 @@ function parseColumnFilterValue(value: unknown) {
   }
 
   return [];
-}
+};
 
 interface DataTableDateFilterProps<TData> {
   column: Column<TData, unknown>;
@@ -58,11 +56,11 @@ interface DataTableDateFilterProps<TData> {
   multiple?: boolean;
 }
 
-export function DataTableDateFilter<TData>({
+export const DataTableDateFilter = <TData,>({
   column,
   title,
   multiple,
-}: DataTableDateFilterProps<TData>) {
+}: DataTableDateFilterProps<TData>) => {
   const columnFilterValue = column.getFilterValue();
 
   const selectedDates = React.useMemo<DateSelection>(() => {
@@ -228,7 +226,7 @@ export function DataTableDateFilter<TData>({
             captionLayout="dropdown"
             mode="single"
             selected={
-              !getIsDateRange(selectedDates) ? selectedDates[0] : undefined
+              getIsDateRange(selectedDates) ? undefined : selectedDates[0]
             }
             onSelect={onSelect}
           />
@@ -236,4 +234,4 @@ export function DataTableDateFilter<TData>({
       </PopoverContent>
     </Popover>
   );
-}
+};

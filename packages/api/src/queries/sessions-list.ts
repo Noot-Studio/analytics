@@ -37,10 +37,10 @@ const ISO_Z_SUFFIX = /Z$/u;
 
 // Shared params + session-select construction so the rows and count queries
 // filter the same window.
-function buildSessionSelect(
+const buildSessionSelect = (
   input: SessionsListInput,
   extra: Record<string, unknown>
-): { sessionSelect: string; params: Record<string, unknown> } {
+): { sessionSelect: string; params: Record<string, unknown> } => {
   const params: Record<string, unknown> = {
     from: input.from.replace(ISO_Z_SUFFIX, ""),
     projectId: input.projectId,
@@ -72,10 +72,12 @@ function buildSessionSelect(
       `;
 
   return { params, sessionSelect };
-}
+};
 
 // One page of browsable sessions in the range.
-export function buildSessionsListQuery(input: SessionsListInput): BuiltQuery {
+export const buildSessionsListQuery = (
+  input: SessionsListInput
+): BuiltQuery => {
   const sortCol = input.sortBy
     ? (SAFE_SORT_COLUMNS[input.sortBy] ?? "started_at")
     : "started_at";
@@ -94,15 +96,15 @@ export function buildSessionsListQuery(input: SessionsListInput): BuiltQuery {
           `;
 
   return { params, query };
-}
+};
 
 // Count of filtered sessions, so pagination reflects the filtered total.
-export function buildSessionsListCountQuery(
+export const buildSessionsListCountQuery = (
   input: SessionsListInput
-): BuiltQuery {
+): BuiltQuery => {
   const { params, sessionSelect } = buildSessionSelect(input, {});
 
   const query = `SELECT count() AS total FROM (${sessionSelect})`;
 
   return { params, query };
-}
+};

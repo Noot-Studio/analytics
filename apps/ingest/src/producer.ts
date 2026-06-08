@@ -8,10 +8,10 @@ export interface EventProducer {
   disconnect(): Promise<void>;
 }
 
-export async function createProducer(opts: {
+export const createProducer = async (opts: {
   brokers: string[];
   topic: string;
-}): Promise<EventProducer> {
+}): Promise<EventProducer> => {
   const kafka = new Kafka({
     brokers: opts.brokers,
     clientId: "sbox-ingest",
@@ -41,4 +41,4 @@ export async function createProducer(opts: {
       });
     },
   };
-}
+};

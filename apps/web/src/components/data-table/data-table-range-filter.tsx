@@ -17,14 +17,14 @@ interface DataTableRangeFilterProps<TData> extends React.ComponentProps<"div"> {
   ) => void;
 }
 
-export function DataTableRangeFilter<TData>({
+export const DataTableRangeFilter = <TData,>({
   filter,
   column,
   inputId,
   onFilterUpdate,
   className,
   ...props
-}: DataTableRangeFilterProps<TData>) {
+}: DataTableRangeFilterProps<TData>) => {
   const { meta } = column.columnDef;
 
   const [min, max] = React.useMemo(() => {
@@ -64,8 +64,8 @@ export function DataTableRangeFilter<TData>({
   }, [filter.value, formatValue]);
 
   const onRangeValueChange = React.useCallback(
-    (value: string, isMin?: boolean) => {
-      const numValue = Number(value);
+    (nextValue: string, isMin?: boolean) => {
+      const numValue = Number(nextValue);
       const currentValues = Array.isArray(filter.value)
         ? filter.value
         : ["", ""];
@@ -74,14 +74,14 @@ export function DataTableRangeFilter<TData>({
         : (currentValues[0] ?? "");
 
       if (
-        value === "" ||
+        nextValue === "" ||
         (!Number.isNaN(numValue) &&
           (isMin
             ? numValue >= min && numValue <= (Number(otherValue) || max)
             : numValue <= max && numValue >= (Number(otherValue) || min)))
       ) {
         onFilterUpdate(filter.filterId, {
-          value: isMin ? [value, otherValue] : [otherValue, value],
+          value: isMin ? [nextValue, otherValue] : [otherValue, nextValue],
         });
       }
     },
@@ -127,4 +127,4 @@ export function DataTableRangeFilter<TData>({
       />
     </div>
   );
-}
+};

@@ -9,7 +9,7 @@ import type { Icon } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
 import type * as React from "react";
 
-export function NavSecondary({
+export const NavSecondary = ({
   items,
   ...props
 }: {
@@ -19,29 +19,32 @@ export function NavSecondary({
     icon: Icon;
     external?: boolean;
   }[];
-} & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
-  return (
-    <SidebarGroup {...props}>
-      <SidebarGroupContent>
-        <SidebarMenu>
-          {items.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton
-                render={
-                  item.external ? (
-                    <a href={item.url} rel="noopener" target="_blank" />
-                  ) : (
-                    <Link to={item.url} />
-                  )
-                }
-              >
-                <item.icon />
-                <span>{item.title}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
-  );
-}
+} & React.ComponentPropsWithoutRef<typeof SidebarGroup>) => (
+  <SidebarGroup {...props}>
+    <SidebarGroupContent>
+      <SidebarMenu>
+        {items.map((item) => (
+          <SidebarMenuItem key={item.title}>
+            <SidebarMenuButton
+              render={
+                item.external ? (
+                  <a
+                    aria-label={item.title}
+                    href={item.url}
+                    rel="noopener"
+                    target="_blank"
+                  />
+                ) : (
+                  <Link to={item.url} />
+                )
+              }
+            >
+              <item.icon />
+              <span>{item.title}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        ))}
+      </SidebarMenu>
+    </SidebarGroupContent>
+  </SidebarGroup>
+);

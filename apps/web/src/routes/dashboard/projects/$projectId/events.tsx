@@ -1,10 +1,17 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 
 import { EventsView } from "@/features/analytics/components/organisms/events-view";
 import {
   analyticsSearchSchema,
   resolveRange,
 } from "@/features/analytics/lib/filters";
+
+const EventsPage = () => {
+  const { projectId } = useParams({
+    from: "/dashboard/projects/$projectId/events",
+  });
+  return <EventsView projectId={projectId} />;
+};
 
 export const Route = createFileRoute("/dashboard/projects/$projectId/events")({
   component: EventsPage,
@@ -50,8 +57,3 @@ export const Route = createFileRoute("/dashboard/projects/$projectId/events")({
   }),
   validateSearch: analyticsSearchSchema,
 });
-
-function EventsPage() {
-  const { projectId } = Route.useParams();
-  return <EventsView projectId={projectId} />;
-}

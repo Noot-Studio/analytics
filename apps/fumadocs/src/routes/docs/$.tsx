@@ -1,4 +1,9 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  getRouteApi,
+  Link,
+  notFound,
+} from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { staticFunctionMiddleware } from "@tanstack/start-static-server-functions";
 import browserCollections from "collections/browser";
@@ -18,16 +23,6 @@ import { useMDXComponents } from "@/components/mdx";
 import { baseOptions } from "@/lib/layout.shared";
 import { gitConfig } from "@/lib/shared";
 import { slugsToMarkdownPath, source } from "@/lib/source";
-
-export const Route = createFileRoute("/docs/$")({
-  component: Page,
-  loader: async ({ params }) => {
-    const slugs = params._splat?.split("/") ?? [];
-    const data = await loader({ data: slugs });
-    await clientLoader.preload(data.path);
-    return data;
-  },
-});
 
 const loader = createServerFn({
   method: "GET",
@@ -78,9 +73,11 @@ const clientLoader = browserCollections.docs.createClientLoader({
   },
 });
 
-function Page() {
+const routeApi = getRouteApi("/docs/$");
+
+const Page = () => {
   const { pageTree, path, markdownUrl } = useFumadocsLoader(
-    Route.useLoaderData()
+    routeApi.useLoaderData()
   );
 
   return (
@@ -91,4 +88,14 @@ function Page() {
       </Suspense>
     </DocsLayout>
   );
-}
+};
+
+export const Route = createFileRoute("/docs/$")({
+  component: Page,
+  loader: async ({ params }) => {
+    const slugs = params._splat?.split("/") ?? [];
+    const data = await loader({ data: slugs });
+    await clientLoader.preload(data.path);
+    return data;
+  },
+});

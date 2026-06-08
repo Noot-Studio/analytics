@@ -7,10 +7,10 @@ interface GenerateIdOptions {
   separator?: string;
 }
 
-export function generateId(
+export const generateId = (
   prefixOrOptions?: keyof typeof prefixes | GenerateIdOptions,
   inputOptions: GenerateIdOptions = {}
-) {
+) => {
   const finalOptions =
     typeof prefixOrOptions === "object" ? prefixOrOptions : inputOptions;
 
@@ -26,4 +26,4 @@ export function generateId(
   return prefix && prefix in prefixes
     ? `${prefixes[prefix]}${separator}${id}`
     : id;
-}
+};

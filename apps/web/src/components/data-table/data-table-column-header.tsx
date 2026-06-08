@@ -25,14 +25,22 @@ interface DataTableColumnHeaderProps<
   label: string;
 }
 
-export function DataTableColumnHeader<TData, TValue>({
+export const DataTableColumnHeader = <TData, TValue>({
   column,
   label,
   className,
   ...props
-}: DataTableColumnHeaderProps<TData, TValue>) {
+}: DataTableColumnHeaderProps<TData, TValue>) => {
   if (!column.getCanSort() && !column.getCanHide()) {
     return <div className={cn(className)}>{label}</div>;
+  }
+
+  const sortedDirection = column.getIsSorted();
+  let sortIcon = <ChevronsUpDown />;
+  if (sortedDirection === "desc") {
+    sortIcon = <ChevronDown />;
+  } else if (sortedDirection === "asc") {
+    sortIcon = <ChevronUp />;
   }
 
   return (
@@ -45,14 +53,7 @@ export function DataTableColumnHeader<TData, TValue>({
         {...props}
       >
         {label}
-        {column.getCanSort() &&
-          (column.getIsSorted() === "desc" ? (
-            <ChevronDown />
-          ) : (column.getIsSorted() === "asc" ? (
-            <ChevronUp />
-          ) : (
-            <ChevronsUpDown />
-          )))}
+        {column.getCanSort() && sortIcon}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-28">
         {column.getCanSort() && (
@@ -97,4 +98,4 @@ export function DataTableColumnHeader<TData, TValue>({
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}
+};
