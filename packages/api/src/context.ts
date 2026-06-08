@@ -1,6 +1,8 @@
 import { auth } from "@sbox-analytics/auth";
 import type { Context as HonoContext } from "hono";
 
+import { createChClient } from "./ch-client";
+
 export interface CreateContextOptions {
   context: HonoContext;
 }
@@ -11,6 +13,7 @@ export async function createContext({ context }: CreateContextOptions) {
   });
   return {
     auth: null,
+    ch: createChClient(),
     session,
   };
 }
