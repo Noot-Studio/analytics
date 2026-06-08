@@ -17,23 +17,23 @@ Analytics.Shutdown();                              // on quit
 
 ## Members
 
-| Member          | Signature                                                                                                  | Description                                                       |
-| --------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `IsInitialized` | `bool`                                                                                                     | `true` once `Init` has run.                                      |
-| `Init`          | `void Init(string apiKey, AnalyticsOptions? options = null)`                                                | Configure and start. Idempotent — a second call is ignored.     |
-| `Track`         | `void Track(string type, object? properties = null, string? scene = null, Vector3? position = null, string? playerId = null)` | Record an event. No-op (one-time warning) before `Init`.        |
-| `Flush`         | `void Flush()`                                                                                              | Send buffered events immediately (fire-and-forget).             |
-| `Shutdown`      | `void Shutdown()`                                                                                           | Emit `session_end`, flush, and tear down.                       |
+| Member          | Signature                                                                                                                     | Description                                                 |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `IsInitialized` | `bool`                                                                                                                        | `true` once `Init` has run.                                 |
+| `Init`          | `void Init(string apiKey, AnalyticsOptions? options = null)`                                                                  | Configure and start. Idempotent — a second call is ignored. |
+| `Track`         | `void Track(string type, object? properties = null, string? scene = null, Vector3? position = null, string? playerId = null)` | Record an event. No-op (one-time warning) before `Init`.    |
+| `Flush`         | `void Flush()`                                                                                                                | Send buffered events immediately (fire-and-forget).         |
+| `Shutdown`      | `void Shutdown()`                                                                                                             | Emit `session_end`, flush, and tear down.                   |
 
 ## Track parameters
 
-| Parameter    | Type      | Description                                                                          |
-| ------------ | --------- | ----------------------------------------------------------------------------------- |
-| `type`       | `string`  | Event name (required). Any name the [API](/docs/api/events) accepts.                |
-| `properties` | `object?` | Anonymous object or dictionary serialized to the event's `properties`.              |
-| `scene`      | `string?` | Sets the event's `scene` field.                                                     |
-| `position`   | `Vector3?`| Sent as `{ x, y, z }`.                                                               |
-| `playerId`   | `string?` | Override the anonymous player id for this event. Defaults to the session's id.      |
+| Parameter    | Type       | Description                                                                    |
+| ------------ | ---------- | ------------------------------------------------------------------------------ |
+| `type`       | `string`   | Event name (required). Any name the [API](/docs/api/events) accepts.           |
+| `properties` | `object?`  | Anonymous object or dictionary serialized to the event's `properties`.         |
+| `scene`      | `string?`  | Sets the event's `scene` field.                                                |
+| `position`   | `Vector3?` | Sent as `{ x, y, z }`.                                                         |
+| `playerId`   | `string?`  | Override the anonymous player id for this event. Defaults to the session's id. |
 
 ```csharp
 Analytics.Track( "player_death",
@@ -46,12 +46,12 @@ Analytics.Track( "player_death",
 
 Pass an `AnalyticsOptions` to `Init` for full configuration:
 
-| Option                 | Type      | Default                             | Purpose                                                       |
-| ---------------------- | --------- | ----------------------------------- | ------------------------------------------------------------- |
-| `IngestUrl`            | `string`  | `https://ingest.sbox-analytics.com` | Override for self-host / local dev.                           |
-| `TrackSessions`        | `bool`    | `true`                              | Emit `session_start` on `Init`, `session_end` on `Shutdown`. |
-| `FlushIntervalSeconds` | `float`   | `10`                                | Background flush cadence in real seconds.                    |
-| `MaxBatchSize`         | `int`     | `50`                                | Events per send. Clamped to the ingest cap (500).            |
+| Option                 | Type      | Default                             | Purpose                                                             |
+| ---------------------- | --------- | ----------------------------------- | ------------------------------------------------------------------- |
+| `IngestUrl`            | `string`  | `https://ingest.sbox-analytics.com` | Override for self-host / local dev.                                 |
+| `TrackSessions`        | `bool`    | `true`                              | Emit `session_start` on `Init`, `session_end` on `Shutdown`.        |
+| `FlushIntervalSeconds` | `float`   | `10`                                | Background flush cadence in real seconds.                           |
+| `MaxBatchSize`         | `int`     | `50`                                | Events per send. Clamped to the ingest cap (500).                   |
 | `PlayerId`             | `string?` | `null`                              | Override the anonymous player id. Null = hash of the local SteamID. |
 
 ```csharp
