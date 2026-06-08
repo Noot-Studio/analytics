@@ -42,10 +42,10 @@ public int Score { get; set; }
 
 ## Parameters
 
-| Parameter        | Applies to | Description                                                     |
-| ---------------- | ---------- | -------------------------------------------------------------- |
-| name (ctor arg)  | Both       | Event name. Null or empty falls back to the member name.       |
-| `Params`         | Methods    | Capture method arguments as event properties. Default `false`. |
+| Parameter       | Applies to | Description                                                    |
+| --------------- | ---------- | -------------------------------------------------------------- |
+| name (ctor arg) | Both       | Event name. Null or empty falls back to the member name.       |
+| `Params`        | Methods    | Capture method arguments as event properties. Default `false`. |
 
 <Callout type="warn">
   `[Track]` wraps the member at compile time. Don't put it on hot per-frame

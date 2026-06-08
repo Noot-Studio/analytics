@@ -14,23 +14,23 @@ In the editor menu, choose **`Analytics → Add to scene`**. This creates a Game
 
 Every field is exposed in the inspector.
 
-| Field                  | Type     | Default                             | Purpose                                                       |
-| ---------------------- | -------- | ----------------------------------- | ------------------------------------------------------------- |
-| `ApiKey`               | `string` | `""`                                | Your project's publishable `pk_…` key. Empty disables the SDK.|
-| `IngestUrl`            | `string` | `https://ingest.sbox-analytics.com` | Override for self-host / local dev.                           |
-| `TrackSessions`        | `bool`   | `true`                              | Emit `session_start` / `session_end`.                        |
-| `TrackSceneLoads`      | `bool`   | `true`                              | Emit `scene_loaded` when the component starts.               |
-| `TrackConnections`     | `bool`   | `true`                              | Emit `player_connected` / `player_disconnected` (host only). |
-| `FlushIntervalSeconds` | `float`  | `10`                                | Background flush cadence in real seconds.                    |
-| `MaxBatchSize`         | `int`    | `50`                                | Events per request. Clamped to the ingest cap (500).         |
+| Field                  | Type     | Default                             | Purpose                                                        |
+| ---------------------- | -------- | ----------------------------------- | -------------------------------------------------------------- |
+| `ApiKey`               | `string` | `""`                                | Your project's publishable `pk_…` key. Empty disables the SDK. |
+| `IngestUrl`            | `string` | `https://ingest.sbox-analytics.com` | Override for self-host / local dev.                            |
+| `TrackSessions`        | `bool`   | `true`                              | Emit `session_start` / `session_end`.                          |
+| `TrackSceneLoads`      | `bool`   | `true`                              | Emit `scene_loaded` when the component starts.                 |
+| `TrackConnections`     | `bool`   | `true`                              | Emit `player_connected` / `player_disconnected` (host only).   |
+| `FlushIntervalSeconds` | `float`  | `10`                                | Background flush cadence in real seconds.                      |
+| `MaxBatchSize`         | `int`    | `50`                                | Events per request. Clamped to the ingest cap (500).           |
 
 ## Events it emits
 
-| Event                 | When                          | Notes                                                |
-| --------------------- | ----------------------------- | ---------------------------------------------------- |
-| `scene_loaded`        | On component start            | Carries the scene name. Gated on `TrackSceneLoads`.  |
-| `player_connected`    | A player joins                | **Host only.** Gated on `TrackConnections`.          |
-| `player_disconnected` | A player leaves               | **Host only.** Gated on `TrackConnections`.          |
+| Event                 | When               | Notes                                               |
+| --------------------- | ------------------ | --------------------------------------------------- |
+| `scene_loaded`        | On component start | Carries the scene name. Gated on `TrackSceneLoads`. |
+| `player_connected`    | A player joins     | **Host only.** Gated on `TrackConnections`.         |
+| `player_disconnected` | A player leaves    | **Host only.** Gated on `TrackConnections`.         |
 
 `session_start` and `session_end` are owned by the core, not the component — they fire on init and shutdown when `TrackSessions` is on. See [Default events](/docs/sdk/events) for the complete list.
 
