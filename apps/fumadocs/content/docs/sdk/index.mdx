@@ -1,0 +1,78 @@
+---
+title: Getting started
+description: Install the s&box Analytics SDK from sbox.game/noot and send your first event in minutes.
+icon: Package
+---
+
+The **s&box Analytics SDK** is a C# library you drop into your s&box game. It batches gameplay events and ships them to the [Ingestion API](/docs/api) for you — owning sessions, batching, retries, and anonymization so you never touch raw HTTP.
+
+It gives you three ways to send events, all funneling into the same core:
+
+| Style                       | Best for                  | Reference                          |
+| --------------------------- | ------------------------- | ---------------------------------- |
+| **Drop-in component**       | Zero-code setup           | [Component](/docs/sdk/component)   |
+| **`[Track]` attribute**     | Declarative tracking      | [Attribute](/docs/sdk/attribute)   |
+| **`Analytics.Track` (code)**| Full imperative control   | [Methods](/docs/sdk/methods)       |
+
+## Install
+
+1. Browse to **[sbox.game/noot](https://sbox.game/noot)** and open the **Analytics** (`noot.analytics`) library.
+2. Add it to your project as a package reference — in the s&box editor under **Project Settings → Packages**, or directly in your `.sbproj` `PackageReferences`.
+3. Reference the namespace in your code:
+
+```csharp
+using Noot.Analytics;
+```
+
+## Get your key
+
+Events are scoped to a [Project](/docs/projects) by its **publishable key** (`pk_…`). Create one under [API Keys](/docs/api-keys), and use the publishable (`pk_`) key in the game — never the secret (`sk_`) key.
+
+## Set up with the drop-in component
+
+The fastest path needs no code:
+
+1. In the editor menu, choose **`Analytics → Add to scene`**. This creates an `Analytics` GameObject with an **Analytics** component attached.
+2. Select it and paste your `pk_…` key into the **ApiKey** field.
+3. Press play.
+
+`session_start`, `scene_loaded`, and connection events now flow automatically. See [Drop-in component](/docs/sdk/component) for every field.
+
+## Or set up in code
+
+Prefer no component? Initialize the core once at startup and tear it down on quit:
+
+```csharp
+using Noot.Analytics;
+
+Analytics.Init( "pk_your_publishable_key" );
+
+Analytics.Track( "level_complete", new { level = "facility_01", deaths = 2 } );
+
+Analytics.Shutdown();
+```
+
+See [Methods](/docs/sdk/methods) for the full facade and options.
+
+<Callout type="info">
+  A blank or missing API key disables the SDK — events are dropped and a warning
+  is logged. Buffered events flush every 10 seconds by default, so allow a moment
+  before they appear on your [dashboard](/docs/dashboards).
+</Callout>
+
+## Next steps
+
+<Cards>
+  <Card title="Drop-in component" href="/docs/sdk/component">
+    Every field on the AnalyticsComponent and the events it emits.
+  </Card>
+  <Card title="The [Track] attribute" href="/docs/sdk/attribute">
+    Declarative tracking on methods and properties.
+  </Card>
+  <Card title="Methods" href="/docs/sdk/methods">
+    The Analytics facade and AnalyticsOptions.
+  </Card>
+  <Card title="Default events" href="/docs/sdk/events">
+    What the SDK emits for you, and how identity is anonymized.
+  </Card>
+</Cards>

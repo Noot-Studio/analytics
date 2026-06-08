@@ -1,0 +1,79 @@
+---
+title: Methods
+description: The Analytics facade — Init, Track, Flush, Shutdown — and AnalyticsOptions for full control with no component.
+icon: Code
+---
+
+The static **`Analytics`** class is the imperative core. It works with **no component** at all — initialize once, track from anywhere, tear down on quit.
+
+```csharp
+using Noot.Analytics;
+
+Analytics.Init( "pk_your_publishable_key" );      // once at startup
+Analytics.Track( "level_complete", new { level = "facility_01" } );
+Analytics.Flush();                                 // optional: send now
+Analytics.Shutdown();                              // on quit
+```
+
+## Members
+
+| Member          | Signature                                                                                                  | Description                                                       |
+| --------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `IsInitialized` | `bool`                                                                                                     | `true` once `Init` has run.                                      |
+| `Init`          | `void Init(string apiKey, AnalyticsOptions? options = null)`                                                | Configure and start. Idempotent — a second call is ignored.     |
+| `Track`         | `void Track(string type, object? properties = null, string? scene = null, Vector3? position = null, string? playerId = null)` | Record an event. No-op (one-time warning) before `Init`.        |
+| `Flush`         | `void Flush()`                                                                                              | Send buffered events immediately (fire-and-forget).             |
+| `Shutdown`      | `void Shutdown()`                                                                                           | Emit `session_end`, flush, and tear down.                       |
+
+## Track parameters
+
+| Parameter    | Type      | Description                                                                          |
+| ------------ | --------- | ----------------------------------------------------------------------------------- |
+| `type`       | `string`  | Event name (required). Any name the [API](/docs/api/events) accepts.                |
+| `properties` | `object?` | Anonymous object or dictionary serialized to the event's `properties`.              |
+| `scene`      | `string?` | Sets the event's `scene` field.                                                     |
+| `position`   | `Vector3?`| Sent as `{ x, y, z }`.                                                               |
+| `playerId`   | `string?` | Override the anonymous player id for this event. Defaults to the session's id.      |
+
+```csharp
+Analytics.Track( "player_death",
+  properties: new { weapon = "rifle", distance = 24.5f },
+  scene: "facility_01",
+  position: player.WorldPosition );
+```
+
+## AnalyticsOptions
+
+Pass an `AnalyticsOptions` to `Init` for full configuration:
+
+| Option                 | Type      | Default                             | Purpose                                                       |
+| ---------------------- | --------- | ----------------------------------- | ------------------------------------------------------------- |
+| `IngestUrl`            | `string`  | `https://ingest.sbox-analytics.com` | Override for self-host / local dev.                           |
+| `TrackSessions`        | `bool`    | `true`                              | Emit `session_start` on `Init`, `session_end` on `Shutdown`. |
+| `FlushIntervalSeconds` | `float`   | `10`                                | Background flush cadence in real seconds.                    |
+| `MaxBatchSize`         | `int`     | `50`                                | Events per send. Clamped to the ingest cap (500).            |
+| `PlayerId`             | `string?` | `null`                              | Override the anonymous player id. Null = hash of the local SteamID. |
+
+```csharp
+Analytics.Init( "pk_your_publishable_key", new AnalyticsOptions
+{
+  FlushIntervalSeconds = 5f,
+  MaxBatchSize = 100,
+} );
+```
+
+## Behavior notes
+
+- A blank `apiKey` disables the SDK — events are dropped and a warning is logged.
+- Each client gets one `session_id` (a GUID) for the lifetime of the session.
+- Flushing is best-effort: a failed send re-queues behind newer events, so ordering is approximate.
+- `Init` called twice is ignored; `Track` called before `Init` is a no-op with a single warning.
+
+<Cards>
+  <Card title="Drop-in component" href="/docs/sdk/component">
+    Skip Init — configure the SDK from the inspector instead.
+  </Card>
+  <Card title="Default events" href="/docs/sdk/events">
+    The events Init and Shutdown emit for you.
+  </Card>
+</Cards>

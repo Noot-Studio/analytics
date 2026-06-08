@@ -1,0 +1,62 @@
+---
+title: The [Track] attribute
+description: Declarative event tracking — annotate a method or property and the SDK emits an event for you.
+icon: Tag
+---
+
+The **`[Track]`** attribute is declarative tracking. Mark a method or property and the SDK emits an event whenever it runs or changes. It's pure compile-time sugar over [`Analytics.Track`](/docs/sdk/methods), so the core must be initialized — by a [component](/docs/sdk/component) or [`Analytics.Init`](/docs/sdk/methods) — or the call no-ops.
+
+## On a method
+
+The event fires when the method is called. The name defaults to the method name; pass a name to override it, and set `Params = true` to capture the arguments as event properties.
+
+```csharp
+using Noot.Analytics;
+
+[Track( "player_jumped" )]
+public void Jump() { /* ... */ }
+// emits { type: "player_jumped" }
+
+[Track] // name defaults to the method name
+public void Respawn() { /* ... */ }
+// emits { type: "Respawn" }
+
+[Track( "player_jumped", Params = true )]
+public void Jump( float height, string surface ) { /* ... */ }
+// emits { type: "player_jumped", properties: { height, surface } }
+```
+
+When `Params = true`, argument names are resolved from the method signature (falling back to `arg0`, `arg1`, … if unavailable). Null arguments are skipped.
+
+## On a property
+
+The event fires when the property's value **changes** — assigning the same value emits nothing. The new value is sent under `value`.
+
+```csharp
+[Track( "score_changed" )]
+public int Score { get; set; }
+// emits { type: "score_changed", properties: { value: <new> } } whenever Score changes
+```
+
+`Params` is ignored on properties.
+
+## Parameters
+
+| Parameter        | Applies to | Description                                                     |
+| ---------------- | ---------- | -------------------------------------------------------------- |
+| name (ctor arg)  | Both       | Event name. Null or empty falls back to the member name.       |
+| `Params`         | Methods    | Capture method arguments as event properties. Default `false`. |
+
+<Callout type="warn">
+  `[Track]` wraps the member at compile time. Don't put it on hot per-frame
+  methods, and remember it requires the SDK to be initialized first.
+</Callout>
+
+<Cards>
+  <Card title="Methods" href="/docs/sdk/methods">
+    The Analytics.Track call this attribute compiles down to.
+  </Card>
+  <Card title="Default events" href="/docs/sdk/events">
+    The events the SDK already emits without any attributes.
+  </Card>
+</Cards>

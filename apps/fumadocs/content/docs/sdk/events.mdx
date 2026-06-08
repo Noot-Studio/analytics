@@ -1,0 +1,36 @@
+---
+title: Default events
+description: The events the SDK emits out of the box, and how player identity is anonymized.
+icon: List
+---
+
+With sessions on (the default) and the [component](/docs/sdk/component) attached, the SDK emits these events without any code from you.
+
+| Event                 | When                            | Source      | Notes                                              |
+| --------------------- | ------------------------------- | ----------- | -------------------------------------------------- |
+| `session_start`       | `Init` / component enable       | Core        | Once per session. Gated on `TrackSessions`.        |
+| `session_end`         | `Shutdown` / component destroy  | Core        | Final flush.                                       |
+| `scene_loaded`        | Component start                 | Component   | Carries the `scene` name. Gated on `TrackSceneLoads`. |
+| `player_connected`    | A player joins                  | Component   | Host only. Gated on `TrackConnections`.            |
+| `player_disconnected` | A player leaves                 | Component   | Host only.                                         |
+
+<Callout type="info">
+  `scene_loaded` and the connection events come from the component, because they
+  need a scene or network presence. If you `Init` from code with no component, emit
+  `scene_loaded` yourself via `Analytics.Track( "scene_loaded", scene: ... )`.
+</Callout>
+
+For the exact wire shape of every event, see the [Events reference](/docs/api/events).
+
+## Privacy
+
+`player_id` is a salted, one-way hash of the SteamID (`AnonymousId.Hash`) — the raw SteamID is **never** sent. Override it per-session with [`AnalyticsOptions.PlayerId`](/docs/sdk/methods), and keep PII out of event `properties`. See [API Keys](/docs/api-keys) for key handling.
+
+<Cards>
+  <Card title="Events reference" href="/docs/api/events">
+    The full wire shape of every event.
+  </Card>
+  <Card title="Ingestion API" href="/docs/api">
+    The HTTP endpoint the SDK posts to.
+  </Card>
+</Cards>
