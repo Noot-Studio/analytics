@@ -32,8 +32,9 @@ jobs:
 
       # Canonical CI env (shared with ci.yml). Job env propagates to the
       # subprocesses Claude spawns (bun test, check-types, build).
+      # $GITHUB_ENV rejects comments/blank lines — keep only KEY=value lines.
       - name: Load CI env
-        run: cat .github/ci.env >> "$GITHUB_ENV"
+        run: grep -E '^[A-Za-z_][A-Za-z0-9_]*=' .github/ci.env >> "$GITHUB_ENV"
 
       - uses: oven-sh/setup-bun@v2
         with:
