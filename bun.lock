@@ -160,10 +160,10 @@
         "@orpc/zod": "catalog:",
         "@sbox-analytics/auth": "workspace:*",
         "@sbox-analytics/db": "workspace:*",
+        "@sbox-analytics/email": "workspace:*",
         "@sbox-analytics/env": "workspace:*",
         "@sbox-analytics/events": "workspace:*",
         "dotenv": "catalog:",
-        "resend": "^6.12.4",
         "zod": "catalog:",
       },
       "devDependencies": {
@@ -176,10 +176,10 @@
       "name": "@sbox-analytics/auth",
       "dependencies": {
         "@sbox-analytics/db": "workspace:*",
+        "@sbox-analytics/email": "workspace:*",
         "@sbox-analytics/env": "workspace:*",
         "better-auth": "catalog:",
         "dotenv": "catalog:",
-        "resend": "^6.12.4",
         "zod": "catalog:",
       },
       "devDependencies": {
@@ -207,6 +207,18 @@
         "@sbox-analytics/config": "workspace:*",
         "@types/pg": "^8.16.0",
         "prisma": "^7.8.0",
+        "typescript": "catalog:",
+      },
+    },
+    "packages/email": {
+      "name": "@sbox-analytics/email",
+      "version": "0.0.0",
+      "dependencies": {
+        "@sbox-analytics/env": "workspace:*",
+        "resend": "^6.12.4",
+      },
+      "devDependencies": {
+        "@sbox-analytics/config": "workspace:*",
         "typescript": "catalog:",
       },
     },
@@ -823,6 +835,8 @@
     "@sbox-analytics/config": ["@sbox-analytics/config@workspace:packages/config"],
 
     "@sbox-analytics/db": ["@sbox-analytics/db@workspace:packages/db"],
+
+    "@sbox-analytics/email": ["@sbox-analytics/email@workspace:packages/email"],
 
     "@sbox-analytics/env": ["@sbox-analytics/env@workspace:packages/env"],
 

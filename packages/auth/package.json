@@ -12,10 +12,10 @@
   "scripts": {},
   "dependencies": {
     "@sbox-analytics/db": "workspace:*",
+    "@sbox-analytics/email": "workspace:*",
     "@sbox-analytics/env": "workspace:*",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
-    "resend": "^6.12.4",
     "zod": "catalog:"
   },
   "devDependencies": {
