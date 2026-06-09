@@ -1,6 +1,7 @@
 import type { RouterClient } from "@orpc/server";
 
 import { protectedProcedure, publicProcedure } from "../index";
+import { alertsRouter } from "./alerts";
 import { analyticsRouter } from "./analytics";
 import { apiKeysRouter } from "./api-keys";
 import { customAnalyticsRouter } from "./custom-analytics";
@@ -12,6 +13,7 @@ import { projectsRouter } from "./projects";
 import { teamsRouter } from "./teams";
 
 export const appRouter = {
+  alerts: alertsRouter,
   apiKeys: apiKeysRouter,
   customAnalytics: customAnalyticsRouter,
   dashboards: dashboardsRouter,

@@ -1,0 +1,31 @@
+enum AlertMetric {
+  CrashSpike
+  DauDrop
+}
+
+enum AlertChannel {
+  Webhook
+  Email
+}
+
+// A per-project threshold rule. `metric` picks what to watch, `threshold` is the
+// trigger value (crash count for CrashSpike, percent drop for DauDrop), and the
+// breach is delivered to `destination` over `channel`. `lastFiredAt` gates a
+// cooldown so a sustained breach doesn't re-notify every evaluation.
+model AlertRule {
+  id          String       @id @default(cuid())
+  projectId   String
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  metric      AlertMetric
+  threshold   Float
+  channel     AlertChannel
+  destination String
+  enabled     Boolean      @default(true)
+  lastFiredAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([projectId])
+  @@map("alert_rule")
+}

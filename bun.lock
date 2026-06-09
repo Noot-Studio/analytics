@@ -163,6 +163,7 @@
         "@sbox-analytics/env": "workspace:*",
         "@sbox-analytics/events": "workspace:*",
         "dotenv": "catalog:",
+        "resend": "^6.12.4",
         "zod": "catalog:",
       },
       "devDependencies": {

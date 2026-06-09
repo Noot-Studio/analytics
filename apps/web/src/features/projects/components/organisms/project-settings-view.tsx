@@ -9,6 +9,7 @@ import { Skeleton } from "@sbox-analytics/ui/components/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { FolderX } from "lucide-react";
 
+import { AlertsSection } from "@/features/alerts/components/organisms/alerts-section";
 import { ApiKeysSection } from "@/features/api-keys/components/organisms/api-keys-section";
 import { orpc } from "@/utils/orpc";
 
@@ -60,7 +61,7 @@ export const ProjectSettingsView = ({ projectId }: { projectId: string }) => {
       <div>
         <h1 className="font-semibold text-2xl">Settings</h1>
         <p className="text-muted-foreground">
-          Manage API keys and SDK integration for this project.
+          Manage API keys, alerts, and SDK integration for this project.
         </p>
       </div>
 
@@ -70,6 +71,8 @@ export const ProjectSettingsView = ({ projectId }: { projectId: string }) => {
       </section>
 
       <ApiKeysSection projectId={projectId} />
+
+      <AlertsSection projectId={projectId} />
 
       <section className="flex flex-col gap-2">
         <h2 className="font-medium text-sm">SDK setup</h2>
