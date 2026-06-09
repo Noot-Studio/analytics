@@ -48,8 +48,12 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 
-          # Toolchain is pre-installed above; let Claude run the same gates as CI.
+          # Pin Opus 4.8 at xhigh effort. xhigh must be explicit — Opus 4.8's
+          # default effort is `high`, not xhigh. Toolchain is pre-installed above,
+          # so Claude can run the same gates as CI.
           claude_args: |
+            --model claude-opus-4-8
+            --effort xhigh
             --allowedTools "Bash(bun install),Bash(bun run check),Bash(bun run check-types),Bash(bun test),Bash(bun run build)"
 
           # Optional: Customize the trigger phrase (default: @claude)
