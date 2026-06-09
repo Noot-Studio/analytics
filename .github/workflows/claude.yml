@@ -47,7 +47,7 @@ jobs:
         id: claude
         uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
           # Pin Opus 4.8 at xhigh effort. xhigh must be explicit — Opus 4.8's
           # default effort is `high`, not xhigh. Toolchain is pre-installed above,
