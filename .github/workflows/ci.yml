@@ -18,17 +18,12 @@ jobs:
   quality:
     name: Lint & type-check
     runs-on: ubuntu-latest
-    env:
-      # Bypass @t3-oss/env-core runtime validation; CI only compiles, never runs.
-      SKIP_ENV_VALIDATION: "true"
-      # Prisma generate (db's postinstall) resolves DATABASE_URL via prisma.config;
-      # a placeholder satisfies it — generate never connects.
-      DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
-      # web's `check-types` runs `vite build`, which bakes these VITE_* values.
-      VITE_SERVER_URL: http://localhost:3000
-      VITE_DOCS_URL: http://localhost:3002
     steps:
       - uses: actions/checkout@v4
+
+      # Canonical CI env (shared with claude.yml). See .github/ci.env.
+      - name: Load CI env
+        run: cat .github/ci.env >> "$GITHUB_ENV"
 
       - uses: oven-sh/setup-bun@v2
         with:
