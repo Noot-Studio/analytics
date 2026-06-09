@@ -55,7 +55,7 @@ jobs:
           claude_args: |
             --model claude-opus-4-8
             --effort xhigh
-            --allowedTools "Bash(bun install),Bash(bun run check),Bash(bun run check-types),Bash(bun test),Bash(bun run build)"
+            --allowedTools "Bash(bun install:*),Bash(bun run check:*),Bash(bun run check-types:*),Bash(bun run fix:*),Bash(bun test:*),Bash(bun run build:*),Bash(bun x ultracite:*)"
 
           # Optional: Customize the trigger phrase (default: @claude)
           # trigger_phrase: "/claude"
