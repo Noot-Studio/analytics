@@ -1,6 +1,15 @@
 import type { DashboardWidgetInput } from "@sbox-analytics/api/dashboard-widgets";
 import { BUILTIN_WIDGET_TYPES } from "@sbox-analytics/api/dashboard-widgets";
-import type { MetricInput, MetricSnapshot } from "@sbox-analytics/api/metrics";
+import type {
+  MetricInput,
+  MetricSnapshot,
+  Visualization,
+} from "@sbox-analytics/api/metrics";
+import {
+  compatibleVisualizations,
+  defaultVisualization,
+  resultShape,
+} from "@sbox-analytics/api/metrics";
 import { Button } from "@sbox-analytics/ui/components/button";
 import { Input } from "@sbox-analytics/ui/components/input";
 import { Label } from "@sbox-analytics/ui/components/label";
@@ -29,6 +38,7 @@ import { orpc } from "@/utils/orpc";
 
 import type { DashboardScopeValue } from "../../lib/use-dashboard-editor";
 import { useWidgetSourcePin } from "../../lib/use-widget-source-pin";
+import type { WidgetDefinition } from "../../lib/widget-registry";
 import {
   WIDGET_REGISTRY,
   METRIC_WIDGET_TYPE,
@@ -48,6 +58,13 @@ interface AddWidgetDrawerProps {
   to: string;
 }
 
+const VISUALIZATION_LABELS: Record<Visualization, string> = {
+  area: "Area chart",
+  bar: "Bar chart",
+  number: "Number",
+  table: "Table",
+};
+
 const WidgetPreview = ({ children }: { children: ReactNode }) => (
   <div className="pointer-events-none select-none">
     <WidgetErrorBoundary>
@@ -57,6 +74,110 @@ const WidgetPreview = ({ children }: { children: ReactNode }) => (
     </WidgetErrorBoundary>
   </div>
 );
+
+interface SavedMetricEntryProps {
+  from: string;
+  isDeleting: boolean;
+  metric: MetricSnapshot;
+  onAdd: (metric: MetricSnapshot, visualization: Visualization) => void;
+  onDelete: () => void;
+  organizationId?: string;
+  pinnedProjectId?: string;
+  projectId?: string;
+  Renderer: WidgetDefinition["Renderer"];
+  to: string;
+}
+
+/**
+ * One library entry: the metric defines the data; the visualization picked
+ * here belongs to the widget being placed, so the same metric can sit on
+ * several dashboards drawn differently.
+ */
+const SavedMetricEntry = ({
+  from,
+  isDeleting,
+  metric,
+  onAdd,
+  onDelete,
+  organizationId,
+  pinnedProjectId,
+  projectId,
+  Renderer,
+  to,
+}: SavedMetricEntryProps) => {
+  const options = compatibleVisualizations(resultShape(metric.config));
+  const [visualization, setVisualization] = useState<Visualization>(
+    options[0] ?? "table"
+  );
+  const items = Object.fromEntries(
+    options.map((option) => [option, VISUALIZATION_LABELS[option]])
+  );
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-muted-foreground text-xs">
+          {metric.description ?? "Saved metric"}
+        </span>
+        <div className="flex items-center gap-1">
+          {options.length > 1 ? (
+            <Select
+              items={items}
+              onValueChange={(value) =>
+                value && setVisualization(value as Visualization)
+              }
+              value={visualization}
+            >
+              <SelectTrigger
+                aria-label={`Visualization for ${metric.name}`}
+                className="h-7"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(items).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : null}
+          <Button
+            aria-label={`Delete ${metric.name}`}
+            disabled={isDeleting}
+            onClick={onDelete}
+            size="icon-sm"
+            variant="ghost"
+          >
+            <Trash2 />
+          </Button>
+          <Button
+            aria-label={`Add ${metric.name}`}
+            onClick={() => onAdd(metric, visualization)}
+            size="icon-sm"
+            variant="ghost"
+          >
+            <Plus />
+          </Button>
+        </div>
+      </div>
+      <WidgetPreview>
+        <Renderer
+          config={{
+            metricId: metric.id,
+            visualization,
+            ...(pinnedProjectId ? { projectId: pinnedProjectId } : {}),
+          }}
+          from={from}
+          organizationId={organizationId}
+          projectId={projectId}
+          to={to}
+        />
+      </WidgetPreview>
+    </div>
+  );
+};
 
 export const AddWidgetDrawer = ({
   from,
@@ -107,13 +228,17 @@ export const AddWidgetDrawer = ({
     handleOpenChange(false);
   };
 
-  const addMetricWidget = (metric: MetricSnapshot) => {
+  const addMetricWidget = (
+    metric: MetricSnapshot,
+    visualization: Visualization
+  ) => {
     onAdd({
       config: {
         metricId: metric.id,
+        visualization,
         ...(pinnedProjectId ? { projectId: pinnedProjectId } : {}),
       },
-      size: metricWidgetSize(metric.config),
+      size: metricWidgetSize(visualization),
       widgetType: METRIC_WIDGET_TYPE,
     });
     handleOpenChange(false);
@@ -124,7 +249,7 @@ export const AddWidgetDrawer = ({
     orpc.metrics.create.mutationOptions({
       onSuccess: (metric) => {
         invalidateMetrics();
-        addMetricWidget(metric);
+        addMetricWidget(metric, defaultVisualization(metric.config));
       },
     })
   );
@@ -262,52 +387,25 @@ export const AddWidgetDrawer = ({
               })}
 
               {savedMetrics.map((metric) => (
-                <div className="flex flex-col gap-2" key={metric.id}>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-muted-foreground text-xs">
-                      {metric.description ?? "Saved metric"}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        aria-label={`Delete ${metric.name}`}
-                        disabled={deleteMutation.isPending}
-                        onClick={() =>
-                          deleteMutation.mutate({
-                            id: metric.id,
-                            organizationId,
-                            projectId,
-                          })
-                        }
-                        size="icon-sm"
-                        variant="ghost"
-                      >
-                        <Trash2 />
-                      </Button>
-                      <Button
-                        aria-label={`Add ${metric.name}`}
-                        onClick={() => addMetricWidget(metric)}
-                        size="icon-sm"
-                        variant="ghost"
-                      >
-                        <Plus />
-                      </Button>
-                    </div>
-                  </div>
-                  <WidgetPreview>
-                    <MetricRenderer
-                      config={{
-                        metricId: metric.id,
-                        ...(pinnedProjectId
-                          ? { projectId: pinnedProjectId }
-                          : {}),
-                      }}
-                      from={from}
-                      organizationId={organizationId}
-                      projectId={projectId}
-                      to={to}
-                    />
-                  </WidgetPreview>
-                </div>
+                <SavedMetricEntry
+                  from={from}
+                  isDeleting={deleteMutation.isPending}
+                  key={metric.id}
+                  metric={metric}
+                  onAdd={addMetricWidget}
+                  onDelete={() =>
+                    deleteMutation.mutate({
+                      id: metric.id,
+                      organizationId,
+                      projectId,
+                    })
+                  }
+                  organizationId={organizationId}
+                  pinnedProjectId={pinnedProjectId}
+                  projectId={projectId}
+                  Renderer={MetricRenderer}
+                  to={to}
+                />
               ))}
 
               {builtins.length === 0 && savedMetrics.length === 0 ? (
