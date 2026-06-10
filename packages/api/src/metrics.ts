@@ -32,15 +32,58 @@ export interface MetricSnapshot {
   updatedAt: string;
 }
 
-export type MetricDisplay = "metric" | "table" | "timeseries";
+/**
+ * The shape of a metric's result set — determined entirely by the query
+ * config, never by how a widget chooses to draw it.
+ */
+export type MetricResultShape =
+  | "grouped-series"
+  | "groups"
+  | "scalar"
+  | "series";
 
-/** How a metric's result set renders: shape is fully determined by the DSL. */
-export const metricDisplay = (config: MetricConfig): MetricDisplay => {
-  if (config.granularity !== "none") {
-    return "timeseries";
+export const resultShape = (config: MetricConfig): MetricResultShape => {
+  const hasSeries = config.granularity !== "none";
+  const hasGroups = (config.groupBy?.length ?? 0) > 0;
+  if (hasSeries && hasGroups) {
+    return "grouped-series";
   }
-  if (config.groupBy && config.groupBy.length > 0) {
-    return "table";
+  if (hasSeries) {
+    return "series";
   }
-  return "metric";
+  if (hasGroups) {
+    return "groups";
+  }
+  return "scalar";
+};
+
+export const visualizationSchema = z.enum(["number", "area", "bar", "table"]);
+export type Visualization = z.infer<typeof visualizationSchema>;
+
+/** Visualizations a result shape can render; first entry is the default. */
+export const compatibleVisualizations = (
+  shape: MetricResultShape
+): Visualization[] => {
+  switch (shape) {
+    case "scalar": {
+      return ["number"];
+    }
+    case "series": {
+      return ["area", "bar", "table"];
+    }
+    case "groups": {
+      return ["table", "bar"];
+    }
+    case "grouped-series": {
+      return ["table"];
+    }
+    default: {
+      return ["table"];
+    }
+  }
+};
+
+export const defaultVisualization = (config: MetricConfig): Visualization => {
+  const [first] = compatibleVisualizations(resultShape(config));
+  return first ?? "table";
 };

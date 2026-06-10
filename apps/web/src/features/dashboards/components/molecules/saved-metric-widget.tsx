@@ -1,5 +1,8 @@
 import type { MetricWidgetConfig } from "@sbox-analytics/api/dashboard-widgets";
-import type { MetricSnapshot } from "@sbox-analytics/api/metrics";
+import type {
+  MetricSnapshot,
+  Visualization,
+} from "@sbox-analytics/api/metrics";
 import { useSuspenseQuery } from "@tanstack/react-query";
 
 import { orpc } from "@/utils/orpc";
@@ -12,11 +15,13 @@ const MetricWidgetBody = ({
   from,
   projectId,
   to,
+  visualization,
 }: {
   metric: MetricSnapshot;
   from: string;
   projectId: string;
   to: string;
+  visualization: Visualization;
 }) => {
   const { data: rows } = useSuspenseQuery(
     orpc.customAnalytics.query.queryOptions({
@@ -29,7 +34,12 @@ const MetricWidgetBody = ({
   );
 
   return (
-    <MetricResult config={metric.config} rows={rows} title={metric.name} />
+    <MetricResult
+      config={metric.config}
+      rows={rows}
+      title={metric.name}
+      visualization={visualization}
+    />
   );
 };
 
@@ -63,6 +73,7 @@ export const SavedMetricWidget = (props: WidgetRendererProps) => {
       metric={metric}
       projectId={projectId}
       to={props.to}
+      visualization={config.visualization}
     />
   );
 };

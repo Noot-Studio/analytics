@@ -1,5 +1,8 @@
 import type { MetricConfig, MetricInput } from "@sbox-analytics/api/metrics";
-import { metricConfigSchema } from "@sbox-analytics/api/metrics";
+import {
+  defaultVisualization,
+  metricConfigSchema,
+} from "@sbox-analytics/api/metrics";
 import { Badge } from "@sbox-analytics/ui/components/badge";
 import { Button } from "@sbox-analytics/ui/components/button";
 import { Input } from "@sbox-analytics/ui/components/input";
@@ -439,6 +442,7 @@ export const MetricBuilder = ({
                 config={parsed.data}
                 rows={preview.rows}
                 title={builder.name.trim() || "Untitled metric"}
+                visualization={defaultVisualization(parsed.data)}
               />
             ) : (
               <Skeleton className="h-24 w-full" />

@@ -16,6 +16,11 @@ import {
   METRIC_WIDGET_TYPE,
 } from "../dashboard-widgets";
 import { protectedProcedure } from "../index";
+import {
+  compatibleVisualizations,
+  metricConfigSchema,
+  resultShape,
+} from "../metrics";
 
 const MAX_WIDGETS = 30;
 
@@ -102,29 +107,51 @@ const assertPinnedProjects = async (
   }
 };
 
-/** Metric widgets reference saved metrics; each must live in the same org. */
+/**
+ * Metric widgets reference saved metrics: each must live in the same org, and
+ * the widget's visualization must be compatible with the metric's result
+ * shape (a scalar can't render as an area chart, etc.).
+ */
 const assertReferencedMetrics = async (
   widgets: z.infer<typeof saveInput>["widgets"],
   organizationId: string
 ): Promise<void> => {
-  const metricIds = [
-    ...new Set(
-      widgets.flatMap((widget) =>
-        widget.widgetType === METRIC_WIDGET_TYPE ? [widget.config.metricId] : []
-      )
-    ),
-  ];
-  if (metricIds.length === 0) {
+  const metricWidgets = widgets.filter(
+    (widget) => widget.widgetType === METRIC_WIDGET_TYPE
+  );
+  if (metricWidgets.length === 0) {
     return;
   }
+  const metricIds = [
+    ...new Set(metricWidgets.map((widget) => widget.config.metricId)),
+  ];
 
-  const count = await prisma.metric.count({
+  const metrics = await prisma.metric.findMany({
+    select: { config: true, id: true },
     where: { id: { in: metricIds }, organizationId },
   });
-  if (count !== metricIds.length) {
+  if (metrics.length !== metricIds.length) {
     throw new ORPCError("FORBIDDEN", {
       message: "Widget references a metric outside the organization",
     });
+  }
+
+  const shapes = new Map(
+    metrics.map((metric) => [
+      metric.id,
+      resultShape(metricConfigSchema.parse(metric.config)),
+    ])
+  );
+  for (const widget of metricWidgets) {
+    const shape = shapes.get(widget.config.metricId);
+    if (
+      shape &&
+      !compatibleVisualizations(shape).includes(widget.config.visualization)
+    ) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: `Visualization "${widget.config.visualization}" cannot render a ${shape} metric`,
+      });
+    }
   }
 };
 

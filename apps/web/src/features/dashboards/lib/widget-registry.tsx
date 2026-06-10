@@ -6,8 +6,7 @@ import {
   CUSTOM_WIDGET_TYPE,
   METRIC_WIDGET_TYPE,
 } from "@sbox-analytics/api/dashboard-widgets";
-import type { MetricConfig } from "@sbox-analytics/api/metrics";
-import { metricDisplay } from "@sbox-analytics/api/metrics";
+import type { Visualization } from "@sbox-analytics/api/metrics";
 import type { ComponentType } from "react";
 
 import {
@@ -91,6 +90,7 @@ export const getWidgetDefinition = (
 
 export { CUSTOM_WIDGET_TYPE, METRIC_WIDGET_TYPE };
 
-/** Timeseries/table metrics fill a row; single-number ones take a third. */
-export const metricWidgetSize = (config: MetricConfig): WidgetSizeValue =>
-  metricDisplay(config) === "metric" ? "Third" : "Full";
+/** Charts and tables fill a row; a single number takes a third. */
+export const metricWidgetSize = (
+  visualization: Visualization
+): WidgetSizeValue => (visualization === "number" ? "Third" : "Full");
