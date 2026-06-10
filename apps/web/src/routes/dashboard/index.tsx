@@ -6,7 +6,7 @@ import { DashboardGrid } from "@/features/dashboards/components/organisms/dashbo
 import { authClient } from "@/lib/auth-client";
 
 const DashboardPending = () => {
-  const cardKeys = Array.from({ length: 3 }, (_, index) => `card-${index}`);
+  const cardKeys = Array.from({ length: 3 }, (_, index) => `widget-${index}`);
 
   return (
     <div className="flex flex-col gap-6 p-4 lg:p-6">

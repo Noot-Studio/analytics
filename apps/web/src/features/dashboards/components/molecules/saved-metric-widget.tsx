@@ -1,13 +1,13 @@
-import type { MetricCardConfig } from "@sbox-analytics/api/dashboard-cards";
+import type { MetricWidgetConfig } from "@sbox-analytics/api/dashboard-widgets";
 import type { MetricSnapshot } from "@sbox-analytics/api/metrics";
 import { useSuspenseQuery } from "@tanstack/react-query";
 
 import { orpc } from "@/utils/orpc";
 
-import type { CardRendererProps } from "../../lib/card-registry";
-import { CardMessage, MetricResult } from "./metric-result";
+import type { WidgetRendererProps } from "../../lib/widget-registry";
+import { WidgetMessage, MetricResult } from "./metric-result";
 
-const MetricCardBody = ({
+const MetricWidgetBody = ({
   metric,
   from,
   projectId,
@@ -33,8 +33,8 @@ const MetricCardBody = ({
   );
 };
 
-export const SavedMetricCard = (props: CardRendererProps) => {
-  const config = props.config as MetricCardConfig;
+export const SavedMetricWidget = (props: WidgetRendererProps) => {
+  const config = props.config as MetricWidgetConfig;
   const projectId = props.projectId ?? config.projectId;
 
   const { data: metric } = useSuspenseQuery(
@@ -47,18 +47,18 @@ export const SavedMetricCard = (props: CardRendererProps) => {
     })
   );
 
-  // Metric queries are project-scoped; an org-overview card must pin one.
+  // Metric queries are project-scoped; an org-overview widget must pin one.
   if (!projectId) {
     return (
-      <CardMessage
-        message="This card needs a project. Remove it and re-add it with a project selected."
+      <WidgetMessage
+        message="This widget needs a project. Remove it and re-add it with a project selected."
         title={metric.name}
       />
     );
   }
 
   return (
-    <MetricCardBody
+    <MetricWidgetBody
       from={props.from}
       metric={metric}
       projectId={projectId}

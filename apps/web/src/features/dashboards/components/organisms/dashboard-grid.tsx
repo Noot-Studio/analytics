@@ -11,15 +11,15 @@ import { useState } from "react";
 import { TimeRangeFilter } from "@/features/analytics/components/molecules/time-range-filter";
 import { useAnalyticsFilters } from "@/features/analytics/lib/use-analytics-filters";
 
-import { getCardDefinition } from "../../lib/card-registry";
 import type {
-  DashboardCardItem,
+  DashboardWidgetItem,
   DashboardScopeValue,
 } from "../../lib/use-dashboard-editor";
 import { useDashboardEditor } from "../../lib/use-dashboard-editor";
-import { AddCardDrawer } from "../molecules/add-card-drawer";
-import { CardSizeMenu } from "../molecules/card-size-menu";
-import { DashboardCardFrame } from "../molecules/dashboard-card-frame";
+import { getWidgetDefinition } from "../../lib/widget-registry";
+import { AddWidgetDrawer } from "../molecules/add-widget-drawer";
+import { DashboardWidgetFrame } from "../molecules/dashboard-widget-frame";
+import { WidgetSizeMenu } from "../molecules/widget-size-menu";
 
 interface DashboardGridProps {
   organizationId?: string;
@@ -68,7 +68,7 @@ export const DashboardGrid = ({
             <>
               <Button onClick={() => setAddOpen(true)} variant="outline">
                 <Plus />
-                Add card
+                Add widget
               </Button>
               <Button onClick={editor.stopEditing}>
                 <Check />
@@ -84,38 +84,38 @@ export const DashboardGrid = ({
         </div>
       </div>
 
-      {editor.cards.length === 0 ? (
+      {editor.widgets.length === 0 ? (
         <p className="rounded-lg border border-border border-dashed p-8 text-center text-muted-foreground text-sm">
-          This dashboard is empty. Add a card to get started.
+          This dashboard is empty. Add a widget to get started.
         </p>
       ) : null}
 
       <Sortable
-        getItemValue={(card: DashboardCardItem) => card.id}
+        getItemValue={(widget: DashboardWidgetItem) => widget.id}
         onValueChange={editor.reorder}
         orientation="mixed"
-        value={editor.cards}
+        value={editor.widgets}
       >
         <SortableContent className="grid grid-cols-1 gap-4 md:grid-cols-6">
-          {editor.cards.map((card) => {
-            const definition = getCardDefinition(card.cardType);
+          {editor.widgets.map((widget) => {
+            const definition = getWidgetDefinition(widget.widgetType);
             return (
-              <DashboardCardFrame
-                id={card.id}
+              <DashboardWidgetFrame
+                id={widget.id}
                 isEditing={editor.isEditing}
-                key={card.id}
-                onRemove={() => editor.removeCard(card.id)}
-                size={card.size}
+                key={widget.id}
+                onRemove={() => editor.removeWidget(widget.id)}
+                size={widget.size}
                 sizeMenu={
-                  <CardSizeMenu
-                    onSizeChange={(size) => editor.setSize(card.id, size)}
-                    size={card.size}
+                  <WidgetSizeMenu
+                    onSizeChange={(size) => editor.setSize(widget.id, size)}
+                    size={widget.size}
                   />
                 }
               >
                 {definition ? (
                   <definition.Renderer
-                    config={card.config}
+                    config={widget.config}
                     from={from}
                     organizationId={organizationId}
                     projectId={projectId}
@@ -123,10 +123,10 @@ export const DashboardGrid = ({
                   />
                 ) : (
                   <div className="flex h-full min-h-24 items-center justify-center rounded-lg border border-border p-4 text-muted-foreground text-sm">
-                    Unknown card type.
+                    Unknown widget type.
                   </div>
                 )}
-              </DashboardCardFrame>
+              </DashboardWidgetFrame>
             );
           })}
         </SortableContent>
@@ -135,9 +135,9 @@ export const DashboardGrid = ({
         </SortableOverlay>
       </Sortable>
 
-      <AddCardDrawer
+      <AddWidgetDrawer
         from={from}
-        onAdd={editor.addCard}
+        onAdd={editor.addWidget}
         onOpenChange={setAddOpen}
         open={addOpen}
         organizationId={organizationId}

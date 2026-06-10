@@ -1,4 +1,4 @@
-import type { CustomCardConfig } from "@sbox-analytics/api/dashboard-cards";
+import type { CustomWidgetConfig } from "@sbox-analytics/api/dashboard-widgets";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 
 import type { MetricTrend } from "@/features/analytics/components/molecules/metric-card";
@@ -6,13 +6,13 @@ import { orpc } from "@/utils/orpc";
 
 import type { DailyMetricKey, DailyRow } from "./aggregate";
 import { buildTrend, previousWindow, sumDaily } from "./aggregate";
-import type { CardRendererProps } from "./card-registry";
+import type { WidgetRendererProps } from "./widget-registry";
 
 /**
- * Resolve the project a card reads from: an explicit dashboard binding wins,
- * otherwise the card's own config pin (org overview cards pin a project).
+ * Resolve the project a widget reads from: an explicit dashboard binding wins,
+ * otherwise the widget's own config pin (org overview widgets pin a project).
  */
-const resolveProjectId = (props: CardRendererProps): string | undefined =>
+const resolveProjectId = (props: WidgetRendererProps): string | undefined =>
   props.projectId ?? (props.config as { projectId?: string }).projectId;
 
 const dailyQueryOptions = (
@@ -29,8 +29,8 @@ const dailyQueryOptions = (
       });
 };
 
-/** Project-pinned cards read insights.daily; org-wide cards orgInsights.daily. */
-export const useDailyRows = (props: CardRendererProps) => {
+/** Project-pinned widgets read insights.daily; org-wide widgets orgInsights.daily. */
+export const useDailyRows = (props: WidgetRendererProps) => {
   const effectiveProjectId = resolveProjectId(props);
   const { data } = useSuspenseQuery(
     dailyQueryOptions(
@@ -46,10 +46,10 @@ export const useDailyRows = (props: CardRendererProps) => {
 /**
  * Sum a daily metric over the current window and the preceding window of equal
  * length, returning the value and a period-over-period trend. The trend query
- * is non-suspense so it appears late without blocking the card.
+ * is non-suspense so it appears late without blocking the widget.
  */
 export const useDailyMetric = (
-  props: CardRendererProps,
+  props: WidgetRendererProps,
   metric: DailyMetricKey
 ) => {
   const { effectiveProjectId, rows } = useDailyRows(props);
@@ -77,13 +77,13 @@ export const useDailyMetric = (
 };
 
 /**
- * Run a custom stat card's stored query for the current binding and time range.
+ * Run a custom stat widget's stored query for the current binding and time range.
  * Rows come back as { value, time_bucket?, group_col_N? } per the query-builder
  * aliases; ClickHouse JSON output serializes 64-bit aggregates as strings, so
  * numeric fields are coerced here.
  */
-export const useCustomCardQuery = (
-  config: CustomCardConfig,
+export const useCustomWidgetQuery = (
+  config: CustomWidgetConfig,
   props: { from: string; projectId: string; to: string }
 ) => {
   const { data: rows } = useSuspenseQuery(

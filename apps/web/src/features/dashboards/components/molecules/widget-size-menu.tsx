@@ -1,4 +1,4 @@
-import type { CardSizeValue } from "@sbox-analytics/api/dashboard-cards";
+import type { WidgetSizeValue } from "@sbox-analytics/api/dashboard-widgets";
 import { Button } from "@sbox-analytics/ui/components/button";
 import {
   DropdownMenu,
@@ -9,30 +9,30 @@ import {
 } from "@sbox-analytics/ui/components/dropdown-menu";
 import { Scaling } from "lucide-react";
 
-const SIZE_LABELS: Record<CardSizeValue, string> = {
+const SIZE_LABELS: Record<WidgetSizeValue, string> = {
   Full: "Full width",
   Half: "1/2 width",
   Third: "1/3 width",
   TwoThirds: "2/3 width",
 };
 
-const SIZE_ORDER: CardSizeValue[] = ["Third", "Half", "TwoThirds", "Full"];
+const SIZE_ORDER: WidgetSizeValue[] = ["Third", "Half", "TwoThirds", "Full"];
 
-interface CardSizeMenuProps {
-  onSizeChange: (size: CardSizeValue) => void;
-  size: CardSizeValue;
+interface WidgetSizeMenuProps {
+  onSizeChange: (size: WidgetSizeValue) => void;
+  size: WidgetSizeValue;
 }
 
-export const CardSizeMenu = ({ onSizeChange, size }: CardSizeMenuProps) => (
+export const WidgetSizeMenu = ({ onSizeChange, size }: WidgetSizeMenuProps) => (
   <DropdownMenu>
     <DropdownMenuTrigger
-      render={<Button aria-label="Card size" size="icon" variant="ghost" />}
+      render={<Button aria-label="Widget size" size="icon" variant="ghost" />}
     >
       <Scaling />
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end">
       <DropdownMenuRadioGroup
-        onValueChange={(value) => onSizeChange(value as CardSizeValue)}
+        onValueChange={(value) => onSizeChange(value as WidgetSizeValue)}
         value={size}
       >
         {SIZE_ORDER.map((option) => (

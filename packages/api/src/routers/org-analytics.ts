@@ -13,7 +13,7 @@ const dailyInput = z.object({
   to: z.iso.date(),
 });
 
-// Same row shape as insights.daily so org and project cards share renderers.
+// Same row shape as insights.daily so org and project widgets share renderers.
 const dailyRow = z.object({
   event_count: z.coerce.number(),
   event_date: z.string(),

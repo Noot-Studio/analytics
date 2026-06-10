@@ -1,96 +1,96 @@
 import type {
-  CardSizeValue,
-  DashboardCardType,
-} from "@sbox-analytics/api/dashboard-cards";
+  WidgetSizeValue,
+  DashboardWidgetType,
+} from "@sbox-analytics/api/dashboard-widgets";
 import {
-  CUSTOM_CARD_TYPE,
-  METRIC_CARD_TYPE,
-} from "@sbox-analytics/api/dashboard-cards";
+  CUSTOM_WIDGET_TYPE,
+  METRIC_WIDGET_TYPE,
+} from "@sbox-analytics/api/dashboard-widgets";
 import type { MetricConfig } from "@sbox-analytics/api/metrics";
 import { metricDisplay } from "@sbox-analytics/api/metrics";
 import type { ComponentType } from "react";
 
 import {
-  EventsByTypeCard,
-  EventsPerDayCard,
-  MetricEventsCard,
-  MetricPlayersCard,
-  MetricSessionsCard,
-} from "../components/molecules/builtin-cards";
-import { CustomStatCard } from "../components/molecules/custom-stat-card";
-import { SavedMetricCard } from "../components/molecules/saved-metric-card";
+  EventsByTypeWidget,
+  EventsPerDayWidget,
+  MetricEventsWidget,
+  MetricPlayersWidget,
+  MetricSessionsWidget,
+} from "../components/molecules/builtin-widgets";
+import { CustomStatWidget } from "../components/molecules/custom-stat-widget";
+import { SavedMetricWidget } from "../components/molecules/saved-metric-widget";
 
-export interface CardRendererProps {
+export interface WidgetRendererProps {
   config: unknown;
   from: string;
-  /** Set for org dashboards; scopes org-wide cards to this organization. */
+  /** Set for org dashboards; scopes org-wide widgets to this organization. */
   organizationId?: string;
-  /** Set for project dashboards; org cards fall back to their config pin. */
+  /** Set for project dashboards; org widgets fall back to their config pin. */
   projectId?: string;
   to: string;
 }
 
-export interface CardDefinition {
-  defaultSize: CardSizeValue;
+export interface WidgetDefinition {
+  defaultSize: WidgetSizeValue;
   description: string;
-  Renderer: ComponentType<CardRendererProps>;
+  Renderer: ComponentType<WidgetRendererProps>;
   title: string;
 }
 
-export const CARD_REGISTRY: Record<DashboardCardType, CardDefinition> = {
+export const WIDGET_REGISTRY: Record<DashboardWidgetType, WidgetDefinition> = {
   "chart.events-per-day": {
-    Renderer: EventsPerDayCard,
+    Renderer: EventsPerDayWidget,
     defaultSize: "Full",
     description: "Area chart of total events per day.",
     title: "Events per day",
   },
   "custom.stat": {
-    Renderer: CustomStatCard,
+    Renderer: CustomStatWidget,
     defaultSize: "Third",
     description: "A statistic you define from your own events.",
     title: "Custom statistic",
   },
   "list.events-by-type": {
-    Renderer: EventsByTypeCard,
+    Renderer: EventsByTypeWidget,
     defaultSize: "Full",
     description: "Event totals broken down by type.",
     title: "Events by type",
   },
   "metric.events": {
-    Renderer: MetricEventsCard,
+    Renderer: MetricEventsWidget,
     defaultSize: "Third",
     description: "Total events with period-over-period trend.",
     title: "Total Events",
   },
   "metric.players": {
-    Renderer: MetricPlayersCard,
+    Renderer: MetricPlayersWidget,
     defaultSize: "Third",
     description: "Unique players summed per day, with trend.",
     title: "Unique Players",
   },
   "metric.saved": {
-    Renderer: SavedMetricCard,
+    Renderer: SavedMetricWidget,
     defaultSize: "Third",
     description: "A saved metric from your library.",
     title: "Saved metric",
   },
   "metric.sessions": {
-    Renderer: MetricSessionsCard,
+    Renderer: MetricSessionsWidget,
     defaultSize: "Third",
     description: "Sessions summed per day, with trend.",
     title: "Sessions",
   },
 };
 
-export const getCardDefinition = (
-  cardType: string
-): CardDefinition | undefined =>
-  Object.hasOwn(CARD_REGISTRY, cardType)
-    ? CARD_REGISTRY[cardType as DashboardCardType]
+export const getWidgetDefinition = (
+  widgetType: string
+): WidgetDefinition | undefined =>
+  Object.hasOwn(WIDGET_REGISTRY, widgetType)
+    ? WIDGET_REGISTRY[widgetType as DashboardWidgetType]
     : undefined;
 
-export { CUSTOM_CARD_TYPE, METRIC_CARD_TYPE };
+export { CUSTOM_WIDGET_TYPE, METRIC_WIDGET_TYPE };
 
 /** Timeseries/table metrics fill a row; single-number ones take a third. */
-export const metricCardSize = (config: MetricConfig): CardSizeValue =>
+export const metricWidgetSize = (config: MetricConfig): WidgetSizeValue =>
   metricDisplay(config) === "metric" ? "Third" : "Full";

@@ -1,4 +1,4 @@
-import type { CardSizeValue } from "@sbox-analytics/api/dashboard-cards";
+import type { WidgetSizeValue } from "@sbox-analytics/api/dashboard-widgets";
 import { Button } from "@sbox-analytics/ui/components/button";
 import { Skeleton } from "@sbox-analytics/ui/components/skeleton";
 import {
@@ -10,40 +10,40 @@ import { GripVertical, X } from "lucide-react";
 import { Suspense } from "react";
 import type { ReactNode } from "react";
 
-import { CardErrorBoundary } from "../atoms/card-error-boundary";
+import { WidgetErrorBoundary } from "../atoms/widget-error-boundary";
 
 // 6-col grid: the LCM of halves and thirds, so every preset is an integer span.
-const SIZE_CLASS: Record<CardSizeValue, string> = {
+const SIZE_CLASS: Record<WidgetSizeValue, string> = {
   Full: "md:col-span-6",
   Half: "md:col-span-3",
   Third: "md:col-span-2",
   TwoThirds: "md:col-span-4",
 };
 
-interface DashboardCardFrameProps {
+interface DashboardWidgetFrameProps {
   children: ReactNode;
   id: string;
   isEditing: boolean;
   onRemove: () => void;
-  onSizeChange: (size: CardSizeValue) => void;
-  size: CardSizeValue;
+  onSizeChange: (size: WidgetSizeValue) => void;
+  size: WidgetSizeValue;
   sizeMenu: ReactNode;
 }
 
-export const DashboardCardFrame = ({
+export const DashboardWidgetFrame = ({
   children,
   id,
   isEditing,
   onRemove,
   size,
   sizeMenu,
-}: Omit<DashboardCardFrameProps, "onSizeChange">) => (
+}: Omit<DashboardWidgetFrameProps, "onSizeChange">) => (
   <SortableItem className={cn("flex flex-col", SIZE_CLASS[size])} value={id}>
     {isEditing ? (
       <div className="mb-1 flex items-center justify-end gap-1">
         {sizeMenu}
         <Button
-          aria-label="Remove card"
+          aria-label="Remove widget"
           onClick={onRemove}
           size="icon"
           variant="ghost"
@@ -58,11 +58,11 @@ export const DashboardCardFrame = ({
       </div>
     ) : null}
     <div className="flex-1">
-      <CardErrorBoundary>
+      <WidgetErrorBoundary>
         <Suspense fallback={<Skeleton className="h-full min-h-24 w-full" />}>
           {children}
         </Suspense>
-      </CardErrorBoundary>
+      </WidgetErrorBoundary>
     </div>
   </SortableItem>
 );

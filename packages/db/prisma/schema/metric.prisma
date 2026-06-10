@@ -1,5 +1,5 @@
 // A Metric is a named, saved query definition (the query-config DSL) owned by
-// an organization. Dashboard cards reference metrics by id; alerts will too.
+// an organization. Dashboard widgets reference metrics by id; alerts will too.
 model Metric {
   id             String       @id @default(cuid())
   organizationId String

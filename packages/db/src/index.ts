@@ -11,9 +11,9 @@ export const createPrismaClient = () => {
 };
 
 export {
-  CardSize,
   DashboardScope,
   ProjectEnvironment,
+  WidgetSize,
 } from "../prisma/generated/enums";
 
 const prisma = createPrismaClient();
