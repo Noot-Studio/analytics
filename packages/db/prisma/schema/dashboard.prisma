@@ -30,19 +30,6 @@ model Dashboard {
   @@map("dashboard")
 }
 
-// Reusable user-created card definitions ("library"); built-ins are code.
-model DashboardCardDefinition {
-  id             String       @id @default(cuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  cardType       String       @default("custom.stat")
-  config         Json         @default("{}")
-  createdAt      DateTime     @default(now())
-
-  @@index([organizationId])
-  @@map("dashboard_card_definition")
-}
-
 model DashboardCard {
   id          String    @id @default(cuid())
   dashboardId String

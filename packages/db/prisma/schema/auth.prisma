@@ -77,7 +77,7 @@ model Organization {
   invitations     Invitation[]
   projects        Project[]
   dashboards      Dashboard[]
-  cardDefinitions DashboardCardDefinition[]
+  metrics         Metric[]
   uploadedImages  UploadedImage[]
 
   @@map("organization")
