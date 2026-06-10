@@ -11,10 +11,9 @@ import type { DashboardCardSnapshot } from "../dashboard-cards";
 import {
   cardSchema,
   cardSizeSchema,
-  CUSTOM_CARD_TYPE,
-  customCardConfigSchema,
   DEFAULT_ORG_OVERVIEW,
   DEFAULT_PROJECT_OVERVIEW,
+  METRIC_CARD_TYPE,
 } from "../dashboard-cards";
 import { protectedProcedure } from "../index";
 
@@ -103,6 +102,32 @@ const assertPinnedProjects = async (
   }
 };
 
+/** Metric cards reference saved metrics; each must live in the same org. */
+const assertReferencedMetrics = async (
+  cards: z.infer<typeof saveInput>["cards"],
+  organizationId: string
+): Promise<void> => {
+  const metricIds = [
+    ...new Set(
+      cards.flatMap((card) =>
+        card.cardType === METRIC_CARD_TYPE ? [card.config.metricId] : []
+      )
+    ),
+  ];
+  if (metricIds.length === 0) {
+    return;
+  }
+
+  const count = await prisma.metric.count({
+    where: { id: { in: metricIds }, organizationId },
+  });
+  if (count !== metricIds.length) {
+    throw new ORPCError("FORBIDDEN", {
+      message: "Card references a metric outside the organization",
+    });
+  }
+};
+
 const cardRowSelect = {
   cardType: true,
   config: true,
@@ -110,25 +135,6 @@ const cardRowSelect = {
   position: true,
   size: true,
 } as const;
-
-// Library procedures resolve their org like get/save: explicit org id, or via
-// the project, or the session's active organization.
-const libraryScopeInput = z.object({
-  organizationId: z.string().min(1).optional(),
-  projectId: z.string().min(1).optional(),
-});
-
-const resolveOrg = async (
-  context: SessionContext,
-  input: z.infer<typeof libraryScopeInput>
-): Promise<string> => {
-  if (input.projectId) {
-    return await assertProjectAccess(input.projectId, context.session.user.id);
-  }
-  const organizationId = input.organizationId ?? requireActiveOrg(context);
-  await assertOrgAccess(organizationId, context.session.user.id);
-  return organizationId;
-};
 
 export const dashboardsRouter = {
   get: protectedProcedure
@@ -165,65 +171,12 @@ export const dashboardsRouter = {
       };
     }),
 
-  // Reusable user-created card definitions; built-in cards live in code.
-  libraryCreate: protectedProcedure
-    .input(libraryScopeInput.extend({ config: customCardConfigSchema }))
-    .handler(async ({ context, input }) => {
-      const organizationId = await resolveOrg(context, input);
-
-      const definition = await prisma.dashboardCardDefinition.create({
-        data: {
-          cardType: CUSTOM_CARD_TYPE,
-          config: input.config,
-          organizationId,
-        },
-        select: { cardType: true, config: true, id: true },
-      });
-      return {
-        cardType: definition.cardType,
-        config: definition.config as unknown,
-        id: definition.id,
-      };
-    }),
-
-  libraryDelete: protectedProcedure
-    .input(libraryScopeInput.extend({ id: z.string().min(1) }))
-    .handler(async ({ context, input }) => {
-      const organizationId = await resolveOrg(context, input);
-
-      const { count } = await prisma.dashboardCardDefinition.deleteMany({
-        where: { id: input.id, organizationId },
-      });
-      if (count === 0) {
-        throw new ORPCError("NOT_FOUND", {
-          message: "Card definition not found",
-        });
-      }
-      return { id: input.id };
-    }),
-
-  libraryList: protectedProcedure
-    .input(libraryScopeInput)
-    .handler(async ({ context, input }) => {
-      const organizationId = await resolveOrg(context, input);
-
-      const definitions = await prisma.dashboardCardDefinition.findMany({
-        orderBy: { createdAt: "asc" },
-        select: { cardType: true, config: true, id: true },
-        where: { organizationId },
-      });
-      return definitions.map((definition) => ({
-        cardType: definition.cardType,
-        config: definition.config as unknown,
-        id: definition.id,
-      }));
-    }),
-
   save: protectedProcedure
     .input(saveInput)
     .handler(async ({ context, input }) => {
       const { organizationId, projectId } = await resolveScope(context, input);
       await assertPinnedProjects(input.cards, organizationId);
+      await assertReferencedMetrics(input.cards, organizationId);
 
       const where = { organizationId, projectId, scope: input.scope };
       const existing = await prisma.dashboard.findFirst({

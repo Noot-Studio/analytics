@@ -14,6 +14,9 @@ export const BUILTIN_CARD_TYPES = [
 
 export const CUSTOM_CARD_TYPE = "custom.stat";
 
+/** A card that renders a saved Metric (referenced by id, not embedded). */
+export const METRIC_CARD_TYPE = "metric.saved";
+
 const MAX_CARD_TITLE_LENGTH = 80;
 
 /**
@@ -57,6 +60,15 @@ export const customCardConfigSchema = z
     }
   });
 
+/**
+ * Metric cards reference a saved Metric; the query lives on the Metric row.
+ * `projectId` follows the same pinning rules as built-in cards.
+ */
+export const metricCardConfigSchema = z.object({
+  metricId: z.string().min(1),
+  projectId: z.string().min(1).optional(),
+});
+
 export const cardSchema = z.discriminatedUnion("cardType", [
   z.object({
     cardType: z.enum(BUILTIN_CARD_TYPES),
@@ -70,14 +82,24 @@ export const cardSchema = z.discriminatedUnion("cardType", [
     id: z.string().min(1).optional(),
     size: cardSizeSchema,
   }),
+  z.object({
+    cardType: z.literal(METRIC_CARD_TYPE),
+    config: metricCardConfigSchema,
+    id: z.string().min(1).optional(),
+    size: cardSizeSchema,
+  }),
 ]);
 
 export type DashboardCardInput = z.infer<typeof cardSchema>;
 export type BuiltinCardType = (typeof BUILTIN_CARD_TYPES)[number];
-export type DashboardCardType = BuiltinCardType | typeof CUSTOM_CARD_TYPE;
+export type DashboardCardType =
+  | BuiltinCardType
+  | typeof CUSTOM_CARD_TYPE
+  | typeof METRIC_CARD_TYPE;
 export type CardSizeValue = z.infer<typeof cardSizeSchema>;
 export type BuiltinCardConfig = z.infer<typeof builtinCardConfigSchema>;
 export type CustomCardConfig = z.infer<typeof customCardConfigSchema>;
+export type MetricCardConfig = z.infer<typeof metricCardConfigSchema>;
 
 export interface DashboardCardSnapshot {
   cardType: string;

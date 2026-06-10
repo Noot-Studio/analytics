@@ -7,6 +7,7 @@ import { customAnalyticsRouter } from "./custom-analytics";
 import { dashboardsRouter } from "./dashboards";
 import { imagesRouter } from "./images";
 import { introspectionRouter } from "./introspection";
+import { metricsRouter } from "./metrics";
 import { orgAnalyticsRouter } from "./org-analytics";
 import { projectsRouter } from "./projects";
 import { teamsRouter } from "./teams";
@@ -19,6 +20,7 @@ export const appRouter = {
   images: imagesRouter,
   insights: analyticsRouter,
   introspection: introspectionRouter,
+  metrics: metricsRouter,
   orgInsights: orgAnalyticsRouter,
   privateData: protectedProcedure.handler(({ context }) => ({
     message: "This is private",

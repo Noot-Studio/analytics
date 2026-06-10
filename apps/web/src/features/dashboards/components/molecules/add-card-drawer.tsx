@@ -1,8 +1,6 @@
-import type {
-  CustomCardConfig,
-  DashboardCardInput,
-} from "@sbox-analytics/api/dashboard-cards";
+import type { DashboardCardInput } from "@sbox-analytics/api/dashboard-cards";
 import { BUILTIN_CARD_TYPES } from "@sbox-analytics/api/dashboard-cards";
+import type { MetricInput, MetricSnapshot } from "@sbox-analytics/api/metrics";
 import { Button } from "@sbox-analytics/ui/components/button";
 import { Input } from "@sbox-analytics/ui/components/input";
 import { Label } from "@sbox-analytics/ui/components/label";
@@ -31,13 +29,13 @@ import { orpc } from "@/utils/orpc";
 
 import {
   CARD_REGISTRY,
-  CUSTOM_CARD_TYPE,
-  customCardSize,
+  METRIC_CARD_TYPE,
+  metricCardSize,
 } from "../../lib/card-registry";
 import { useCardSourcePin } from "../../lib/use-card-source-pin";
 import type { DashboardScopeValue } from "../../lib/use-dashboard-editor";
 import { CardErrorBoundary } from "../atoms/card-error-boundary";
-import { CustomCardForm } from "./custom-card-form";
+import { MetricBuilder } from "./metric-builder";
 
 interface AddCardDrawerProps {
   from: string;
@@ -83,25 +81,14 @@ export const AddCardDrawer = ({
   const [search, setSearch] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
-  const libraryQueryOptions = orpc.dashboards.libraryList.queryOptions({
+  const metricsQueryOptions = orpc.metrics.list.queryOptions({
     enabled: open,
     input: { organizationId, projectId },
   });
-  const { data: library } = useQuery(libraryQueryOptions);
+  const { data: metrics } = useQuery(metricsQueryOptions);
 
-  const invalidateLibrary = () =>
-    queryClient.invalidateQueries({ queryKey: libraryQueryOptions.queryKey });
-
-  const createMutation = useMutation(
-    orpc.dashboards.libraryCreate.mutationOptions({
-      onSuccess: invalidateLibrary,
-    })
-  );
-  const deleteMutation = useMutation(
-    orpc.dashboards.libraryDelete.mutationOptions({
-      onSuccess: invalidateLibrary,
-    })
-  );
+  const invalidateMetrics = () =>
+    queryClient.invalidateQueries({ queryKey: metricsQueryOptions.queryKey });
 
   const handleOpenChange = (next: boolean) => {
     if (!next) {
@@ -120,39 +107,48 @@ export const AddCardDrawer = ({
     handleOpenChange(false);
   };
 
-  const addCustom = (config: CustomCardConfig) => {
+  const addMetricCard = (metric: MetricSnapshot) => {
     onAdd({
-      cardType: CUSTOM_CARD_TYPE,
-      config,
-      size: customCardSize(config),
+      cardType: METRIC_CARD_TYPE,
+      config: {
+        metricId: metric.id,
+        ...(pinnedProjectId ? { projectId: pinnedProjectId } : {}),
+      },
+      size: metricCardSize(metric.config),
     });
     handleOpenChange(false);
   };
 
-  // Creating saves the definition to the library, then places it.
-  const createCustom = (card: DashboardCardInput) => {
-    if (card.cardType !== CUSTOM_CARD_TYPE) {
-      return;
-    }
-    createMutation.mutate({
-      config: card.config,
-      organizationId,
-      projectId,
-    });
-    addCustom(card.config);
+  // Creating saves the metric to the library, then places a card for it.
+  const createMutation = useMutation(
+    orpc.metrics.create.mutationOptions({
+      onSuccess: (metric) => {
+        invalidateMetrics();
+        addMetricCard(metric);
+      },
+    })
+  );
+  const deleteMutation = useMutation(
+    orpc.metrics.delete.mutationOptions({ onSuccess: invalidateMetrics })
+  );
+
+  const createMetric = (input: MetricInput) => {
+    createMutation.mutate({ ...input, organizationId, projectId });
   };
 
   const query = search.trim().toLowerCase();
-  const matches = (...texts: (string | undefined)[]) =>
+  const matches = (...texts: (string | null | undefined)[]) =>
     query === "" || texts.some((text) => text?.toLowerCase().includes(query));
 
   const builtins = BUILTIN_CARD_TYPES.filter((cardType) => {
     const definition = CARD_REGISTRY[cardType];
     return matches(definition.title, definition.description);
   });
-  const customs = (library ?? []).filter((definition) =>
-    matches((definition.config as CustomCardConfig).title, "custom")
+  const savedMetrics = (metrics ?? []).filter((metric) =>
+    matches(metric.name, metric.description, "metric")
   );
+
+  const { Renderer: MetricRenderer } = CARD_REGISTRY[METRIC_CARD_TYPE];
 
   return (
     <Sheet onOpenChange={handleOpenChange} open={open}>
@@ -163,7 +159,7 @@ export const AddCardDrawer = ({
         <SheetHeader className="gap-1">
           <SheetTitle>Add card</SheetTitle>
           <SheetDescription>
-            Preview a statistic from the library or create your own.
+            Preview a metric from the library or create your own.
           </SheetDescription>
         </SheetHeader>
 
@@ -202,16 +198,17 @@ export const AddCardDrawer = ({
                 Back to library
               </Button>
               {customProjectId ? (
-                <CustomCardForm
+                <MetricBuilder
                   from={from}
-                  onAdd={createCustom}
+                  isSaving={createMutation.isPending}
+                  onSave={createMetric}
                   projectId={customProjectId}
                   to={to}
                 />
               ) : (
                 <p className="rounded-lg border border-border border-dashed p-6 text-center text-muted-foreground text-sm">
-                  Custom statistics query a single project. Pick a project as
-                  the data source above first.
+                  Metrics query a single project. Pick a project as the data
+                  source above first.
                 </p>
               )}
             </>
@@ -227,7 +224,7 @@ export const AddCardDrawer = ({
                 />
                 <Button onClick={() => setIsCreating(true)} variant="outline">
                   <Plus />
-                  New
+                  New metric
                 </Button>
               </div>
 
@@ -264,55 +261,56 @@ export const AddCardDrawer = ({
                 );
               })}
 
-              {customs.map((definition) => {
-                const config = definition.config as CustomCardConfig;
-                const { Renderer } = CARD_REGISTRY[CUSTOM_CARD_TYPE];
-                return (
-                  <div className="flex flex-col gap-2" key={definition.id}>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-muted-foreground text-xs">
-                        Custom statistic
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          aria-label={`Delete ${config.title}`}
-                          disabled={deleteMutation.isPending}
-                          onClick={() =>
-                            deleteMutation.mutate({
-                              id: definition.id,
-                              organizationId,
-                              projectId,
-                            })
-                          }
-                          size="icon-sm"
-                          variant="ghost"
-                        >
-                          <Trash2 />
-                        </Button>
-                        <Button
-                          aria-label={`Add ${config.title}`}
-                          onClick={() => addCustom(config)}
-                          size="icon-sm"
-                          variant="ghost"
-                        >
-                          <Plus />
-                        </Button>
-                      </div>
+              {savedMetrics.map((metric) => (
+                <div className="flex flex-col gap-2" key={metric.id}>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground text-xs">
+                      {metric.description ?? "Saved metric"}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        aria-label={`Delete ${metric.name}`}
+                        disabled={deleteMutation.isPending}
+                        onClick={() =>
+                          deleteMutation.mutate({
+                            id: metric.id,
+                            organizationId,
+                            projectId,
+                          })
+                        }
+                        size="icon-sm"
+                        variant="ghost"
+                      >
+                        <Trash2 />
+                      </Button>
+                      <Button
+                        aria-label={`Add ${metric.name}`}
+                        onClick={() => addMetricCard(metric)}
+                        size="icon-sm"
+                        variant="ghost"
+                      >
+                        <Plus />
+                      </Button>
                     </div>
-                    <CardPreview>
-                      <Renderer
-                        config={config}
-                        from={from}
-                        organizationId={organizationId}
-                        projectId={projectId}
-                        to={to}
-                      />
-                    </CardPreview>
                   </div>
-                );
-              })}
+                  <CardPreview>
+                    <MetricRenderer
+                      config={{
+                        metricId: metric.id,
+                        ...(pinnedProjectId
+                          ? { projectId: pinnedProjectId }
+                          : {}),
+                      }}
+                      from={from}
+                      organizationId={organizationId}
+                      projectId={projectId}
+                      to={to}
+                    />
+                  </CardPreview>
+                </div>
+              ))}
 
-              {builtins.length === 0 && customs.length === 0 ? (
+              {builtins.length === 0 && savedMetrics.length === 0 ? (
                 <p className="rounded-lg border border-border border-dashed p-6 text-center text-muted-foreground text-sm">
                   No cards match your search.
                 </p>

@@ -60,6 +60,44 @@ describe("buildQuery", () => {
     expect(query).toContain("GROUP BY time_bucket");
     expect(query).toContain("ORDER BY time_bucket");
   });
+
+  it("groups by a known column directly (no JSONExtract)", () => {
+    const config = queryConfigSchema.parse({
+      aggregation: "count",
+      granularity: "none",
+      groupBy: ["event_type"],
+      projectId: "p1",
+      timeRange: {
+        from: "2026-05-28T00:00:00.000Z",
+        to: "2026-06-04T23:59:59.999Z",
+      },
+    });
+
+    const { query } = buildQuery(config);
+
+    expect(query).toContain("event_type AS group_col_0");
+    expect(query).not.toContain("JSONExtract");
+  });
+
+  it("groups by a custom property via JSONExtractString", () => {
+    const config = queryConfigSchema.parse({
+      aggregation: "count",
+      granularity: "none",
+      groupBy: ["weapon"],
+      projectId: "p1",
+      timeRange: {
+        from: "2026-05-28T00:00:00.000Z",
+        to: "2026-06-04T23:59:59.999Z",
+      },
+    });
+
+    const { params, query } = buildQuery(config);
+
+    expect(query).toContain(
+      "JSONExtractString(properties, {prop_weapon_name:String}) AS group_col_0"
+    );
+    expect(params.prop_weapon_name).toBe("weapon");
+  });
 });
 
 describe("applyFilters", () => {

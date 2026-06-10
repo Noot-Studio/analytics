@@ -1,9 +1,13 @@
 import type {
   CardSizeValue,
-  CustomCardConfig,
   DashboardCardType,
 } from "@sbox-analytics/api/dashboard-cards";
-import { CUSTOM_CARD_TYPE } from "@sbox-analytics/api/dashboard-cards";
+import {
+  CUSTOM_CARD_TYPE,
+  METRIC_CARD_TYPE,
+} from "@sbox-analytics/api/dashboard-cards";
+import type { MetricConfig } from "@sbox-analytics/api/metrics";
+import { metricDisplay } from "@sbox-analytics/api/metrics";
 import type { ComponentType } from "react";
 
 import {
@@ -14,6 +18,7 @@ import {
   MetricSessionsCard,
 } from "../components/molecules/builtin-cards";
 import { CustomStatCard } from "../components/molecules/custom-stat-card";
+import { SavedMetricCard } from "../components/molecules/saved-metric-card";
 
 export interface CardRendererProps {
   config: unknown;
@@ -63,6 +68,12 @@ export const CARD_REGISTRY: Record<DashboardCardType, CardDefinition> = {
     description: "Unique players summed per day, with trend.",
     title: "Unique Players",
   },
+  "metric.saved": {
+    Renderer: SavedMetricCard,
+    defaultSize: "Third",
+    description: "A saved metric from your library.",
+    title: "Saved metric",
+  },
   "metric.sessions": {
     Renderer: MetricSessionsCard,
     defaultSize: "Third",
@@ -78,8 +89,8 @@ export const getCardDefinition = (
     ? CARD_REGISTRY[cardType as DashboardCardType]
     : undefined;
 
-export { CUSTOM_CARD_TYPE };
+export { CUSTOM_CARD_TYPE, METRIC_CARD_TYPE };
 
-/** Timeseries custom cards fill a row; single-number ones take a third. */
-export const customCardSize = (config: CustomCardConfig): CardSizeValue =>
-  config.display === "timeseries" ? "Full" : "Third";
+/** Timeseries/table metrics fill a row; single-number ones take a third. */
+export const metricCardSize = (config: MetricConfig): CardSizeValue =>
+  metricDisplay(config) === "metric" ? "Third" : "Full";

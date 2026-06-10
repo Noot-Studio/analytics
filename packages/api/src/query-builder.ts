@@ -395,11 +395,13 @@ export const buildQuery = (config: QueryConfig): QueryResult => {
       if (property === undefined) {
         continue;
       }
-      const paramName = getPropertyParamName(property, propertyParams);
-      const alias = `group_col_${i}`;
-      selectColumns.push(
-        `JSONExtractString(properties, {${paramName}:String}) AS ${alias}`
+      const accessor = buildPropertyAccessor(
+        property,
+        "string",
+        propertyParams
       );
+      const alias = `group_col_${i}`;
+      selectColumns.push(`${accessor} AS ${alias}`);
       groupByColumns.push(alias);
     }
   }
