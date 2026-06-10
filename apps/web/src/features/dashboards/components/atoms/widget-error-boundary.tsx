@@ -1,23 +1,23 @@
 import { Component } from "react";
 import type { ReactNode } from "react";
 
-interface CardErrorBoundaryProps {
+interface WidgetErrorBoundaryProps {
   children: ReactNode;
 }
 
-interface CardErrorBoundaryState {
+interface WidgetErrorBoundaryState {
   hasError: boolean;
 }
 
 // Error boundaries still require a class component; keep this the only one.
-// Scoped per card so one failing query never blanks the whole dashboard.
-export class CardErrorBoundary extends Component<
-  CardErrorBoundaryProps,
-  CardErrorBoundaryState
+// Scoped per widget so one failing query never blanks the whole dashboard.
+export class WidgetErrorBoundary extends Component<
+  WidgetErrorBoundaryProps,
+  WidgetErrorBoundaryState
 > {
-  state: CardErrorBoundaryState = { hasError: false };
+  state: WidgetErrorBoundaryState = { hasError: false };
 
-  static getDerivedStateFromError(): CardErrorBoundaryState {
+  static getDerivedStateFromError(): WidgetErrorBoundaryState {
     return { hasError: true };
   }
 
@@ -25,7 +25,7 @@ export class CardErrorBoundary extends Component<
     if (this.state.hasError) {
       return (
         <div className="flex h-full min-h-24 items-center justify-center rounded-lg border border-border p-4 text-destructive text-sm">
-          Failed to load card.
+          Failed to load widget.
         </div>
       );
     }

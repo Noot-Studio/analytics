@@ -76,9 +76,9 @@ model Organization {
   members         Member[]
   invitations     Invitation[]
   projects        Project[]
-  dashboards      Dashboard[]
-  metrics         Metric[]
-  uploadedImages  UploadedImage[]
+  dashboards     Dashboard[]
+  metrics        Metric[]
+  uploadedImages UploadedImage[]
 
   @@map("organization")
 }

@@ -7,17 +7,17 @@ import {
   assertProjectAccess,
   requireActiveOrg,
 } from "../access";
-import type { DashboardCardSnapshot } from "../dashboard-cards";
+import type { DashboardWidgetSnapshot } from "../dashboard-widgets";
 import {
-  cardSchema,
-  cardSizeSchema,
+  widgetSchema,
+  widgetSizeSchema,
   DEFAULT_ORG_OVERVIEW,
   DEFAULT_PROJECT_OVERVIEW,
-  METRIC_CARD_TYPE,
-} from "../dashboard-cards";
+  METRIC_WIDGET_TYPE,
+} from "../dashboard-widgets";
 import { protectedProcedure } from "../index";
 
-const MAX_CARDS = 30;
+const MAX_WIDGETS = 30;
 
 // CustomPage is reserved for a later feature; only overviews are editable now.
 const scopeSchema = z.enum(["OrgOverview", "ProjectOverview"]);
@@ -31,10 +31,10 @@ const getInput = z.object({
 });
 
 const saveInput = z.object({
-  cards: z.array(cardSchema).max(MAX_CARDS),
   organizationId: z.string().min(1).optional(),
   projectId: z.string().min(1).optional(),
   scope: scopeSchema,
+  widgets: z.array(widgetSchema).max(MAX_WIDGETS),
 });
 
 type Scope = z.infer<typeof scopeSchema>;
@@ -73,18 +73,18 @@ const resolveScope = async (
   return { organizationId, projectId: null };
 };
 
-const defaultCards = (scope: Scope): DashboardCardSnapshot[] =>
+const defaultWidgets = (scope: Scope): DashboardWidgetSnapshot[] =>
   scope === "ProjectOverview" ? DEFAULT_PROJECT_OVERVIEW : DEFAULT_ORG_OVERVIEW;
 
-/** Cards may pin a project; every pinned project must live in the same org. */
+/** Widgets may pin a project; every pinned project must live in the same org. */
 const assertPinnedProjects = async (
-  cards: z.infer<typeof saveInput>["cards"],
+  widgets: z.infer<typeof saveInput>["widgets"],
   organizationId: string
 ): Promise<void> => {
   const pinnedIds = [
     ...new Set(
-      cards.flatMap((card) =>
-        card.config.projectId ? [card.config.projectId] : []
+      widgets.flatMap((widget) =>
+        widget.config.projectId ? [widget.config.projectId] : []
       )
     ),
   ];
@@ -97,20 +97,20 @@ const assertPinnedProjects = async (
   });
   if (count !== pinnedIds.length) {
     throw new ORPCError("FORBIDDEN", {
-      message: "Card references a project outside the organization",
+      message: "Widget references a project outside the organization",
     });
   }
 };
 
-/** Metric cards reference saved metrics; each must live in the same org. */
+/** Metric widgets reference saved metrics; each must live in the same org. */
 const assertReferencedMetrics = async (
-  cards: z.infer<typeof saveInput>["cards"],
+  widgets: z.infer<typeof saveInput>["widgets"],
   organizationId: string
 ): Promise<void> => {
   const metricIds = [
     ...new Set(
-      cards.flatMap((card) =>
-        card.cardType === METRIC_CARD_TYPE ? [card.config.metricId] : []
+      widgets.flatMap((widget) =>
+        widget.widgetType === METRIC_WIDGET_TYPE ? [widget.config.metricId] : []
       )
     ),
   ];
@@ -123,17 +123,17 @@ const assertReferencedMetrics = async (
   });
   if (count !== metricIds.length) {
     throw new ORPCError("FORBIDDEN", {
-      message: "Card references a metric outside the organization",
+      message: "Widget references a metric outside the organization",
     });
   }
 };
 
-const cardRowSelect = {
-  cardType: true,
+const widgetRowSelect = {
   config: true,
   id: true,
   position: true,
   size: true,
+  widgetType: true,
 } as const;
 
 export const dashboardsRouter = {
@@ -144,30 +144,30 @@ export const dashboardsRouter = {
 
       const dashboard = await prisma.dashboard.findFirst({
         select: {
-          cards: { orderBy: { position: "asc" }, select: cardRowSelect },
           id: true,
+          widgets: { orderBy: { position: "asc" }, select: widgetRowSelect },
         },
         where: { organizationId, projectId, scope: input.scope },
       });
 
       if (!dashboard) {
         return {
-          cards: defaultCards(input.scope),
           id: null,
           scope: input.scope,
+          widgets: defaultWidgets(input.scope),
         };
       }
 
       return {
-        cards: dashboard.cards.map((card) => ({
-          cardType: card.cardType,
-          config: card.config as unknown,
-          id: card.id,
-          position: card.position,
-          size: cardSizeSchema.parse(card.size),
-        })),
         id: dashboard.id,
         scope: input.scope,
+        widgets: dashboard.widgets.map((widget) => ({
+          config: widget.config as unknown,
+          id: widget.id,
+          position: widget.position,
+          size: widgetSizeSchema.parse(widget.size),
+          widgetType: widget.widgetType,
+        })),
       };
     }),
 
@@ -175,8 +175,8 @@ export const dashboardsRouter = {
     .input(saveInput)
     .handler(async ({ context, input }) => {
       const { organizationId, projectId } = await resolveScope(context, input);
-      await assertPinnedProjects(input.cards, organizationId);
-      await assertReferencedMetrics(input.cards, organizationId);
+      await assertPinnedProjects(input.widgets, organizationId);
+      await assertReferencedMetrics(input.widgets, organizationId);
 
       const where = { organizationId, projectId, scope: input.scope };
       const existing = await prisma.dashboard.findFirst({
@@ -188,36 +188,36 @@ export const dashboardsRouter = {
 
       // Whole-set replace keeps reorder/add/remove atomic; last write wins.
       const [_deleted, _created, saved] = await prisma.$transaction([
-        prisma.dashboardCard.deleteMany({
+        prisma.dashboardWidget.deleteMany({
           where: { dashboardId: dashboard.id },
         }),
-        prisma.dashboardCard.createMany({
-          data: input.cards.map((card, index) => ({
-            cardType: card.cardType,
-            config: card.config,
+        prisma.dashboardWidget.createMany({
+          data: input.widgets.map((widget, index) => ({
+            config: widget.config,
             dashboardId: dashboard.id,
-            id: card.id ?? crypto.randomUUID(),
+            id: widget.id ?? crypto.randomUUID(),
             position: index,
-            size: card.size,
+            size: widget.size,
+            widgetType: widget.widgetType,
           })),
         }),
-        prisma.dashboardCard.findMany({
+        prisma.dashboardWidget.findMany({
           orderBy: { position: "asc" },
-          select: cardRowSelect,
+          select: widgetRowSelect,
           where: { dashboardId: dashboard.id },
         }),
       ]);
 
       return {
-        cards: saved.map((card) => ({
-          cardType: card.cardType,
-          config: card.config as unknown,
-          id: card.id,
-          position: card.position,
-          size: cardSizeSchema.parse(card.size),
-        })),
         id: dashboard.id,
         scope: input.scope,
+        widgets: saved.map((widget) => ({
+          config: widget.config as unknown,
+          id: widget.id,
+          position: widget.position,
+          size: widgetSizeSchema.parse(widget.size),
+          widgetType: widget.widgetType,
+        })),
       };
     }),
 };

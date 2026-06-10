@@ -15,12 +15,12 @@ interface CardSourcePinArgs {
 }
 
 /**
- * Org-overview dashboards let an author pin a card to one project as its data
+ * Org-overview dashboards let an author pin a widget to one project as its data
  * source; project dashboards already have one. Owns the pin selector state, the
  * projects fetch behind it, and the project ids derived for built-in vs custom
- * cards.
+ * widgets.
  */
-export const useCardSourcePin = ({
+export const useWidgetSourcePin = ({
   open,
   projectId,
   scope,
@@ -44,7 +44,7 @@ export const useCardSourcePin = ({
   };
 
   const pinnedProjectId = pin === ORG_WIDE ? undefined : pin;
-  // Custom cards query project-scoped data; org dashboards must pin one.
+  // Custom widgets query project-scoped data; org dashboards must pin one.
   const customProjectId = projectId ?? pinnedProjectId;
 
   return {

@@ -1,4 +1,4 @@
-import type { CustomCardConfig } from "@sbox-analytics/api/dashboard-cards";
+import type { CustomWidgetConfig } from "@sbox-analytics/api/dashboard-widgets";
 import { Area } from "@sbox-analytics/ui/components/chart-series";
 import {
   AreaChart,
@@ -10,12 +10,12 @@ import {
 
 import { MetricCard } from "@/features/analytics/components/molecules/metric-card";
 
-import { useCustomCardQuery } from "../../lib/card-data";
-import type { CardRendererProps } from "../../lib/card-registry";
+import { useCustomWidgetQuery } from "../../lib/widget-data";
+import type { WidgetRendererProps } from "../../lib/widget-registry";
 
 const CHART_HEIGHT = 240;
 
-const CardMessage = ({
+const WidgetMessage = ({
   title,
   message,
 }: {
@@ -36,12 +36,12 @@ const CustomStatBody = ({
   projectId,
   to,
 }: {
-  config: CustomCardConfig;
+  config: CustomWidgetConfig;
   from: string;
   projectId: string;
   to: string;
 }) => {
-  const { metricValue, series } = useCustomCardQuery(config, {
+  const { metricValue, series } = useCustomWidgetQuery(config, {
     from,
     projectId,
     to,
@@ -53,7 +53,7 @@ const CustomStatBody = ({
 
   if (series.length === 0) {
     return (
-      <CardMessage message="No data for this period." title={config.title} />
+      <WidgetMessage message="No data for this period." title={config.title} />
     );
   }
 
@@ -78,15 +78,15 @@ const CustomStatBody = ({
   );
 };
 
-export const CustomStatCard = (props: CardRendererProps) => {
-  const config = props.config as CustomCardConfig;
+export const CustomStatWidget = (props: WidgetRendererProps) => {
+  const config = props.config as CustomWidgetConfig;
   const projectId = props.projectId ?? config.projectId;
 
-  // customAnalytics is project-scoped; an org-overview card must pin one.
+  // customAnalytics is project-scoped; an org-overview widget must pin one.
   if (!projectId) {
     return (
-      <CardMessage
-        message="This card needs a project. Remove it and re-add it with a project selected."
+      <WidgetMessage
+        message="This widget needs a project. Remove it and re-add it with a project selected."
         title={config.title}
       />
     );

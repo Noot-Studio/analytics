@@ -1,5 +1,5 @@
-import type { DashboardCardInput } from "@sbox-analytics/api/dashboard-cards";
-import { BUILTIN_CARD_TYPES } from "@sbox-analytics/api/dashboard-cards";
+import type { DashboardWidgetInput } from "@sbox-analytics/api/dashboard-widgets";
+import { BUILTIN_WIDGET_TYPES } from "@sbox-analytics/api/dashboard-widgets";
 import type { MetricInput, MetricSnapshot } from "@sbox-analytics/api/metrics";
 import { Button } from "@sbox-analytics/ui/components/button";
 import { Input } from "@sbox-analytics/ui/components/input";
@@ -27,19 +27,19 @@ import type { ReactNode } from "react";
 
 import { orpc } from "@/utils/orpc";
 
-import {
-  CARD_REGISTRY,
-  METRIC_CARD_TYPE,
-  metricCardSize,
-} from "../../lib/card-registry";
-import { useCardSourcePin } from "../../lib/use-card-source-pin";
 import type { DashboardScopeValue } from "../../lib/use-dashboard-editor";
-import { CardErrorBoundary } from "../atoms/card-error-boundary";
+import { useWidgetSourcePin } from "../../lib/use-widget-source-pin";
+import {
+  WIDGET_REGISTRY,
+  METRIC_WIDGET_TYPE,
+  metricWidgetSize,
+} from "../../lib/widget-registry";
+import { WidgetErrorBoundary } from "../atoms/widget-error-boundary";
 import { MetricBuilder } from "./metric-builder";
 
-interface AddCardDrawerProps {
+interface AddWidgetDrawerProps {
   from: string;
-  onAdd: (card: DashboardCardInput) => void;
+  onAdd: (widget: DashboardWidgetInput) => void;
   onOpenChange: (open: boolean) => void;
   open: boolean;
   organizationId?: string;
@@ -48,17 +48,17 @@ interface AddCardDrawerProps {
   to: string;
 }
 
-const CardPreview = ({ children }: { children: ReactNode }) => (
+const WidgetPreview = ({ children }: { children: ReactNode }) => (
   <div className="pointer-events-none select-none">
-    <CardErrorBoundary>
+    <WidgetErrorBoundary>
       <Suspense fallback={<Skeleton className="h-24 w-full" />}>
         {children}
       </Suspense>
-    </CardErrorBoundary>
+    </WidgetErrorBoundary>
   </div>
 );
 
-export const AddCardDrawer = ({
+export const AddWidgetDrawer = ({
   from,
   onAdd,
   onOpenChange,
@@ -67,7 +67,7 @@ export const AddCardDrawer = ({
   projectId,
   scope,
   to,
-}: AddCardDrawerProps) => {
+}: AddWidgetDrawerProps) => {
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const {
@@ -77,7 +77,7 @@ export const AddCardDrawer = ({
     pinnedProjectId,
     setPin,
     sourceItems,
-  } = useCardSourcePin({ open, projectId, scope });
+  } = useWidgetSourcePin({ open, projectId, scope });
   const [search, setSearch] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
@@ -98,33 +98,33 @@ export const AddCardDrawer = ({
     onOpenChange(next);
   };
 
-  const addBuiltin = (cardType: (typeof BUILTIN_CARD_TYPES)[number]) => {
+  const addBuiltin = (widgetType: (typeof BUILTIN_WIDGET_TYPES)[number]) => {
     onAdd({
-      cardType,
       config: pinnedProjectId ? { projectId: pinnedProjectId } : {},
-      size: CARD_REGISTRY[cardType].defaultSize,
+      size: WIDGET_REGISTRY[widgetType].defaultSize,
+      widgetType,
     });
     handleOpenChange(false);
   };
 
-  const addMetricCard = (metric: MetricSnapshot) => {
+  const addMetricWidget = (metric: MetricSnapshot) => {
     onAdd({
-      cardType: METRIC_CARD_TYPE,
       config: {
         metricId: metric.id,
         ...(pinnedProjectId ? { projectId: pinnedProjectId } : {}),
       },
-      size: metricCardSize(metric.config),
+      size: metricWidgetSize(metric.config),
+      widgetType: METRIC_WIDGET_TYPE,
     });
     handleOpenChange(false);
   };
 
-  // Creating saves the metric to the library, then places a card for it.
+  // Creating saves the metric to the library, then places a widget for it.
   const createMutation = useMutation(
     orpc.metrics.create.mutationOptions({
       onSuccess: (metric) => {
         invalidateMetrics();
-        addMetricCard(metric);
+        addMetricWidget(metric);
       },
     })
   );
@@ -140,15 +140,15 @@ export const AddCardDrawer = ({
   const matches = (...texts: (string | null | undefined)[]) =>
     query === "" || texts.some((text) => text?.toLowerCase().includes(query));
 
-  const builtins = BUILTIN_CARD_TYPES.filter((cardType) => {
-    const definition = CARD_REGISTRY[cardType];
+  const builtins = BUILTIN_WIDGET_TYPES.filter((widgetType) => {
+    const definition = WIDGET_REGISTRY[widgetType];
     return matches(definition.title, definition.description);
   });
   const savedMetrics = (metrics ?? []).filter((metric) =>
     matches(metric.name, metric.description, "metric")
   );
 
-  const { Renderer: MetricRenderer } = CARD_REGISTRY[METRIC_CARD_TYPE];
+  const { Renderer: MetricRenderer } = WIDGET_REGISTRY[METRIC_WIDGET_TYPE];
 
   return (
     <Sheet onOpenChange={handleOpenChange} open={open}>
@@ -157,7 +157,7 @@ export const AddCardDrawer = ({
         side={isMobile ? "bottom" : "right"}
       >
         <SheetHeader className="gap-1">
-          <SheetTitle>Add card</SheetTitle>
+          <SheetTitle>Add widget</SheetTitle>
           <SheetDescription>
             Preview a metric from the library or create your own.
           </SheetDescription>
@@ -166,13 +166,13 @@ export const AddCardDrawer = ({
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4">
           {isOrgScope ? (
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="add-card-project">Data source</Label>
+              <Label htmlFor="add-widget-project">Data source</Label>
               <Select
                 items={sourceItems}
                 onValueChange={(value) => value && setPin(value)}
                 value={pin}
               >
-                <SelectTrigger className="w-full" id="add-card-project">
+                <SelectTrigger className="w-full" id="add-widget-project">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -216,10 +216,10 @@ export const AddCardDrawer = ({
             <>
               <div className="flex items-center gap-2">
                 <Input
-                  aria-label="Search cards"
+                  aria-label="Search widgets"
                   className="flex-1"
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search cards…"
+                  placeholder="Search widgets…"
                   value={search}
                 />
                 <Button onClick={() => setIsCreating(true)} variant="outline">
@@ -228,25 +228,25 @@ export const AddCardDrawer = ({
                 </Button>
               </div>
 
-              {builtins.map((cardType) => {
-                const definition = CARD_REGISTRY[cardType];
+              {builtins.map((widgetType) => {
+                const definition = WIDGET_REGISTRY[widgetType];
                 return (
-                  // The preview itself is a card — no extra chrome around it.
-                  <div className="flex flex-col gap-2" key={cardType}>
+                  // The preview itself is a widget — no extra chrome around it.
+                  <div className="flex flex-col gap-2" key={widgetType}>
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-muted-foreground text-xs">
                         {definition.description}
                       </span>
                       <Button
                         aria-label={`Add ${definition.title}`}
-                        onClick={() => addBuiltin(cardType)}
+                        onClick={() => addBuiltin(widgetType)}
                         size="icon-sm"
                         variant="ghost"
                       >
                         <Plus />
                       </Button>
                     </div>
-                    <CardPreview>
+                    <WidgetPreview>
                       <definition.Renderer
                         config={
                           pinnedProjectId ? { projectId: pinnedProjectId } : {}
@@ -256,7 +256,7 @@ export const AddCardDrawer = ({
                         projectId={projectId}
                         to={to}
                       />
-                    </CardPreview>
+                    </WidgetPreview>
                   </div>
                 );
               })}
@@ -285,7 +285,7 @@ export const AddCardDrawer = ({
                       </Button>
                       <Button
                         aria-label={`Add ${metric.name}`}
-                        onClick={() => addMetricCard(metric)}
+                        onClick={() => addMetricWidget(metric)}
                         size="icon-sm"
                         variant="ghost"
                       >
@@ -293,7 +293,7 @@ export const AddCardDrawer = ({
                       </Button>
                     </div>
                   </div>
-                  <CardPreview>
+                  <WidgetPreview>
                     <MetricRenderer
                       config={{
                         metricId: metric.id,
@@ -306,13 +306,13 @@ export const AddCardDrawer = ({
                       projectId={projectId}
                       to={to}
                     />
-                  </CardPreview>
+                  </WidgetPreview>
                 </div>
               ))}
 
               {builtins.length === 0 && savedMetrics.length === 0 ? (
                 <p className="rounded-lg border border-border border-dashed p-6 text-center text-muted-foreground text-sm">
-                  No cards match your search.
+                  No widgets match your search.
                 </p>
               ) : null}
             </>

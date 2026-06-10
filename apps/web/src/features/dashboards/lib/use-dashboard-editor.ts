@@ -1,4 +1,4 @@
-import type { DashboardCardInput } from "@sbox-analytics/api/dashboard-cards";
+import type { DashboardWidgetInput } from "@sbox-analytics/api/dashboard-widgets";
 import {
   useMutation,
   useQueryClient,
@@ -12,7 +12,7 @@ export type DashboardScopeValue = "OrgOverview" | "ProjectOverview";
 
 // Distribute over the union so each branch keeps its discriminated config.
 type WithId<T> = T extends unknown ? Omit<T, "id"> & { id: string } : never;
-export type DashboardCardItem = WithId<DashboardCardInput>;
+export type DashboardWidgetItem = WithId<DashboardWidgetInput>;
 
 const AUTOSAVE_DELAY_MS = 800;
 
@@ -40,10 +40,10 @@ export const useDashboardEditor = ({
   });
   const { data } = useSuspenseQuery(queryOptions);
 
-  const [draft, setDraft] = useState<DashboardCardItem[] | null>(null);
+  const [draft, setDraft] = useState<DashboardWidgetItem[] | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingRef = useRef<DashboardCardItem[] | null>(null);
+  const pendingRef = useRef<DashboardWidgetItem[] | null>(null);
 
   const saveMutation = useMutation(
     orpc.dashboards.save.mutationOptions({
@@ -61,17 +61,17 @@ export const useDashboardEditor = ({
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    const cards = pendingRef.current;
-    if (cards) {
+    const widgets = pendingRef.current;
+    if (widgets) {
       pendingRef.current = null;
-      mutateRef.current({ cards, organizationId, projectId, scope });
+      mutateRef.current({ organizationId, projectId, scope, widgets });
     }
   }, [organizationId, projectId, scope]);
 
   const applyChange = useCallback(
-    (cards: DashboardCardItem[]) => {
-      setDraft(cards);
-      pendingRef.current = cards;
+    (widgets: DashboardWidgetItem[]) => {
+      setDraft(widgets);
+      pendingRef.current = widgets;
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
@@ -86,10 +86,10 @@ export const useDashboardEditor = ({
   const startEditing = useCallback(() => {
     // Default (unpersisted) layouts carry shared placeholder ids; fork them
     // into unique ids so they can become primary keys on first save.
-    const cards = (data.cards as DashboardCardItem[]).map((card) =>
-      data.id === null ? { ...card, id: crypto.randomUUID() } : { ...card }
+    const widgets = (data.widgets as DashboardWidgetItem[]).map((widget) =>
+      data.id === null ? { ...widget, id: crypto.randomUUID() } : { ...widget }
     );
-    setDraft(cards);
+    setDraft(widgets);
     setIsEditing(true);
   }, [data]);
 
@@ -99,44 +99,44 @@ export const useDashboardEditor = ({
     setDraft(null);
   }, [flush]);
 
-  const cards =
-    isEditing && draft ? draft : (data.cards as DashboardCardItem[]);
+  const widgets =
+    isEditing && draft ? draft : (data.widgets as DashboardWidgetItem[]);
 
   const reorder = useCallback(
-    (next: DashboardCardItem[]) => applyChange(next),
+    (next: DashboardWidgetItem[]) => applyChange(next),
     [applyChange]
   );
 
-  const removeCard = useCallback(
+  const removeWidget = useCallback(
     (id: string) => {
       if (!draft) {
         return;
       }
-      applyChange(draft.filter((card) => card.id !== id));
+      applyChange(draft.filter((widget) => widget.id !== id));
     },
     [applyChange, draft]
   );
 
   const setSize = useCallback(
-    (id: string, size: DashboardCardItem["size"]) => {
+    (id: string, size: DashboardWidgetItem["size"]) => {
       if (!draft) {
         return;
       }
       applyChange(
-        draft.map((card) => (card.id === id ? { ...card, size } : card))
+        draft.map((widget) => (widget.id === id ? { ...widget, size } : widget))
       );
     },
     [applyChange, draft]
   );
 
-  const addCard = useCallback(
-    (card: DashboardCardInput) => {
+  const addWidget = useCallback(
+    (widget: DashboardWidgetInput) => {
       if (!draft) {
         return;
       }
       applyChange([
         ...draft,
-        { ...card, id: crypto.randomUUID() } as DashboardCardItem,
+        { ...widget, id: crypto.randomUUID() } as DashboardWidgetItem,
       ]);
     },
     [applyChange, draft]
@@ -150,14 +150,14 @@ export const useDashboardEditor = ({
   }
 
   return {
-    addCard,
-    cards,
+    addWidget,
     isEditing,
-    removeCard,
+    removeWidget,
     reorder,
     saveState,
     setSize,
     startEditing,
     stopEditing,
+    widgets,
   };
 };

@@ -4,7 +4,7 @@ enum DashboardScope {
   CustomPage
 }
 
-enum CardSize {
+enum WidgetSize {
   Third
   Half
   TwoThirds
@@ -22,7 +22,7 @@ model Dashboard {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
-  cards DashboardCard[]
+  widgets DashboardWidget[]
 
   @@unique([organizationId, projectId, scope])
   @@index([organizationId])
@@ -30,15 +30,15 @@ model Dashboard {
   @@map("dashboard")
 }
 
-model DashboardCard {
-  id          String    @id @default(cuid())
+model DashboardWidget {
+  id          String     @id @default(cuid())
   dashboardId String
-  dashboard   Dashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+  dashboard   Dashboard  @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
   position    Int
-  size        CardSize  @default(Full)
-  cardType    String
-  config      Json      @default("{}")
+  size        WidgetSize @default(Full)
+  widgetType  String
+  config      Json       @default("{}")
 
   @@index([dashboardId])
-  @@map("dashboard_card")
+  @@map("dashboard_widget")
 }

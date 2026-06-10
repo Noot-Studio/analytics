@@ -15,7 +15,7 @@ const OverviewPage = () => {
 };
 
 const OverviewPending = () => {
-  const cardKeys = Array.from({ length: 3 }, (_, index) => `card-${index}`);
+  const cardKeys = Array.from({ length: 3 }, (_, index) => `widget-${index}`);
 
   return (
     <div className="flex flex-col gap-6 p-4 lg:p-6">
@@ -55,7 +55,7 @@ export const Route = createFileRoute("/dashboard/projects/$projectId/overview")(
             },
           })
         ),
-        // Default built-in cards all read from this one rollup query.
+        // Default built-in widgets all read from this one rollup query.
         context.queryClient.ensureQueryData(
           context.orpc.insights.daily.queryOptions({
             input: {

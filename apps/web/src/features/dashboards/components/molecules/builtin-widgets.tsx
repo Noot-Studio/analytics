@@ -11,42 +11,46 @@ import { MetricCard } from "@/features/analytics/components/molecules/metric-car
 
 import type { DailyMetricKey } from "../../lib/aggregate";
 import { dailySeries, typeBreakdown } from "../../lib/aggregate";
-import { useDailyMetric, useDailyRows } from "../../lib/card-data";
-import type { CardRendererProps } from "../../lib/card-registry";
+import { useDailyMetric, useDailyRows } from "../../lib/widget-data";
+import type { WidgetRendererProps } from "../../lib/widget-registry";
 
 const CHART_HEIGHT = 240;
 
-interface DailyMetricCardProps extends CardRendererProps {
+interface DailyMetricWidgetProps extends WidgetRendererProps {
   label: string;
   metric: DailyMetricKey;
 }
 
-const DailyMetricCard = ({ label, metric, ...props }: DailyMetricCardProps) => {
+const DailyMetricWidget = ({
+  label,
+  metric,
+  ...props
+}: DailyMetricWidgetProps) => {
   const { trend, value } = useDailyMetric(props, metric);
   return <MetricCard label={label} trend={trend} value={value} />;
 };
 
-export const MetricEventsCard = (props: CardRendererProps) => (
-  <DailyMetricCard {...props} label="Total Events" metric="event_count" />
+export const MetricEventsWidget = (props: WidgetRendererProps) => (
+  <DailyMetricWidget {...props} label="Total Events" metric="event_count" />
 );
 
-export const MetricPlayersCard = (props: CardRendererProps) => (
-  <DailyMetricCard
+export const MetricPlayersWidget = (props: WidgetRendererProps) => (
+  <DailyMetricWidget
     {...props}
     label="Unique Players (sum/day)"
     metric="unique_players"
   />
 );
 
-export const MetricSessionsCard = (props: CardRendererProps) => (
-  <DailyMetricCard
+export const MetricSessionsWidget = (props: WidgetRendererProps) => (
+  <DailyMetricWidget
     {...props}
     label="Sessions (sum/day)"
     metric="unique_sessions"
   />
 );
 
-const EmptyCardBody = ({ title }: { title: string }) => (
+const EmptyWidgetBody = ({ title }: { title: string }) => (
   <div className="flex h-full min-h-24 flex-col rounded-lg border border-border p-4">
     <h2 className="font-medium text-sm">{title}</h2>
     <p className="flex flex-1 items-center justify-center text-muted-foreground text-sm">
@@ -55,12 +59,12 @@ const EmptyCardBody = ({ title }: { title: string }) => (
   </div>
 );
 
-export const EventsPerDayCard = (props: CardRendererProps) => {
+export const EventsPerDayWidget = (props: WidgetRendererProps) => {
   const { rows } = useDailyRows(props);
   const series = dailySeries(rows);
 
   if (series.length === 0) {
-    return <EmptyCardBody title="Events per day" />;
+    return <EmptyWidgetBody title="Events per day" />;
   }
 
   return (
@@ -84,12 +88,12 @@ export const EventsPerDayCard = (props: CardRendererProps) => {
   );
 };
 
-export const EventsByTypeCard = (props: CardRendererProps) => {
+export const EventsByTypeWidget = (props: WidgetRendererProps) => {
   const { rows } = useDailyRows(props);
   const types = typeBreakdown(rows);
 
   if (types.length === 0) {
-    return <EmptyCardBody title="Events by type" />;
+    return <EmptyWidgetBody title="Events by type" />;
   }
 
   return (
