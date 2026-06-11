@@ -11,17 +11,18 @@
     "prefix": ""
   },
   "iconLibrary": "hugeicons",
+  "rtl": false,
+  "menuColor": "default",
+  "menuAccent": "subtle",
   "aliases": {
     "components": "@sbox-analytics/ui/components",
     "utils": "@sbox-analytics/ui/lib/utils",
-    "hooks": "@sbox-analytics/ui/hooks",
+    "ui": "@sbox-analytics/ui/components",
     "lib": "@sbox-analytics/ui/lib",
-    "ui": "@sbox-analytics/ui/components"
+    "hooks": "@sbox-analytics/ui/hooks"
   },
-  "menuColor": "default",
-  "menuAccent": "subtle",
   "registries": {
-    "@reui": "https://reui.io/r/{name}.json"
-  },
-  "rtl": false
+    "@reui": "https://reui.io/r/{name}.json",
+    "@diceui": "https://diceui.com/r/{style}/{name}.json"
+  }
 }

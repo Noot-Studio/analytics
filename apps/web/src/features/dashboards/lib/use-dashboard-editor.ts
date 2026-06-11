@@ -4,7 +4,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 
 import { orpc } from "@/utils/orpc";
 
@@ -13,10 +13,6 @@ export type DashboardScopeValue = "OrgOverview" | "ProjectOverview";
 // Distribute over the union so each branch keeps its discriminated config.
 type WithId<T> = T extends unknown ? Omit<T, "id"> & { id: string } : never;
 export type DashboardWidgetItem = WithId<DashboardWidgetInput>;
-
-const AUTOSAVE_DELAY_MS = 800;
-
-export type SaveState = "idle" | "saved" | "saving";
 
 interface UseDashboardEditorParams {
   organizationId?: string;
@@ -27,7 +23,8 @@ interface UseDashboardEditorParams {
 /**
  * Working state for one dashboard. Outside edit mode the persisted (or
  * default) layout renders as-is; entering edit mode forks it into a local
- * draft that autosaves (debounced, last write wins) on every change.
+ * draft that is only persisted when the user explicitly saves. Cancelling
+ * discards the draft.
  */
 export const useDashboardEditor = ({
   organizationId,
@@ -42,8 +39,7 @@ export const useDashboardEditor = ({
 
   const [draft, setDraft] = useState<DashboardWidgetItem[] | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingRef = useRef<DashboardWidgetItem[] | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
 
   const saveMutation = useMutation(
     orpc.dashboards.save.mutationOptions({
@@ -52,36 +48,6 @@ export const useDashboardEditor = ({
       },
     })
   );
-  // Keep the latest mutate stable for the unmount flush below.
-  const mutateRef = useRef(saveMutation.mutate);
-  mutateRef.current = saveMutation.mutate;
-
-  const flush = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    const widgets = pendingRef.current;
-    if (widgets) {
-      pendingRef.current = null;
-      mutateRef.current({ organizationId, projectId, scope, widgets });
-    }
-  }, [organizationId, projectId, scope]);
-
-  const applyChange = useCallback(
-    (widgets: DashboardWidgetItem[]) => {
-      setDraft(widgets);
-      pendingRef.current = widgets;
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-      timerRef.current = setTimeout(flush, AUTOSAVE_DELAY_MS);
-    },
-    [flush]
-  );
-
-  // Don't lose an in-flight debounce if the page unmounts mid-edit.
-  useEffect(() => flush, [flush]);
 
   const startEditing = useCallback(() => {
     // Default (unpersisted) layouts carry shared placeholder ids; fork them
@@ -91,16 +57,36 @@ export const useDashboardEditor = ({
     );
     setDraft(widgets);
     setIsEditing(true);
+    setIsDirty(false);
   }, [data]);
 
-  const stopEditing = useCallback(() => {
-    flush();
+  const cancelEditing = useCallback(() => {
     setIsEditing(false);
     setDraft(null);
-  }, [flush]);
+    setIsDirty(false);
+  }, []);
+
+  const saveEditing = useCallback(async () => {
+    if (draft) {
+      await saveMutation.mutateAsync({
+        organizationId,
+        projectId,
+        scope,
+        widgets: draft,
+      });
+    }
+    setIsEditing(false);
+    setDraft(null);
+    setIsDirty(false);
+  }, [draft, organizationId, projectId, saveMutation, scope]);
 
   const widgets =
     isEditing && draft ? draft : (data.widgets as DashboardWidgetItem[]);
+
+  const applyChange = useCallback((next: DashboardWidgetItem[]) => {
+    setDraft(next);
+    setIsDirty(true);
+  }, []);
 
   const reorder = useCallback(
     (next: DashboardWidgetItem[]) => applyChange(next),
@@ -142,22 +128,17 @@ export const useDashboardEditor = ({
     [applyChange, draft]
   );
 
-  let saveState: SaveState = "idle";
-  if (saveMutation.isPending) {
-    saveState = "saving";
-  } else if (saveMutation.isSuccess) {
-    saveState = "saved";
-  }
-
   return {
     addWidget,
+    cancelEditing,
+    isDirty,
     isEditing,
+    isSaving: saveMutation.isPending,
     removeWidget,
     reorder,
-    saveState,
+    saveEditing,
     setSize,
     startEditing,
-    stopEditing,
     widgets,
   };
 };

@@ -1,3 +1,10 @@
+import {
+  ActionBar,
+  ActionBarGroup,
+  ActionBarItem,
+  ActionBarSelection,
+  ActionBarSeparator,
+} from "@sbox-analytics/ui/components/action-bar";
 import { Button } from "@sbox-analytics/ui/components/button";
 import { Skeleton } from "@sbox-analytics/ui/components/skeleton";
 import {
@@ -5,7 +12,7 @@ import {
   SortableContent,
   SortableOverlay,
 } from "@sbox-analytics/ui/components/sortable";
-import { Check, Loader2, Pencil, Plus } from "lucide-react";
+import { Check, Loader2, Pencil, Plus, X } from "lucide-react";
 import { useState } from "react";
 
 import { TimeRangeFilter } from "@/features/analytics/components/molecules/time-range-filter";
@@ -27,27 +34,6 @@ interface DashboardGridProps {
   scope: DashboardScopeValue;
 }
 
-const SaveIndicator = ({ state }: { state: "idle" | "saved" | "saving" }) => {
-  if (state === "idle") {
-    return null;
-  }
-  return (
-    <span className="inline-flex items-center gap-1 text-muted-foreground text-xs">
-      {state === "saving" ? (
-        <>
-          <Loader2 aria-hidden className="size-3 animate-spin" />
-          Saving…
-        </>
-      ) : (
-        <>
-          <Check aria-hidden className="size-3" />
-          Saved
-        </>
-      )}
-    </span>
-  );
-};
-
 export const DashboardGrid = ({
   organizationId,
   projectId,
@@ -62,7 +48,6 @@ export const DashboardGrid = ({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="font-semibold text-2xl">Overview</h1>
         <div className="flex items-center gap-2">
-          <SaveIndicator state={editor.isEditing ? editor.saveState : "idle"} />
           <TimeRangeFilter />
           {editor.isEditing ? (
             <>
@@ -70,10 +55,12 @@ export const DashboardGrid = ({
                 <Plus />
                 Add widget
               </Button>
-              <Button onClick={editor.stopEditing}>
-                <Check />
-                Done
-              </Button>
+              {editor.isDirty ? null : (
+                <Button onClick={editor.cancelEditing} variant="outline">
+                  <Check />
+                  Done
+                </Button>
+              )}
             </>
           ) : (
             <Button onClick={editor.startEditing} variant="outline">
@@ -145,6 +132,29 @@ export const DashboardGrid = ({
         scope={scope}
         to={to}
       />
+
+      <ActionBar open={editor.isEditing && editor.isDirty}>
+        <ActionBarSelection>Unsaved changes</ActionBarSelection>
+        <ActionBarSeparator />
+        <ActionBarGroup>
+          <ActionBarItem
+            disabled={editor.isSaving}
+            onSelect={editor.cancelEditing}
+            variant="outline"
+          >
+            <X />
+            Cancel
+          </ActionBarItem>
+          <ActionBarItem
+            disabled={editor.isSaving}
+            onSelect={() => editor.saveEditing()}
+            variant="default"
+          >
+            {editor.isSaving ? <Loader2 className="animate-spin" /> : <Check />}
+            Save
+          </ActionBarItem>
+        </ActionBarGroup>
+      </ActionBar>
     </div>
   );
 };
