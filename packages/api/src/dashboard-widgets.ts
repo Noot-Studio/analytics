@@ -5,6 +5,19 @@ import { queryConfigSchema } from "./query-builder";
 
 export const widgetSizeSchema = z.enum(["Third", "Half", "TwoThirds", "Full"]);
 
+// Grid layout in react-grid-layout units on a 12-column grid. Optional so a
+// widget can be created from its `size`; once placed/resized the client sends
+// explicit coordinates. Minimums keep widgets readable.
+export const GRID_COLUMNS = 12;
+export const WIDGET_MIN_W = 2;
+export const WIDGET_MIN_H = 2;
+export const widgetLayoutSchema = z.object({
+  h: z.number().int().min(WIDGET_MIN_H).max(100),
+  w: z.number().int().min(WIDGET_MIN_W).max(GRID_COLUMNS),
+  x: z.number().int().min(0).max(GRID_COLUMNS),
+  y: z.number().int().min(0),
+});
+
 export const BUILTIN_WIDGET_TYPES = [
   "metric.events",
   "metric.players",
@@ -81,18 +94,21 @@ export const widgetSchema = z.discriminatedUnion("widgetType", [
   z.object({
     config: builtinWidgetConfigSchema,
     id: z.string().min(1).optional(),
+    layout: widgetLayoutSchema.optional(),
     size: widgetSizeSchema,
     widgetType: z.enum(BUILTIN_WIDGET_TYPES),
   }),
   z.object({
     config: customWidgetConfigSchema,
     id: z.string().min(1).optional(),
+    layout: widgetLayoutSchema.optional(),
     size: widgetSizeSchema,
     widgetType: z.literal(CUSTOM_WIDGET_TYPE),
   }),
   z.object({
     config: metricWidgetConfigSchema,
     id: z.string().min(1).optional(),
+    layout: widgetLayoutSchema.optional(),
     size: widgetSizeSchema,
     widgetType: z.literal(METRIC_WIDGET_TYPE),
   }),
@@ -109,18 +125,22 @@ export type BuiltinWidgetConfig = z.infer<typeof builtinWidgetConfigSchema>;
 export type CustomWidgetConfig = z.infer<typeof customWidgetConfigSchema>;
 export type MetricWidgetConfig = z.infer<typeof metricWidgetConfigSchema>;
 
+export type WidgetLayout = z.infer<typeof widgetLayoutSchema>;
+
 export interface DashboardWidgetSnapshot {
   widgetType: string;
   config: unknown;
   id: string;
   position: number;
   size: WidgetSizeValue;
+  layout?: WidgetLayout;
 }
 
 const buildDefaultWidgets = (prefix: string): DashboardWidgetSnapshot[] => [
   {
     config: {},
     id: `${prefix}-metric-events`,
+    layout: { h: 4, w: 4, x: 0, y: 0 },
     position: 0,
     size: "Third",
     widgetType: "metric.events",
@@ -128,6 +148,7 @@ const buildDefaultWidgets = (prefix: string): DashboardWidgetSnapshot[] => [
   {
     config: {},
     id: `${prefix}-metric-players`,
+    layout: { h: 4, w: 4, x: 4, y: 0 },
     position: 1,
     size: "Third",
     widgetType: "metric.players",
@@ -135,6 +156,7 @@ const buildDefaultWidgets = (prefix: string): DashboardWidgetSnapshot[] => [
   {
     config: {},
     id: `${prefix}-metric-sessions`,
+    layout: { h: 4, w: 4, x: 8, y: 0 },
     position: 2,
     size: "Third",
     widgetType: "metric.sessions",
@@ -142,6 +164,7 @@ const buildDefaultWidgets = (prefix: string): DashboardWidgetSnapshot[] => [
   {
     config: {},
     id: `${prefix}-chart-events-per-day`,
+    layout: { h: 10, w: 12, x: 0, y: 4 },
     position: 3,
     size: "Full",
     widgetType: "chart.events-per-day",
@@ -149,6 +172,7 @@ const buildDefaultWidgets = (prefix: string): DashboardWidgetSnapshot[] => [
   {
     config: {},
     id: `${prefix}-list-events-by-type`,
+    layout: { h: 10, w: 12, x: 0, y: 14 },
     position: 4,
     size: "Full",
     widgetType: "list.events-by-type",

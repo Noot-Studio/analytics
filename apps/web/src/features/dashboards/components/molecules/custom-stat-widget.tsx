@@ -13,8 +13,6 @@ import { MetricCard } from "@/features/analytics/components/molecules/metric-car
 import { useCustomWidgetQuery } from "../../lib/widget-data";
 import type { WidgetRendererProps } from "../../lib/widget-registry";
 
-const CHART_HEIGHT = 240;
-
 const WidgetMessage = ({
   title,
   message,
@@ -48,7 +46,13 @@ const CustomStatBody = ({
   });
 
   if (config.display === "metric") {
-    return <MetricCard label={config.title} value={metricValue} />;
+    return (
+      <MetricCard
+        className="h-full content-start"
+        label={config.title}
+        value={metricValue}
+      />
+    );
   }
 
   if (series.length === 0) {
@@ -58,22 +62,24 @@ const CustomStatBody = ({
   }
 
   return (
-    <div className="h-full rounded-lg border border-border p-4">
+    <div className="flex h-full flex-col rounded-lg border border-border p-4">
       <h2 className="mb-4 font-medium text-sm">{config.title}</h2>
-      <ResponsiveContainer height={CHART_HEIGHT} width="100%">
-        <AreaChart data={series}>
-          <XAxis dataKey="bucket" fontSize={12} tickLine={false} />
-          <YAxis fontSize={12} tickLine={false} />
-          <Tooltip />
-          <Area
-            dataKey="value"
-            fill="var(--primary)"
-            fillOpacity={0.2}
-            stroke="var(--primary)"
-            type="monotone"
-          />
-        </AreaChart>
-      </ResponsiveContainer>
+      <div className="min-h-0 flex-1">
+        <ResponsiveContainer height="100%" width="100%">
+          <AreaChart data={series}>
+            <XAxis dataKey="bucket" fontSize={12} tickLine={false} />
+            <YAxis fontSize={12} tickLine={false} />
+            <Tooltip />
+            <Area
+              dataKey="value"
+              fill="var(--primary)"
+              fillOpacity={0.2}
+              stroke="var(--primary)"
+              type="monotone"
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 };

@@ -36,6 +36,12 @@ model DashboardWidget {
   dashboard   Dashboard  @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
   position    Int
   size        WidgetSize @default(Full)
+  // Grid layout in react-grid-layout units (12-col). Null on legacy rows that
+  // predate free layout; the client derives a layout from `size` until saved.
+  x           Int?
+  y           Int?
+  w           Int?
+  h           Int?
   widgetType  String
   config      Json       @default("{}")
 
