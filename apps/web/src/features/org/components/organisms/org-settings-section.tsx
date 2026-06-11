@@ -13,13 +13,13 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { DeleteEntityDialog } from "@/components/delete-entity-dialog";
 import { ImageUploadControl } from "@/components/image-upload-control";
 import { OrgAvatar } from "@/components/org-avatar";
 import { authClient } from "@/lib/auth-client";
 import { downscaleImage } from "@/lib/image";
 import { client } from "@/utils/orpc";
 
-import { DeleteOrgDialog } from "../molecules/delete-org-dialog";
 import { OrgForm } from "../molecules/org-form";
 
 const MANAGER_ROLES = new Set(["owner", "admin"]);
@@ -258,12 +258,20 @@ export const OrgSettingsSection = () => {
         </div>
       </section>
 
-      <DeleteOrgDialog
+      <DeleteEntityDialog
+        description={
+          <>
+            This permanently deletes {activeOrg.name}, including all of its
+            projects, API keys, dashboards, and analytics data. This cannot be
+            undone.
+          </>
+        }
+        entityLabel="organization"
+        entityName={activeOrg.name}
         isPending={deleteOrg.isPending}
         onConfirm={() => deleteOrg.mutate()}
         onOpenChange={setDeleteOpen}
         open={deleteOpen}
-        organizationName={activeOrg.name}
       />
 
       <Dialog onOpenChange={setLeaveOpen} open={leaveOpen}>

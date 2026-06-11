@@ -176,4 +176,34 @@ export const projectsRouter = {
 
       return { rows, total };
     }),
+
+  update: protectedProcedure
+    .input(
+      z.object({
+        environment: z.enum(ProjectEnvironment),
+        id: z.string().min(1),
+      })
+    )
+    .handler(async ({ context, input }) => {
+      const { role } = await assertProjectAccess(
+        input.id,
+        context.session.user.id
+      );
+      requireWriteRole(role);
+
+      const project = await prisma.project.update({
+        data: { environment: input.environment },
+        select: {
+          createdAt: true,
+          environment: true,
+          id: true,
+          name: true,
+          organizationId: true,
+          slug: true,
+        },
+        where: { id: input.id },
+      });
+
+      return project;
+    }),
 };
