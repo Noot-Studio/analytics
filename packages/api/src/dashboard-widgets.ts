@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { isVisualizationCompatible, visualizationSchema } from "./metrics";
+import type { ShapeParams, Visualization } from "./metrics";
 import { queryConfigSchema } from "./query-builder";
 
 export const widgetSizeSchema = z.enum(["Third", "Half", "TwoThirds", "Full"]);
@@ -84,22 +85,34 @@ export const customWidgetConfigSchema = z
  * dashboards as a number, a daily chart, or a grouped table. `projectId`
  * follows the same pinning rules as built-in widgets.
  */
-export const metricWidgetConfigSchema = queryConfigSchema
+export const metricWidgetConfigBase = queryConfigSchema
   .pick({ granularity: true, groupBy: true, limit: true })
   .extend({
     metricId: z.string().min(1),
     projectId: z.string().min(1).optional(),
     visualization: visualizationSchema,
-  })
-  .superRefine((config, ctx) => {
-    if (!isVisualizationCompatible(config, config.visualization)) {
-      ctx.addIssue({
-        code: "custom",
-        message: `Visualization "${config.visualization}" is not compatible with this metric's result shape`,
-        path: ["visualization"],
-      });
-    }
   });
+
+// The shape↔visualization rule, applied to the metric-widget config here and to
+// the metric-agnostic saved-widget config in widgets.ts (which omits metricId).
+// Kept separate from the base object so callers can `.omit()` before refining —
+// zod forbids `.omit()` on an already-refined schema.
+export const refineWidgetVisualization = (
+  config: ShapeParams & { visualization: Visualization },
+  ctx: z.RefinementCtx
+): void => {
+  if (!isVisualizationCompatible(config, config.visualization)) {
+    ctx.addIssue({
+      code: "custom",
+      message: `Visualization "${config.visualization}" is not compatible with this metric's result shape`,
+      path: ["visualization"],
+    });
+  }
+};
+
+export const metricWidgetConfigSchema = metricWidgetConfigBase.superRefine(
+  refineWidgetVisualization
+);
 
 export const widgetSchema = z.discriminatedUnion("widgetType", [
   z.object({
