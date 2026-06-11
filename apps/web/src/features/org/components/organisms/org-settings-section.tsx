@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { DeleteEntityDialog } from "@/components/delete-entity-dialog";
 import { ImageUploadControl } from "@/components/image-upload-control";
 import { OrgAvatar } from "@/components/org-avatar";
+import { AlertsSection } from "@/features/alerts/components/organisms/alerts-section";
 import { authClient } from "@/lib/auth-client";
 import { downscaleImage } from "@/lib/image";
 import { client } from "@/utils/orpc";
@@ -209,6 +210,10 @@ export const OrgSettingsSection = () => {
           </dl>
         )}
       </section>
+
+      <Separator />
+
+      <AlertsSection scope={{ organizationId: activeOrg.id }} />
 
       <Separator />
 

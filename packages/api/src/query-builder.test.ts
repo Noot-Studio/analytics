@@ -27,6 +27,25 @@ describe("buildQuery", () => {
     expect(params.to).toBe("2026-06-04 23:59:59.999");
   });
 
+  it("scopes to a set of projects with an IN clause", () => {
+    const base = queryConfigSchema.parse({
+      aggregation: "count",
+      granularity: "none",
+      projectId: "p1",
+      timeRange: {
+        from: "2026-05-28T00:00:00.000Z",
+        to: "2026-06-04T23:59:59.999Z",
+      },
+    });
+
+    const { params, query } = buildQuery({ ...base, projectId: ["p1", "p2"] });
+
+    expect(query).toContain("project_id IN {projectIds:Array(String)}");
+    expect(query).not.toContain("project_id = {projectId:String}");
+    expect(params.projectIds).toEqual(["p1", "p2"]);
+    expect(params.projectId).toBeUndefined();
+  });
+
   it("omits ORDER BY for an ungrouped aggregate (single-row result)", () => {
     const config = queryConfigSchema.parse({
       aggregation: "count",

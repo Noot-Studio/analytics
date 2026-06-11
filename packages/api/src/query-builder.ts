@@ -61,6 +61,18 @@ export const queryConfigSchema = z.object({
 export type QueryConfig = z.infer<typeof queryConfigSchema>;
 
 /**
+ * {@link buildQuery}'s input, widened so a consumer can scope a query to a set
+ * of projects instead of one. The router-facing `queryConfigSchema` stays a
+ * single `projectId` (its public contract is unchanged); only internal callers
+ * that legitimately span projects — an org-wide alert evaluating one metric
+ * across every project in the org — pass an array, which emits
+ * `project_id IN (...)` instead of `project_id = ...`.
+ */
+export type QueryScope = Omit<QueryConfig, "projectId"> & {
+  projectId: string | string[];
+};
+
+/**
  * Layer the "exactly one of aggregation / expression" rule (plus expression
  * syntax validation) onto a config schema. Applied at user-input boundaries
  * (metric save, preview, raw JSON editor) — kept off the bare object schema so
@@ -254,14 +266,24 @@ export const buildColumnFilters = (
   return `(${conditions.join(glue)})`;
 };
 
-export const buildQuery = (config: QueryConfig): QueryResult => {
+export const buildQuery = (config: QueryScope): QueryResult => {
   const propertyParams = new Map<string, string>();
   const selectColumns: string[] = [];
   const groupByColumns: string[] = [];
+  // A single project compares with `=`; a set (org-wide alert scope) uses `IN`.
+  const projectScope = Array.isArray(config.projectId)
+    ? {
+        clause: "project_id IN {projectIds:Array(String)}",
+        params: { projectIds: config.projectId },
+      }
+    : {
+        clause: "project_id = {projectId:String}",
+        params: { projectId: config.projectId },
+      };
   const params: Record<string, unknown> = {
     from: toClickHouseDateTime(config.timeRange.from),
-    projectId: config.projectId,
     to: toClickHouseDateTime(config.timeRange.to),
+    ...projectScope.params,
   };
 
   // Time bucket
@@ -311,7 +333,7 @@ export const buildQuery = (config: QueryConfig): QueryResult => {
 
   // Build WHERE clauses
   const whereConditions: string[] = [
-    "project_id = {projectId:String}",
+    projectScope.clause,
     "timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}",
   ];
 

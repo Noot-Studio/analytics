@@ -18,6 +18,7 @@
     "@orpc/zod": "catalog:",
     "@sbox-analytics/auth": "workspace:*",
     "@sbox-analytics/db": "workspace:*",
+    "@sbox-analytics/email": "workspace:*",
     "@sbox-analytics/env": "workspace:*",
     "@sbox-analytics/events": "workspace:*",
     "dotenv": "catalog:",

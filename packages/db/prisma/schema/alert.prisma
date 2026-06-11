@@ -1,0 +1,53 @@
+// Alert rules: a threshold check on any saved Metric, delivered via webhook or
+// email. The metric is evaluated as a single scalar over `window`; the rule
+// fires when that value crosses `threshold` in the `operator` direction. Dual-
+// scoped exactly like Dashboard — every rule belongs to an organization;
+// `projectId` is null for org-wide rules (the metric runs across all the org's
+// projects) and set for a single-project rule.
+enum AlertChannel {
+  Webhook
+  Email
+}
+
+// Which side of the threshold fires the alert.
+enum AlertOperator {
+  Above
+  Below
+}
+
+// The trailing window the metric is evaluated over.
+enum AlertWindow {
+  LastHour
+  Last24Hours
+  Last7Days
+}
+
+model AlertRule {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId      String?
+  project        Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name           String
+  // The saved metric this rule watches. Deleting the metric removes its rules.
+  metricId       String
+  metric         Metric       @relation(fields: [metricId], references: [id], onDelete: Cascade)
+  operator       AlertOperator
+  window         AlertWindow
+  // The value the metric's scalar must cross to fire, in the operator direction.
+  threshold      Float
+  channel        AlertChannel
+  // Webhook URL or destination email address, depending on `channel`.
+  destination    String
+  enabled        Boolean      @default(true)
+  // Last time this rule delivered a notification — drives the cooldown so a
+  // sustained breach doesn't re-notify on every check.
+  lastFiredAt    DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@index([projectId])
+  @@index([metricId])
+  @@map("alert_rule")
+}

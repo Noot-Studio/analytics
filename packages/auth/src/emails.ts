@@ -1,5 +1,7 @@
+import { sendEmail } from "@sbox-analytics/email";
 import { env } from "@sbox-analytics/env/server";
-import { Resend } from "resend";
+
+export { canSendEmail } from "@sbox-analytics/email";
 
 interface InvitationEmailData {
   id: string;
@@ -7,11 +9,6 @@ interface InvitationEmailData {
   organization: { name: string };
   inviter: { user: { name: string; email: string } };
 }
-
-const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
-
-/** Whether real emails can be delivered (Resend configured). */
-export const canSendEmail = resend !== null;
 
 const buildInvitationHtml = (
   data: InvitationEmailData,
@@ -40,33 +37,26 @@ export const sendInvitationEmail = async (
 ): Promise<void> => {
   const acceptUrl = `${env.CORS_ORIGIN}/accept-invitation/${data.id}`;
 
-  if (!resend) {
-    // Dev fallback: no Resend key configured, surface the link in the console.
-    console.warn(
-      `[auth] RESEND_API_KEY not set — invitation for ${data.email}: ${acceptUrl}`
-    );
-    return;
-  }
-
-  await resend.emails.send({
-    from: env.EMAIL_FROM,
+  const sent = await sendEmail({
     html: buildInvitationHtml(data, acceptUrl),
     subject: `Join ${data.organization.name} on s&box Analytics`,
     to: data.email,
   });
+
+  if (!sent) {
+    // Dev fallback: no Resend key configured, surface the link in the console.
+    console.warn(
+      `[auth] RESEND_API_KEY not set — invitation for ${data.email}: ${acceptUrl}`
+    );
+  }
 };
 
 export const sendVerificationEmail = async (
   email: string,
   url: string
 ): Promise<void> => {
-  if (!resend) {
-    // Unreachable in practice: only wired up when Resend is configured.
-    return;
-  }
-
-  await resend.emails.send({
-    from: env.EMAIL_FROM,
+  // Only wired up when Resend is configured, so a no-op when it isn't.
+  await sendEmail({
     html: `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h2>Verify your email</h2>

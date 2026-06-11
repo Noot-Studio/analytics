@@ -23,6 +23,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { DeleteEntityDialog } from "@/components/delete-entity-dialog";
+import { AlertsSection } from "@/features/alerts/components/organisms/alerts-section";
 import { ApiKeysSection } from "@/features/api-keys/components/organisms/api-keys-section";
 import { MetricsSection } from "@/features/dashboards/components/organisms/metrics-section";
 import { orpc } from "@/utils/orpc";
@@ -136,6 +137,8 @@ export const ProjectSettingsView = ({ projectId }: { projectId: string }) => {
       </section>
 
       <MetricsSection projectId={projectId} />
+
+      <AlertsSection scope={{ projectId }} />
 
       <ApiKeysSection projectId={projectId} />
 
