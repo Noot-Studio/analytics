@@ -1,0 +1,39 @@
+// Alert rules: threshold checks on crash spikes and DAU drops, delivered via
+// webhook or email. Dual-scoped exactly like Dashboard — every rule belongs to
+// an organization; `projectId` is null for org-wide rules (evaluated across all
+// the org's projects) and set for a single-project rule.
+enum AlertMetric {
+  CrashSpike
+  DauDrop
+}
+
+enum AlertChannel {
+  Webhook
+  Email
+}
+
+model AlertRule {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId      String?
+  project        Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name           String
+  metric         AlertMetric
+  // CrashSpike: absolute crash count over the last hour that fires the alert.
+  // DauDrop: percent (0-100) the day's DAU must fall below the trailing average.
+  threshold      Float
+  channel        AlertChannel
+  // Webhook URL or destination email address, depending on `channel`.
+  destination    String
+  enabled        Boolean      @default(true)
+  // Last time this rule delivered a notification — drives the cooldown so a
+  // sustained breach doesn't re-notify on every check.
+  lastFiredAt    DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@index([projectId])
+  @@map("alert_rule")
+}

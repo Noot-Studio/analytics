@@ -80,6 +80,7 @@ model Organization {
   metrics        Metric[]
   savedWidgets   Widget[]
   uploadedImages UploadedImage[]
+  alertRules     AlertRule[]
 
   @@map("organization")
 }
