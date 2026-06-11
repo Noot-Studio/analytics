@@ -79,6 +79,30 @@ describe("buildQuery", () => {
     expect(query).not.toContain("JSONExtract");
   });
 
+  it("builds a percentage from an expression as a single value column", () => {
+    const config = queryConfigSchema.parse({
+      expression:
+        'count({event_type="purchase"}) / count({event_type="add_cart"}) * 100',
+      granularity: "day",
+      projectId: "p1",
+      timeRange: {
+        from: "2026-05-28T00:00:00.000Z",
+        to: "2026-06-04T23:59:59.999Z",
+      },
+    });
+
+    const { params, query } = buildQuery(config);
+
+    expect(query).toContain(
+      "(countIf(event_type = {filter_0_value:String}) / nullIf(countIf(event_type = {filter_1_value:String}), 0)) * 100) AS value"
+    );
+    // Event selection lives in the conditional aggregates, not the WHERE clause.
+    expect(query).not.toContain("event_type = {eventType:String}");
+    expect(query).toContain("GROUP BY time_bucket");
+    expect(params.filter_0_value).toBe("purchase");
+    expect(params.filter_1_value).toBe("add_cart");
+  });
+
   it("groups by a custom property via JSONExtractString", () => {
     const config = queryConfigSchema.parse({
       aggregation: "count",

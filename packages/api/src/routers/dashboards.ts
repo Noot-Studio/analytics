@@ -16,11 +16,7 @@ import {
   METRIC_WIDGET_TYPE,
 } from "../dashboard-widgets";
 import { protectedProcedure } from "../index";
-import {
-  compatibleVisualizations,
-  metricConfigSchema,
-  resultShape,
-} from "../metrics";
+import { compatibleVisualizations, resultShape } from "../metrics";
 
 const MAX_WIDGETS = 30;
 
@@ -127,7 +123,7 @@ const assertReferencedMetrics = async (
   ];
 
   const metrics = await prisma.metric.findMany({
-    select: { config: true, id: true },
+    select: { id: true },
     where: { id: { in: metricIds }, organizationId },
   });
   if (metrics.length !== metricIds.length) {
@@ -136,16 +132,11 @@ const assertReferencedMetrics = async (
     });
   }
 
-  const shapes = new Map(
-    metrics.map((metric) => [
-      metric.id,
-      resultShape(metricConfigSchema.parse(metric.config)),
-    ])
-  );
+  // The widget owns granularity/groupBy, so the result shape — and thus which
+  // visualizations are valid — is determined by the widget config alone.
   for (const widget of metricWidgets) {
-    const shape = shapes.get(widget.config.metricId);
+    const shape = resultShape(widget.config);
     if (
-      shape &&
       !compatibleVisualizations(shape).includes(widget.config.visualization)
     ) {
       throw new ORPCError("BAD_REQUEST", {

@@ -9,7 +9,11 @@ import {
 } from "../access";
 import { protectedProcedure } from "../index";
 import type { MetricSnapshot } from "../metrics";
-import { metricConfigSchema, metricInputSchema } from "../metrics";
+import {
+  metricConfigSchema,
+  metricInputSchema,
+  metricViewSchema,
+} from "../metrics";
 import { buildQuery } from "../query-builder";
 import { runQuery } from "../run-query";
 
@@ -70,6 +74,9 @@ const previewInput = z.object({
     from: z.iso.datetime(),
     to: z.iso.datetime(),
   }),
+  // Shape params (granularity/groupBy/limit) come from the consumer, not the
+  // metric — for the builder, this is the preview's chosen view.
+  view: metricViewSchema,
 });
 
 export const metricsRouter = {
@@ -144,6 +151,7 @@ export const metricsRouter = {
 
       const built = buildQuery({
         ...input.config,
+        ...input.view,
         projectId: input.projectId,
         timeRange: input.timeRange,
       });

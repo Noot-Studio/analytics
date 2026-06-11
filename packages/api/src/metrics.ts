@@ -1,19 +1,42 @@
 import { z } from "zod";
 
-import { queryConfigSchema } from "./query-builder";
+import { queryConfigSchema, withMetricConfigRules } from "./query-builder";
 
 const MAX_METRIC_NAME_LENGTH = 80;
 const MAX_METRIC_DESCRIPTION_LENGTH = 500;
 
 /**
- * A metric stores the query-config DSL without execution context: `projectId`
- * and `timeRange` are supplied by the consumer (dashboard binding + global
- * time range, or an alert's evaluation window).
+ * A metric is *what* to measure — an aggregation/expression over a selector —
+ * and nothing about *how* to fetch or draw it. Execution context (`projectId`,
+ * `timeRange`) and shape (`granularity`, `groupBy`, `limit`) are supplied by the
+ * consumer: a widget, an alert window, or the builder preview. This is what lets
+ * one metric be reused across widgets and alerts. The rules enforce that exactly
+ * one of `aggregation` / `expression` is set.
  */
-export const metricConfigSchema = queryConfigSchema.omit({
-  projectId: true,
-  timeRange: true,
+export const metricConfigSchema = withMetricConfigRules(
+  queryConfigSchema.omit({
+    granularity: true,
+    groupBy: true,
+    limit: true,
+    projectId: true,
+    timeRange: true,
+  })
+);
+
+/**
+ * The shape/execution half a consumer pairs with a metric to fetch data. Lives
+ * on the widget (or alert), not the metric, so the same metric draws as a
+ * number, a daily series, or a grouped table depending on who runs it.
+ */
+export const metricViewSchema = queryConfigSchema.pick({
+  granularity: true,
+  groupBy: true,
+  limit: true,
 });
+
+export type MetricView = z.infer<typeof metricViewSchema>;
+/** Just the fields that determine result shape (granularity + group-by). */
+export type ShapeParams = Pick<MetricView, "granularity" | "groupBy">;
 
 export const metricInputSchema = z.object({
   config: metricConfigSchema,
@@ -33,8 +56,8 @@ export interface MetricSnapshot {
 }
 
 /**
- * The shape of a metric's result set — determined entirely by the query
- * config, never by how a widget chooses to draw it.
+ * The shape of a result set — determined by the view params (granularity +
+ * group-by) the consumer runs the metric with, never by how it's drawn.
  */
 export type MetricResultShape =
   | "grouped-series"
@@ -42,9 +65,9 @@ export type MetricResultShape =
   | "scalar"
   | "series";
 
-export const resultShape = (config: MetricConfig): MetricResultShape => {
-  const hasSeries = config.granularity !== "none";
-  const hasGroups = (config.groupBy?.length ?? 0) > 0;
+export const resultShape = (view: ShapeParams): MetricResultShape => {
+  const hasSeries = view.granularity !== "none";
+  const hasGroups = (view.groupBy?.length ?? 0) > 0;
   if (hasSeries && hasGroups) {
     return "grouped-series";
   }
@@ -83,7 +106,7 @@ export const compatibleVisualizations = (
   }
 };
 
-export const defaultVisualization = (config: MetricConfig): Visualization => {
-  const [first] = compatibleVisualizations(resultShape(config));
+export const defaultVisualization = (view: ShapeParams): Visualization => {
+  const [first] = compatibleVisualizations(resultShape(view));
   return first ?? "table";
 };
