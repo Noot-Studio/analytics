@@ -2,11 +2,7 @@ import { ORPCError } from "@orpc/server";
 import prisma from "@sbox-analytics/db";
 import { z } from "zod";
 
-import {
-  assertOrgAccess,
-  assertProjectAccess,
-  requireActiveOrg,
-} from "../access";
+import { requireWriteRole, resolveOrgScope } from "../access";
 import { protectedProcedure } from "../index";
 import type { WidgetSnapshot } from "../widgets";
 import { widgetConfigSchema, widgetInputSchema } from "../widgets";
@@ -17,25 +13,6 @@ const orgScopeInput = z.object({
   organizationId: z.string().min(1).optional(),
   projectId: z.string().min(1).optional(),
 });
-
-interface SessionContext {
-  session: {
-    session: { activeOrganizationId?: string | null };
-    user: { id: string };
-  };
-}
-
-const resolveOrg = async (
-  context: SessionContext,
-  input: z.infer<typeof orgScopeInput>
-): Promise<string> => {
-  if (input.projectId) {
-    return await assertProjectAccess(input.projectId, context.session.user.id);
-  }
-  const organizationId = input.organizationId ?? requireActiveOrg(context);
-  await assertOrgAccess(organizationId, context.session.user.id);
-  return organizationId;
-};
 
 const widgetSelect = {
   config: true,
@@ -65,7 +42,8 @@ export const widgetsRouter = {
   create: protectedProcedure
     .input(orgScopeInput.extend(widgetInputSchema.shape))
     .handler(async ({ context, input }) => {
-      const organizationId = await resolveOrg(context, input);
+      const { organizationId, role } = await resolveOrgScope(context, input);
+      requireWriteRole(role);
 
       const metric = await prisma.metric.findFirst({
         select: { id: true },
@@ -90,7 +68,8 @@ export const widgetsRouter = {
   delete: protectedProcedure
     .input(orgScopeInput.extend({ id: z.string().min(1) }))
     .handler(async ({ context, input }) => {
-      const organizationId = await resolveOrg(context, input);
+      const { organizationId, role } = await resolveOrgScope(context, input);
+      requireWriteRole(role);
 
       const { count } = await prisma.widget.deleteMany({
         where: { id: input.id, organizationId },
@@ -104,7 +83,7 @@ export const widgetsRouter = {
   list: protectedProcedure
     .input(orgScopeInput)
     .handler(async ({ context, input }) => {
-      const organizationId = await resolveOrg(context, input);
+      const { organizationId } = await resolveOrgScope(context, input);
 
       const widgets = await prisma.widget.findMany({
         orderBy: { createdAt: "asc" },

@@ -110,3 +110,15 @@ export const defaultVisualization = (view: ShapeParams): Visualization => {
   const [first] = compatibleVisualizations(resultShape(view));
   return first ?? "table";
 };
+
+/**
+ * The single source of the invariant "a widget's visualization must be
+ * compatible with the metric's result shape". The schema refinement, the
+ * builder's auto-reset, and the save-time check all consume this so the rule
+ * lives in exactly one place.
+ */
+export const isVisualizationCompatible = (
+  view: ShapeParams,
+  visualization: Visualization
+): boolean =>
+  compatibleVisualizations(resultShape(view)).includes(visualization);

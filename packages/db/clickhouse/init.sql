@@ -1,4 +1,6 @@
 -- Raw events table — long-term store for all ingested analytics events.
+-- The event columns below mirror EVENT_COLUMNS / ClickHouseEvent in
+-- packages/events/src/contract.ts (the canonical source). Keep them in sync.
 CREATE TABLE IF NOT EXISTS analytics.events
 (
     project_id   String,

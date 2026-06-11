@@ -2,12 +2,8 @@ import { ORPCError } from "@orpc/server";
 import prisma, { ProjectEnvironment } from "@sbox-analytics/db";
 import { z } from "zod";
 
-import {
-  assertOrgAccess,
-  assertProjectAccess,
-  requireActiveOrg,
-} from "../access";
-import { protectedProcedure } from "../index";
+import { assertProjectAccess, requireWriteRole } from "../access";
+import { orgProcedure, orgWriteProcedure, protectedProcedure } from "../index";
 import { buildPrismaWhere } from "../prisma-filters";
 import { filterSchema } from "../query-builder";
 
@@ -34,7 +30,7 @@ const generateSlug = (name: string): string =>
     .slice(0, 64);
 
 export const projectsRouter = {
-  create: protectedProcedure
+  create: orgWriteProcedure
     .input(
       z.object({
         environment: z
@@ -45,8 +41,7 @@ export const projectsRouter = {
       })
     )
     .handler(async ({ context, input }) => {
-      const organizationId = requireActiveOrg(context);
-      await assertOrgAccess(organizationId, context.session.user.id);
+      const { organizationId } = context;
 
       const projectCount = await prisma.project.count({
         where: { organizationId },
@@ -93,7 +88,11 @@ export const projectsRouter = {
   delete: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
     .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.id, context.session.user.id);
+      const { role } = await assertProjectAccess(
+        input.id,
+        context.session.user.id
+      );
+      requireWriteRole(role);
 
       await prisma.project.delete({
         where: { id: input.id },
@@ -136,11 +135,10 @@ export const projectsRouter = {
       return project;
     }),
 
-  list: protectedProcedure
+  list: orgProcedure
     .input(projectsListInput.optional())
     .handler(async ({ context, input }) => {
-      const organizationId = requireActiveOrg(context);
-      await assertOrgAccess(organizationId, context.session.user.id);
+      const { organizationId } = context;
 
       const page = input?.page ?? 1;
       const perPage = input?.perPage ?? 10;

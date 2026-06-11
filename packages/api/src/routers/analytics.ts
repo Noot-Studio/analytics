@@ -1,7 +1,6 @@
 import { z } from "zod";
 
-import { assertProjectAccess } from "../access";
-import { protectedProcedure } from "../index";
+import { projectProcedure } from "../index";
 import { buildBreakdownQuery } from "../queries/breakdown";
 import { buildDailyQuery } from "../queries/daily";
 import {
@@ -635,31 +634,25 @@ const spatialVoxelsOutput = z.object({
 
 export const analyticsRouter = {
   // Aggregated event-type totals over a date window — backs the Events table.
-  breakdown: protectedProcedure
+  breakdown: projectProcedure
     .input(breakdownInput)
-    .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.projectId, context.session.user.id);
-
-      return runQuery(context.ch, buildBreakdownQuery(input), eventsRow);
-    }),
+    .handler(({ context, input }) =>
+      runQuery(context.ch, buildBreakdownQuery(input), eventsRow)
+    ),
 
   // Daily rollup powered by the AggregatingMergeTree in ClickHouse.
-  daily: protectedProcedure
+  daily: projectProcedure
     .input(dailyInput)
-    .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.projectId, context.session.user.id);
-
-      return runQuery(context.ch, buildDailyQuery(input), dailyRow);
-    }),
+    .handler(({ context, input }) =>
+      runQuery(context.ch, buildDailyQuery(input), dailyRow)
+    ),
 
   // Ad-hoc funnel over user-defined ordered event steps. windowFunnel returns
   // the furthest consecutive step each player reached; per-step counts and a
   // first-touch conversion trend are derived from that.
-  funnels: protectedProcedure
+  funnels: projectProcedure
     .input(funnelsInput)
     .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.projectId, context.session.user.id);
-
       const { levelCounts, trend } = await runQueries(context.ch, {
         levelCounts: {
           query: buildFunnelsLevelsQuery(input),
@@ -685,11 +678,9 @@ export const analyticsRouter = {
     }),
 
   // Per-map/mode breakdown derived from session_start events.
-  maps: protectedProcedure
+  maps: projectProcedure
     .input(mapsInput)
     .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.projectId, context.session.user.id);
-
       const [charts, table] = await Promise.all([
         runQueries(context.ch, {
           breakdown: {
@@ -716,11 +707,9 @@ export const analyticsRouter = {
       });
     }),
 
-  performance: protectedProcedure
+  performance: projectProcedure
     .input(performanceInput)
     .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.projectId, context.session.user.id);
-
       const { byMap, crashes, fps, loadHistogram } = await runQueries(
         context.ch,
         {
@@ -746,11 +735,9 @@ export const analyticsRouter = {
       return performanceOutput.parse({ byMap, crashes, fps, loadHistogram });
     }),
 
-  playerProfile: protectedProcedure
+  playerProfile: projectProcedure
     .input(playerProfileInput)
     .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.projectId, context.session.user.id);
-
       const {
         activity,
         durationHistogram,
@@ -819,11 +806,9 @@ export const analyticsRouter = {
 
   // Paginated, filterable session history for one player — kept separate from
   // playerProfile so table interactions don't refetch the aggregate queries.
-  playerSessions: protectedProcedure
+  playerSessions: projectProcedure
     .input(playerSessionsInput)
     .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.projectId, context.session.user.id);
-
       const { rows, total } = await paginated(
         context.ch,
         buildPlayerSessionsQuery(input),
@@ -835,11 +820,9 @@ export const analyticsRouter = {
     }),
 
   // DAU + new-vs-returning daily series, plus trailing WAU/MAU.
-  players: protectedProcedure
+  players: projectProcedure
     .input(playersInput)
     .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.projectId, context.session.user.id);
-
       const { daily, totals } = await runQueries(context.ch, {
         daily: {
           query: buildPlayersDailyQuery(input),
@@ -862,11 +845,9 @@ export const analyticsRouter = {
 
   // Browsable, paginated list of players active in the range — powers the
   // clickable players table on the Engagement → Players page.
-  playersList: protectedProcedure
+  playersList: projectProcedure
     .input(playersListInput)
     .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.projectId, context.session.user.id);
-
       const { rows, total } = await paginated(
         context.ch,
         buildPlayersListQuery(input),
@@ -878,7 +859,7 @@ export const analyticsRouter = {
     }),
 
   // Most recent raw events — for the dashboard's live stream view.
-  recent: protectedProcedure
+  recent: projectProcedure
     .input(
       z.object({
         filters: z.array(filterSchema).max(10).optional(),
@@ -892,8 +873,6 @@ export const analyticsRouter = {
       })
     )
     .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.projectId, context.session.user.id);
-
       const { rows, total } = await paginated(
         context.ch,
         buildRecentRowsQuery(input),
@@ -907,11 +886,9 @@ export const analyticsRouter = {
   // Cohort retention: day-1/7/30 per first-seen cohort plus a maturity-gated
   // average retention curve. Cohort date comes from player_first_seen; return
   // activity comes from raw events.
-  retention: protectedProcedure
+  retention: projectProcedure
     .input(retentionInput)
     .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.projectId, context.session.user.id);
-
       const [curve, table] = await Promise.all([
         runQuery(
           context.ch,
@@ -931,11 +908,9 @@ export const analyticsRouter = {
 
   // Paginated, filterable event log for one session — kept separate from
   // sessionProfile so table interactions don't refetch the aggregate queries.
-  sessionEvents: protectedProcedure
+  sessionEvents: projectProcedure
     .input(sessionEventsInput)
     .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.projectId, context.session.user.id);
-
       const { rows, total } = await paginated(
         context.ch,
         buildSessionEventsQuery(input),
@@ -947,11 +922,9 @@ export const analyticsRouter = {
     }),
 
   // Single-session detail: meta header + the session's paginated event stream.
-  sessionProfile: protectedProcedure
+  sessionProfile: projectProcedure
     .input(sessionProfileInput)
     .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.projectId, context.session.user.id);
-
       const { eventBreakdown, fpsSeries, meta, perf, specs } = await runQueries(
         context.ch,
         {
@@ -995,11 +968,9 @@ export const analyticsRouter = {
     }),
 
   // Session duration histogram, avg-duration trend, and time-of-day heatmap.
-  sessions: protectedProcedure
+  sessions: projectProcedure
     .input(sessionsInput)
     .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.projectId, context.session.user.id);
-
       const { heatmap, histogram, trend } = await runQueries(context.ch, {
         heatmap: {
           query: buildSessionsHeatmapQuery(input),
@@ -1020,11 +991,9 @@ export const analyticsRouter = {
 
   // Browsable, paginated list of sessions in the range — powers the clickable
   // sessions table on the Engagement → Sessions page.
-  sessionsList: protectedProcedure
+  sessionsList: projectProcedure
     .input(sessionsListInput)
     .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.projectId, context.session.user.id);
-
       const { rows, total } = await paginated(
         context.ch,
         buildSessionsListQuery(input),
@@ -1035,10 +1004,9 @@ export const analyticsRouter = {
       return sessionsListOutput.parse({ rows, total });
     }),
   spatial: {
-    scenes: protectedProcedure
+    scenes: projectProcedure
       .input(spatialScenesInput)
       .handler(async ({ context, input }) => {
-        await assertProjectAccess(input.projectId, context.session.user.id);
         const rows = await runQuery(
           context.ch,
           buildScenesQuery(input),
@@ -1059,10 +1027,9 @@ export const analyticsRouter = {
           })),
         });
       }),
-    voxels: protectedProcedure
+    voxels: projectProcedure
       .input(spatialVoxelsInput)
       .handler(async ({ context, input }) => {
-        await assertProjectAccess(input.projectId, context.session.user.id);
         const rows = await runQuery(
           context.ch,
           buildVoxelsQuery(input),

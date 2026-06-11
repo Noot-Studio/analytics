@@ -1,22 +1,12 @@
-import { z } from "zod";
-
-import { assertProjectAccess } from "../access";
-import { protectedProcedure } from "../index";
-import { buildQuery, queryConfigSchema } from "../query-builder";
-import { runQuery } from "../run-query";
+import { projectProcedure } from "../index";
+import { queryConfigSchema } from "../query-builder";
+import { runMetric } from "../run-metric";
 
 export const customAnalyticsRouter = {
-  query: protectedProcedure
+  query: projectProcedure
     .input(queryConfigSchema)
     .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.projectId, context.session.user.id);
-
-      // The shape is user-defined (arbitrary aggregation/group-by), so rows pass
-      // through a permissive object schema rather than a fixed row schema.
-      return runQuery(
-        context.ch,
-        buildQuery(input),
-        z.record(z.string(), z.unknown())
-      );
+      const { rows } = await runMetric(context.ch, input);
+      return rows;
     }),
 };

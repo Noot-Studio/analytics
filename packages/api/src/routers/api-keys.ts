@@ -2,12 +2,33 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { ORPCError } from "@orpc/server";
 import prisma from "@sbox-analytics/db";
+import { env } from "@sbox-analytics/env/server";
+import { apiKeyCacheKey } from "@sbox-analytics/events";
+import { RedisClient } from "bun";
 import { z } from "zod";
 
-import { assertProjectAccess } from "../access";
-import { protectedProcedure } from "../index";
+import { assertProjectAccess, requireWriteRole } from "../access";
+import {
+  projectProcedure,
+  projectWriteProcedure,
+  protectedProcedure,
+} from "../index";
 import { buildPrismaWhere } from "../prisma-filters";
 import { filterSchema } from "../query-builder";
+
+// Drop the ingest resolver's cache for a key so a revoke/rotate takes effect
+// immediately rather than waiting out the positive TTL. Shares apiKeyCacheKey
+// with apps/ingest so both planes agree on the key format. Best-effort: a Redis
+// outage must not fail the mutation (Postgres is already updated) — the positive
+// TTL bounds how long a revoked key stays cached-valid.
+const redis = new RedisClient(env.REDIS_URL);
+const revokeApiKeyCache = async (publishableKey: string): Promise<void> => {
+  try {
+    await redis.del(apiKeyCacheKey(publishableKey));
+  } catch {
+    // Cache eviction is best-effort; the key's positive TTL is the backstop.
+  }
+};
 
 // Columns the data-table may filter on; anything else is dropped server-side.
 const API_KEY_FILTER_COLUMNS = new Set(["name"]);
@@ -25,16 +46,14 @@ const generateKeyPair = () => {
 };
 
 export const apiKeysRouter = {
-  create: protectedProcedure
+  create: projectWriteProcedure
     .input(
       z.object({
         name: z.string().min(1).max(100),
         projectId: z.string().min(1),
       })
     )
-    .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.projectId, context.session.user.id);
-
+    .handler(async ({ input }) => {
       const activeKeyCount = await prisma.apiKey.count({
         where: { projectId: input.projectId, revokedAt: null },
       });
@@ -57,7 +76,7 @@ export const apiKeysRouter = {
       return { ...apiKey, secretKey };
     }),
 
-  list: protectedProcedure
+  list: projectProcedure
     .input(
       z.object({
         filters: z.array(filterSchema).max(10).optional(),
@@ -69,9 +88,7 @@ export const apiKeysRouter = {
         sortDesc: z.boolean().default(true),
       })
     )
-    .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.projectId, context.session.user.id);
-
+    .handler(async ({ input }) => {
       const sortBy = input.sortBy ?? "createdAt";
       const where = {
         projectId: input.projectId,
@@ -107,7 +124,7 @@ export const apiKeysRouter = {
     .input(z.object({ id: z.string().min(1) }))
     .handler(async ({ context, input }) => {
       const apiKey = await prisma.apiKey.findFirst({
-        select: { projectId: true },
+        select: { projectId: true, publishableKey: true },
         where: { id: input.id, revokedAt: null },
       });
 
@@ -115,12 +132,17 @@ export const apiKeysRouter = {
         throw new ORPCError("NOT_FOUND", { message: "API key not found" });
       }
 
-      await assertProjectAccess(apiKey.projectId, context.session.user.id);
+      const { role } = await assertProjectAccess(
+        apiKey.projectId,
+        context.session.user.id
+      );
+      requireWriteRole(role);
 
       await prisma.apiKey.update({
         data: { revokedAt: new Date() },
         where: { id: input.id },
       });
+      await revokeApiKeyCache(apiKey.publishableKey);
 
       return { id: input.id };
     }),
@@ -129,7 +151,7 @@ export const apiKeysRouter = {
     .input(z.object({ id: z.string().min(1) }))
     .handler(async ({ context, input }) => {
       const apiKey = await prisma.apiKey.findFirst({
-        select: { projectId: true },
+        select: { projectId: true, publishableKey: true },
         where: { id: input.id, revokedAt: null },
       });
 
@@ -137,13 +159,18 @@ export const apiKeysRouter = {
         throw new ORPCError("NOT_FOUND", { message: "API key not found" });
       }
 
-      await assertProjectAccess(apiKey.projectId, context.session.user.id);
+      const { role } = await assertProjectAccess(
+        apiKey.projectId,
+        context.session.user.id
+      );
+      requireWriteRole(role);
 
       const { publishableKey, secretKey, secretHash } = generateKeyPair();
       await prisma.apiKey.update({
         data: { publishableKey, secretHash },
         where: { id: input.id },
       });
+      await revokeApiKeyCache(apiKey.publishableKey);
 
       return { publishableKey, secretKey };
     }),

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { visualizationSchema } from "./metrics";
+import { isVisualizationCompatible, visualizationSchema } from "./metrics";
 import { queryConfigSchema } from "./query-builder";
 
 export const widgetSizeSchema = z.enum(["Third", "Half", "TwoThirds", "Full"]);
@@ -77,10 +77,12 @@ export const customWidgetConfigSchema = z
 /**
  * Metric widgets reference a saved Metric (the *what*) and own everything about
  * *how* to fetch and draw it: `granularity` / `groupBy` / `limit` shape the
- * result, and `visualization` must be compatible with that shape (enforced at
- * save time). The same metric can therefore sit on several dashboards as a
- * number, a daily chart, or a grouped table. `projectId` follows the same
- * pinning rules as built-in widgets.
+ * result, and `visualization` must be compatible with that shape — enforced
+ * here at the schema seam via the shared `isVisualizationCompatible` predicate,
+ * so an incompatible pairing is rejected wherever a config is parsed (save or
+ * load), not only in the UI. The same metric can therefore sit on several
+ * dashboards as a number, a daily chart, or a grouped table. `projectId`
+ * follows the same pinning rules as built-in widgets.
  */
 export const metricWidgetConfigSchema = queryConfigSchema
   .pick({ granularity: true, groupBy: true, limit: true })
@@ -88,6 +90,15 @@ export const metricWidgetConfigSchema = queryConfigSchema
     metricId: z.string().min(1),
     projectId: z.string().min(1).optional(),
     visualization: visualizationSchema,
+  })
+  .superRefine((config, ctx) => {
+    if (!isVisualizationCompatible(config, config.visualization)) {
+      ctx.addIssue({
+        code: "custom",
+        message: `Visualization "${config.visualization}" is not compatible with this metric's result shape`,
+        path: ["visualization"],
+      });
+    }
   });
 
 export const widgetSchema = z.discriminatedUnion("widgetType", [

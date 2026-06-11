@@ -1,7 +1,6 @@
 import { z } from "zod";
 
-import { assertProjectAccess } from "../access";
-import { protectedProcedure } from "../index";
+import { projectProcedure } from "../index";
 import { runQuery } from "../run-query";
 
 // Bounded sample of recent events scanned for property keys.
@@ -18,11 +17,9 @@ const propertyKeysInput = z.object({
 
 export const introspectionRouter = {
   // Distinct event types seen for a project (from the cheap daily rollup).
-  eventTypes: protectedProcedure
+  eventTypes: projectProcedure
     .input(eventTypesInput)
     .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.projectId, context.session.user.id);
-
       const rows = await runQuery(
         context.ch,
         {
@@ -40,11 +37,9 @@ export const introspectionRouter = {
     }),
 
   // Property keys observed on recent events of one type (bounded sample).
-  propertyKeys: protectedProcedure
+  propertyKeys: projectProcedure
     .input(propertyKeysInput)
     .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.projectId, context.session.user.id);
-
       const rows = await runQuery(
         context.ch,
         {

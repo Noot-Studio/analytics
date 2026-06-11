@@ -1,16 +1,14 @@
-import { ORPCError } from "@orpc/server";
 import prisma from "@sbox-analytics/db";
 import { env } from "@sbox-analytics/env/server";
 import { z } from "zod";
 
+import { loadMemberRole, requireWriteRole } from "../access";
 import { protectedProcedure } from "../index";
 
 // The web client downscales to 256px before uploading; this cap only guards
 // against clients sending raw originals.
 const MAX_IMAGE_BYTES = 512 * 1024;
 const ALLOWED_MIME_TYPES = ["image/png", "image/jpeg", "image/webp"];
-// Roles allowed to change the organization logo.
-const ELEVATED_ROLES = new Set(["owner", "admin"]);
 
 const imageFileSchema = z
   .file()
@@ -19,19 +17,14 @@ const imageFileSchema = z
 
 type ImageOwner = { userId: string } | { organizationId: string };
 
+// The org logo is managed by owners/admins only. Resolving the role through the
+// shared helper keeps the gate identical to every other write in the API.
 const assertCanManageOrg = async (
   userId: string,
   organizationId: string
 ): Promise<void> => {
-  const membership = await prisma.member.findFirst({
-    select: { role: true },
-    where: { organizationId, userId },
-  });
-  if (!membership || !ELEVATED_ROLES.has(membership.role)) {
-    throw new ORPCError("FORBIDDEN", {
-      message: "Only owners and admins can change the organization logo",
-    });
-  }
+  const role = await loadMemberRole(organizationId, userId);
+  requireWriteRole(role);
 };
 
 // Each owner keeps a single image: storing a new one replaces the previous.

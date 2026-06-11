@@ -3,10 +3,12 @@ import prisma from "@sbox-analytics/db";
 import { z } from "zod";
 
 import {
-  assertOrgAccess,
   assertProjectAccess,
+  loadMemberRole,
   requireActiveOrg,
+  requireWriteRole,
 } from "../access";
+import type { MemberRole } from "../access";
 import type { DashboardWidgetSnapshot } from "../dashboard-widgets";
 import {
   widgetSchema,
@@ -16,7 +18,7 @@ import {
   METRIC_WIDGET_TYPE,
 } from "../dashboard-widgets";
 import { protectedProcedure } from "../index";
-import { compatibleVisualizations, resultShape } from "../metrics";
+import { isVisualizationCompatible, resultShape } from "../metrics";
 
 const MAX_WIDGETS = 30;
 
@@ -43,6 +45,7 @@ type Scope = z.infer<typeof scopeSchema>;
 interface ResolvedScope {
   organizationId: string;
   projectId: string | null;
+  role: MemberRole;
 }
 
 interface SessionContext {
@@ -62,16 +65,16 @@ const resolveScope = async (
         message: "projectId is required for project dashboards",
       });
     }
-    const organizationId = await assertProjectAccess(
+    const { organizationId, role } = await assertProjectAccess(
       input.projectId,
       context.session.user.id
     );
-    return { organizationId, projectId: input.projectId };
+    return { organizationId, projectId: input.projectId, role };
   }
 
   const organizationId = input.organizationId ?? requireActiveOrg(context);
-  await assertOrgAccess(organizationId, context.session.user.id);
-  return { organizationId, projectId: null };
+  const role = await loadMemberRole(organizationId, context.session.user.id);
+  return { organizationId, projectId: null, role };
 };
 
 const defaultWidgets = (scope: Scope): DashboardWidgetSnapshot[] =>
@@ -133,14 +136,15 @@ const assertReferencedMetrics = async (
   }
 
   // The widget owns granularity/groupBy, so the result shape — and thus which
-  // visualizations are valid — is determined by the widget config alone.
+  // visualizations are valid — is determined by the widget config alone. The
+  // schema already rejects incompatible pairings at parse time; this re-checks
+  // through the same predicate as defense in depth with a shape-aware message.
   for (const widget of metricWidgets) {
-    const shape = resultShape(widget.config);
     if (
-      !compatibleVisualizations(shape).includes(widget.config.visualization)
+      !isVisualizationCompatible(widget.config, widget.config.visualization)
     ) {
       throw new ORPCError("BAD_REQUEST", {
-        message: `Visualization "${widget.config.visualization}" cannot render a ${shape} metric`,
+        message: `Visualization "${widget.config.visualization}" cannot render a ${resultShape(widget.config)} metric`,
       });
     }
   }
@@ -218,7 +222,11 @@ export const dashboardsRouter = {
   save: protectedProcedure
     .input(saveInput)
     .handler(async ({ context, input }) => {
-      const { organizationId, projectId } = await resolveScope(context, input);
+      const { organizationId, projectId, role } = await resolveScope(
+        context,
+        input
+      );
+      requireWriteRole(role);
       await assertPinnedProjects(input.widgets, organizationId);
       await assertReferencedMetrics(input.widgets, organizationId);
 
