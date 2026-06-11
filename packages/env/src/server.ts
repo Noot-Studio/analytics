@@ -29,4 +29,5 @@ export const env = createEnv({
     SERVER_PORT: z.coerce.number().int().positive().default(3000),
     STEAM_API_KEY: z.string().min(1),
   },
+  skipValidation: !!process.env.SKIP_ENV_VALIDATION,
 });
