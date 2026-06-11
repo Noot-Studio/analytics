@@ -78,6 +78,7 @@ model Organization {
   projects        Project[]
   dashboards     Dashboard[]
   metrics        Metric[]
+  savedWidgets   Widget[]
   uploadedImages UploadedImage[]
 
   @@map("organization")

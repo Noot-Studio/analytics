@@ -1,10 +1,6 @@
 import type { DashboardWidgetInput } from "@sbox-analytics/api/dashboard-widgets";
 import { BUILTIN_WIDGET_TYPES } from "@sbox-analytics/api/dashboard-widgets";
-import type {
-  MetricSnapshot,
-  MetricView,
-  Visualization,
-} from "@sbox-analytics/api/metrics";
+import type { WidgetInput, WidgetSnapshot } from "@sbox-analytics/api/widgets";
 import { Button } from "@sbox-analytics/ui/components/button";
 import { Input } from "@sbox-analytics/ui/components/input";
 import { Label } from "@sbox-analytics/ui/components/label";
@@ -24,16 +20,16 @@ import {
 } from "@sbox-analytics/ui/components/sheet";
 import { Skeleton } from "@sbox-analytics/ui/components/skeleton";
 import { useIsMobile } from "@sbox-analytics/ui/hooks/use-mobile";
-import { useQuery } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, Plus } from "lucide-react";
 import { Suspense, useState } from "react";
 import type { ReactNode } from "react";
+import { toast } from "sonner";
 
 import { orpc } from "@/utils/orpc";
 
 import type { DashboardScopeValue } from "../../lib/use-dashboard-editor";
 import { useWidgetSourcePin } from "../../lib/use-widget-source-pin";
-import type { WidgetDefinition } from "../../lib/widget-registry";
 import {
   WIDGET_REGISTRY,
   METRIC_WIDGET_TYPE,
@@ -41,6 +37,7 @@ import {
 } from "../../lib/widget-registry";
 import { WidgetErrorBoundary } from "../atoms/widget-error-boundary";
 import { MetricDrawer } from "./metric-drawer";
+import { WidgetBuilder } from "./widget-builder";
 
 interface AddWidgetDrawerProps {
   from: string;
@@ -53,31 +50,6 @@ interface AddWidgetDrawerProps {
   to: string;
 }
 
-const VISUALIZATION_LABELS: Record<Visualization, string> = {
-  area: "Area chart",
-  bar: "Bar chart",
-  number: "Number",
-  table: "Table",
-};
-
-/** Offered in this order; a metric can be drawn any of these ways. */
-const VISUALIZATION_OPTIONS: Visualization[] = [
-  "number",
-  "area",
-  "bar",
-  "table",
-];
-
-/**
- * The widget owns the shape. A "number" is a scalar (no time bucket); charts and
- * tables are a daily series. Group-by isn't exposed here yet — widgets default
- * to no breakdown.
- */
-const viewForVisualization = (visualization: Visualization): MetricView => ({
-  granularity: visualization === "number" ? "none" : "day",
-  limit: 100,
-});
-
 const WidgetPreview = ({ children }: { children: ReactNode }) => (
   <div className="pointer-events-none select-none">
     <WidgetErrorBoundary>
@@ -87,96 +59,6 @@ const WidgetPreview = ({ children }: { children: ReactNode }) => (
     </WidgetErrorBoundary>
   </div>
 );
-
-interface SavedMetricEntryProps {
-  from: string;
-  metric: MetricSnapshot;
-  onAdd: (metric: MetricSnapshot, visualization: Visualization) => void;
-  organizationId?: string;
-  pinnedProjectId?: string;
-  projectId?: string;
-  Renderer: WidgetDefinition["Renderer"];
-  to: string;
-}
-
-/**
- * One library entry: the metric defines the data; the visualization picked
- * here belongs to the widget being placed, so the same metric can sit on
- * several dashboards drawn differently.
- */
-const SavedMetricEntry = ({
-  from,
-  metric,
-  onAdd,
-  organizationId,
-  pinnedProjectId,
-  projectId,
-  Renderer,
-  to,
-}: SavedMetricEntryProps) => {
-  const [visualization, setVisualization] = useState<Visualization>("number");
-  const items = Object.fromEntries(
-    VISUALIZATION_OPTIONS.map((option) => [
-      option,
-      VISUALIZATION_LABELS[option],
-    ])
-  );
-
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-muted-foreground text-xs">
-          {metric.description ?? "Saved metric"}
-        </span>
-        <div className="flex items-center gap-1">
-          <Select
-            items={items}
-            onValueChange={(value) =>
-              value && setVisualization(value as Visualization)
-            }
-            value={visualization}
-          >
-            <SelectTrigger
-              aria-label={`Visualization for ${metric.name}`}
-              className="h-7"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(items).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            aria-label={`Add ${metric.name}`}
-            onClick={() => onAdd(metric, visualization)}
-            size="icon-sm"
-            variant="ghost"
-          >
-            <Plus />
-          </Button>
-        </div>
-      </div>
-      <WidgetPreview>
-        <Renderer
-          config={{
-            ...viewForVisualization(visualization),
-            metricId: metric.id,
-            visualization,
-            ...(pinnedProjectId ? { projectId: pinnedProjectId } : {}),
-          }}
-          from={from}
-          organizationId={organizationId}
-          projectId={projectId}
-          to={to}
-        />
-      </WidgetPreview>
-    </div>
-  );
-};
 
 export const AddWidgetDrawer = ({
   from,
@@ -189,6 +71,7 @@ export const AddWidgetDrawer = ({
   to,
 }: AddWidgetDrawerProps) => {
   const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
   const {
     customProjectId,
     isOrgScope,
@@ -198,10 +81,12 @@ export const AddWidgetDrawer = ({
     sourceItems,
   } = useWidgetSourcePin({ open, projectId, scope });
   const [search, setSearch] = useState("");
+  const [mode, setMode] = useState<"library" | "create">("library");
   const [metricDrawerOpen, setMetricDrawerOpen] = useState(false);
+  const [selectedMetricId, setSelectedMetricId] = useState<string>();
 
-  const { data: metrics } = useQuery(
-    orpc.metrics.list.queryOptions({
+  const { data: widgets } = useQuery(
+    orpc.widgets.list.queryOptions({
       enabled: open,
       input: { organizationId, projectId },
     })
@@ -210,7 +95,9 @@ export const AddWidgetDrawer = ({
   const handleOpenChange = (next: boolean) => {
     if (!next) {
       setSearch("");
+      setMode("library");
       setMetricDrawerOpen(false);
+      setSelectedMetricId(undefined);
     }
     onOpenChange(next);
   };
@@ -224,21 +111,39 @@ export const AddWidgetDrawer = ({
     handleOpenChange(false);
   };
 
-  const addMetricWidget = (
-    metric: MetricSnapshot,
-    visualization: Visualization
-  ) => {
+  /** Placing a saved widget copies its config onto the dashboard. */
+  const placeWidget = (widget: WidgetSnapshot) => {
     onAdd({
       config: {
-        ...viewForVisualization(visualization),
-        metricId: metric.id,
-        visualization,
+        ...widget.config,
+        metricId: widget.metricId,
         ...(pinnedProjectId ? { projectId: pinnedProjectId } : {}),
       },
-      size: metricWidgetSize(visualization),
+      size: metricWidgetSize(widget.config.visualization),
       widgetType: METRIC_WIDGET_TYPE,
     });
     handleOpenChange(false);
+  };
+
+  const createWidgetMutation = useMutation({
+    ...orpc.widgets.create.mutationOptions(),
+    onError: () => toast.error("Failed to save widget"),
+    onSuccess: (widget: WidgetSnapshot) => {
+      queryClient.invalidateQueries({ queryKey: orpc.widgets.list.key() });
+      placeWidget(widget);
+    },
+  });
+
+  const saveWidget = (input: WidgetInput) => {
+    createWidgetMutation.mutate({
+      ...input,
+      config: {
+        ...input.config,
+        ...(pinnedProjectId ? { projectId: pinnedProjectId } : {}),
+      },
+      organizationId,
+      projectId,
+    });
   };
 
   const query = search.trim().toLowerCase();
@@ -249,11 +154,10 @@ export const AddWidgetDrawer = ({
     const definition = WIDGET_REGISTRY[widgetType];
     return matches(definition.title, definition.description);
   });
-  const savedMetrics = (metrics ?? []).filter((metric) =>
-    matches(metric.name, metric.description, "metric")
-  );
+  const savedWidgets = (widgets ?? []).filter((widget) => matches(widget.name));
 
   const { Renderer: MetricRenderer } = WIDGET_REGISTRY[METRIC_WIDGET_TYPE];
+  const isCreating = mode === "create";
 
   return (
     <>
@@ -263,9 +167,11 @@ export const AddWidgetDrawer = ({
           side={isMobile ? "bottom" : "right"}
         >
           <SheetHeader className="gap-1">
-            <SheetTitle>Add widget</SheetTitle>
+            <SheetTitle>{isCreating ? "New widget" : "Add widget"}</SheetTitle>
             <SheetDescription>
-              Pick a metric from the library or create your own.
+              {isCreating
+                ? "Pick a metric, then choose how to draw it."
+                : "Pick a widget from the library or create a new one."}
             </SheetDescription>
           </SheetHeader>
 
@@ -292,75 +198,134 @@ export const AddWidgetDrawer = ({
               </div>
             ) : null}
 
-            <div className="flex items-center gap-2">
-              <Input
-                aria-label="Search widgets"
-                className="flex-1"
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search widgets…"
-                value={search}
-              />
-              <Button
-                onClick={() => setMetricDrawerOpen(true)}
-                variant="outline"
-              >
-                <Plus />
-                New metric
-              </Button>
-            </div>
-
-            {builtins.map((widgetType) => {
-              const definition = WIDGET_REGISTRY[widgetType];
-              return (
-                // The preview itself is a widget — no extra chrome around it.
-                <div className="flex flex-col gap-2" key={widgetType}>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-muted-foreground text-xs">
-                      {definition.description}
-                    </span>
-                    <Button
-                      aria-label={`Add ${definition.title}`}
-                      onClick={() => addBuiltin(widgetType)}
-                      size="icon-sm"
-                      variant="ghost"
-                    >
-                      <Plus />
-                    </Button>
-                  </div>
-                  <WidgetPreview>
-                    <definition.Renderer
-                      config={
-                        pinnedProjectId ? { projectId: pinnedProjectId } : {}
-                      }
-                      from={from}
-                      organizationId={organizationId}
-                      projectId={projectId}
-                      to={to}
-                    />
-                  </WidgetPreview>
+            {isCreating ? (
+              <>
+                <Button
+                  className="self-start"
+                  onClick={() => setMode("library")}
+                  size="sm"
+                  variant="ghost"
+                >
+                  <ArrowLeft />
+                  Back to library
+                </Button>
+                <WidgetBuilder
+                  isSaving={createWidgetMutation.isPending}
+                  onCreateMetric={() => setMetricDrawerOpen(true)}
+                  onSave={saveWidget}
+                  onSelectMetric={setSelectedMetricId}
+                  organizationId={organizationId}
+                  projectId={projectId}
+                  renderPreview={(config) => (
+                    <WidgetPreview>
+                      <MetricRenderer
+                        config={{
+                          ...config,
+                          ...(pinnedProjectId
+                            ? { projectId: pinnedProjectId }
+                            : {}),
+                        }}
+                        from={from}
+                        organizationId={organizationId}
+                        projectId={projectId}
+                        to={to}
+                      />
+                    </WidgetPreview>
+                  )}
+                  selectedMetricId={selectedMetricId}
+                />
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <Input
+                    aria-label="Search widgets"
+                    className="flex-1"
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Search widgets…"
+                    value={search}
+                  />
+                  <Button onClick={() => setMode("create")} variant="outline">
+                    <Plus />
+                    New widget
+                  </Button>
                 </div>
-              );
-            })}
 
-            {savedMetrics.map((metric) => (
-              <SavedMetricEntry
-                from={from}
-                key={metric.id}
-                metric={metric}
-                onAdd={addMetricWidget}
-                organizationId={organizationId}
-                pinnedProjectId={pinnedProjectId}
-                projectId={projectId}
-                Renderer={MetricRenderer}
-                to={to}
-              />
-            ))}
+                {builtins.map((widgetType) => {
+                  const definition = WIDGET_REGISTRY[widgetType];
+                  return (
+                    // The preview itself is a widget — no extra chrome around it.
+                    <div className="flex flex-col gap-2" key={widgetType}>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-muted-foreground text-xs">
+                          {definition.description}
+                        </span>
+                        <Button
+                          aria-label={`Add ${definition.title}`}
+                          onClick={() => addBuiltin(widgetType)}
+                          size="icon-sm"
+                          variant="ghost"
+                        >
+                          <Plus />
+                        </Button>
+                      </div>
+                      <WidgetPreview>
+                        <definition.Renderer
+                          config={
+                            pinnedProjectId
+                              ? { projectId: pinnedProjectId }
+                              : {}
+                          }
+                          from={from}
+                          organizationId={organizationId}
+                          projectId={projectId}
+                          to={to}
+                        />
+                      </WidgetPreview>
+                    </div>
+                  );
+                })}
 
-            {builtins.length === 0 && savedMetrics.length === 0 ? (
-              <p className="rounded-lg border border-border border-dashed p-6 text-center text-muted-foreground text-sm">
-                No widgets match your search.
-              </p>
-            ) : null}
+                {savedWidgets.map((widget) => (
+                  <div className="flex flex-col gap-2" key={widget.id}>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground text-xs">
+                        {widget.name}
+                      </span>
+                      <Button
+                        aria-label={`Add ${widget.name}`}
+                        onClick={() => placeWidget(widget)}
+                        size="icon-sm"
+                        variant="ghost"
+                      >
+                        <Plus />
+                      </Button>
+                    </div>
+                    <WidgetPreview>
+                      <MetricRenderer
+                        config={{
+                          ...widget.config,
+                          metricId: widget.metricId,
+                          ...(pinnedProjectId
+                            ? { projectId: pinnedProjectId }
+                            : {}),
+                        }}
+                        from={from}
+                        organizationId={organizationId}
+                        projectId={projectId}
+                        to={to}
+                      />
+                    </WidgetPreview>
+                  </div>
+                ))}
+
+                {builtins.length === 0 && savedWidgets.length === 0 ? (
+                  <p className="rounded-lg border border-border border-dashed p-6 text-center text-muted-foreground text-sm">
+                    No widgets match your search.
+                  </p>
+                ) : null}
+              </>
+            )}
           </div>
         </SheetContent>
       </Sheet>
@@ -368,6 +333,7 @@ export const AddWidgetDrawer = ({
       <MetricDrawer
         from={from}
         onOpenChange={setMetricDrawerOpen}
+        onSaved={(metric) => setSelectedMetricId(metric.id)}
         open={metricDrawerOpen}
         organizationId={organizationId}
         projectId={customProjectId}

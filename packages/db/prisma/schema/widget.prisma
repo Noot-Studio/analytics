@@ -1,0 +1,19 @@
+// A Widget is a saved presentation of a Metric: the metric defines *what* to
+// measure; the widget owns *how* to fetch and draw it (visualization, shape
+// params, optional project pin). Dashboards copy a widget's config when it is
+// placed, so a widget acts as a reusable template across dashboards.
+model Widget {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  metricId       String
+  metric         Metric       @relation(fields: [metricId], references: [id], onDelete: Cascade)
+  name           String
+  config         Json         @default("{}")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@index([metricId])
+  @@map("widget")
+}
