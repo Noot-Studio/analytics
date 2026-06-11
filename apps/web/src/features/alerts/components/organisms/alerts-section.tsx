@@ -30,10 +30,14 @@ interface AlertScope {
   projectId?: string;
 }
 
+const WINDOW_LABELS: Record<AlertRuleSnapshot["window"], string> = {
+  Last24Hours: "last 24h",
+  Last7Days: "last 7d",
+  LastHour: "last hour",
+};
+
 const metricLabel = (alert: AlertRuleSnapshot): string =>
-  alert.metric === "CrashSpike"
-    ? `Crash spike ≥ ${alert.threshold}/hr`
-    : `DAU drop ≥ ${alert.threshold}%`;
+  `${alert.metricName} ${alert.operator === "Above" ? "≥" : "≤"} ${alert.threshold} (${WINDOW_LABELS[alert.window]})`;
 
 const channelLabel = (alert: AlertRuleSnapshot): string =>
   `${alert.channel} → ${alert.destination}`;
@@ -91,8 +95,7 @@ export const AlertsSection = ({ scope }: { scope: AlertScope }) => {
         <div>
           <h2 className="font-semibold text-lg">Alerts</h2>
           <p className="text-muted-foreground text-sm">
-            Threshold rules on crash spikes and DAU drops, delivered by webhook
-            or email.
+            Threshold rules on any saved metric, delivered by webhook or email.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -125,8 +128,8 @@ export const AlertsSection = ({ scope }: { scope: AlertScope }) => {
             </EmptyMedia>
             <EmptyTitle>No alerts yet</EmptyTitle>
             <EmptyDescription>
-              Create an alert to get notified when crashes spike or active
-              players drop.
+              Create an alert to get notified when a metric crosses your
+              threshold.
             </EmptyDescription>
           </EmptyHeader>
         </Empty>

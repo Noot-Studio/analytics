@@ -1,36 +1,37 @@
 // The alert evaluation pipeline: query -> evaluate -> deliver, with a cooldown.
 // It depends only on the ChClient and AlertNotifier seams plus an injected
-// clock, never on Prisma — the router loads the rules, expands their scope, and
-// persists `lastFiredAt`. That keeps the whole pipeline testable end-to-end
-// against in-memory fakes.
-import type { AlertChannel, AlertMetric } from "@sbox-analytics/db";
-import { z } from "zod";
+// clock, never on Prisma — the router loads the rules, expands their scope and
+// metric config, and persists `lastFiredAt`. That keeps the whole pipeline
+// testable end-to-end against in-memory fakes.
+import type {
+  AlertChannel,
+  AlertOperator,
+  AlertWindow,
+} from "@sbox-analytics/db";
 
 import type { ChClient } from "../ch-client";
-import { runQuery } from "../run-query";
+import type { MetricConfig } from "../metrics";
+import { runMetric } from "../run-metric";
 import type { AlertNotifier } from "./delivery";
-import { evaluateCrashSpike, evaluateDauDrop } from "./evaluate";
-import { buildCrashCountQuery, buildDauWindowQuery } from "./queries";
+import { evaluateThreshold } from "./evaluate";
+import { buildAlertMetricQuery } from "./queries";
 
 const HOUR_MS = 60 * 60 * 1000;
-const DAY_MS = 24 * HOUR_MS;
-const DAU_BASELINE_DAYS = 7;
 
 // A sustained breach shouldn't re-notify on every check; suppress repeat
 // notifications within this window of the last delivery.
 export const DEFAULT_COOLDOWN_MS = HOUR_MS;
 
-const METRIC_LABELS: Record<AlertMetric, string> = {
-  CrashSpike: "Crash spike",
-  DauDrop: "DAU drop",
-};
-
 // A rule with its scope already expanded to the concrete project ids it covers
-// (one for a project rule, every org project for an org rule).
+// (one for a project rule, every org project for an org rule) and its watched
+// metric's config + name resolved.
 export interface ResolvedAlertRule {
   id: string;
   name: string;
-  metric: AlertMetric;
+  metricConfig: MetricConfig;
+  metricName: string;
+  operator: AlertOperator;
+  window: AlertWindow;
   threshold: number;
   channel: AlertChannel;
   destination: string;
@@ -47,44 +48,26 @@ export interface AlertRunResult {
   notified: boolean;
 }
 
-const crashRow = z.object({ crashes: z.coerce.number() });
-const dauRow = z.object({
-  baseline_dau: z.coerce.number(),
-  current_dau: z.coerce.number(),
-});
-
-const isoDate = (date: Date): string => date.toISOString().slice(0, 10);
-
 const evaluateRule = async (
   ch: ChClient,
   rule: ResolvedAlertRule,
   now: Date
 ): Promise<{ fired: boolean; summary: string }> => {
-  if (rule.metric === "CrashSpike") {
-    const since = new Date(now.getTime() - HOUR_MS).toISOString();
-    const rows = await runQuery(
-      ch,
-      buildCrashCountQuery({ projectIds: rule.projectIds, since }),
-      crashRow
-    );
-    return evaluateCrashSpike(rows[0]?.crashes ?? 0, rule.threshold);
-  }
-
-  const rows = await runQuery(
+  const { rows } = await runMetric(
     ch,
-    buildDauWindowQuery({
-      baselineFrom: isoDate(
-        new Date(now.getTime() - DAU_BASELINE_DAYS * DAY_MS)
-      ),
+    buildAlertMetricQuery({
+      config: rule.metricConfig,
+      now,
       projectIds: rule.projectIds,
-      today: isoDate(now),
-    }),
-    dauRow
+      window: rule.window,
+    })
   );
-  return evaluateDauDrop(
-    rows[0]?.current_dau ?? 0,
-    rows[0]?.baseline_dau ?? 0,
-    rule.threshold
+  const value = Number(rows[0]?.value ?? 0);
+  return evaluateThreshold(
+    value,
+    rule.operator,
+    rule.threshold,
+    rule.metricName
   );
 };
 
@@ -120,7 +103,7 @@ export const runAlerts = async (
           channel: rule.channel,
           destination: rule.destination,
           firedAt: deps.now.toISOString(),
-          metricLabel: METRIC_LABELS[rule.metric],
+          metricLabel: rule.metricName,
           ruleName: rule.name,
           scopeLabel: rule.scopeLabel,
           summary: verdict.summary,

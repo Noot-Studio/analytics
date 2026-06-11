@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ChClient } from "./ch-client";
 import { resultShape } from "./metrics";
-import type { QueryConfig } from "./query-builder";
+import type { QueryScope } from "./query-builder";
 import { buildQuery } from "./query-builder";
 import { runQuery } from "./run-query";
 
@@ -24,7 +24,7 @@ const seriesRow = z.looseObject({
   value: z.coerce.number(),
 });
 
-const rowSchema = (config: QueryConfig) => {
+const rowSchema = (config: QueryScope) => {
   switch (resultShape(config)) {
     case "series":
     case "grouped-series": {
@@ -44,7 +44,7 @@ const rowSchema = (config: QueryConfig) => {
  */
 export const runMetric = async (
   ch: ChClient,
-  config: QueryConfig
+  config: QueryScope
 ): Promise<{ rows: Record<string, unknown>[]; sql: string }> => {
   const built = buildQuery(config);
   const rows = await runQuery(ch, built, rowSchema(config));

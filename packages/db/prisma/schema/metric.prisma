@@ -10,7 +10,8 @@ model Metric {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  widgets Widget[]
+  widgets    Widget[]
+  alertRules AlertRule[]
 
   @@index([organizationId])
   @@map("metric")

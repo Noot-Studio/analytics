@@ -87,7 +87,7 @@ export const AlertDrawer = ({
           <SheetDescription>
             {isEditing
               ? "Update this alert rule."
-              : "Get notified when a crash spike or DAU drop crosses your threshold."}
+              : "Get notified when a metric crosses your threshold."}
           </SheetDescription>
         </SheetHeader>
 
@@ -97,6 +97,8 @@ export const AlertDrawer = ({
             isSaving={createMutation.isPending || updateMutation.isPending}
             key={alert?.id ?? "new"}
             onSave={handleSave}
+            organizationId={scope.organizationId}
+            projectId={scope.projectId}
             submitLabel={isEditing ? "Save changes" : "Create alert"}
           />
         </div>

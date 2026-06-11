@@ -12,7 +12,8 @@ export const createPrismaClient = () => {
 
 export {
   AlertChannel,
-  AlertMetric,
+  AlertOperator,
+  AlertWindow,
   DashboardScope,
   ProjectEnvironment,
   WidgetSize,

@@ -1,15 +1,25 @@
-// Alert rules: threshold checks on crash spikes and DAU drops, delivered via
-// webhook or email. Dual-scoped exactly like Dashboard — every rule belongs to
-// an organization; `projectId` is null for org-wide rules (evaluated across all
-// the org's projects) and set for a single-project rule.
-enum AlertMetric {
-  CrashSpike
-  DauDrop
-}
-
+// Alert rules: a threshold check on any saved Metric, delivered via webhook or
+// email. The metric is evaluated as a single scalar over `window`; the rule
+// fires when that value crosses `threshold` in the `operator` direction. Dual-
+// scoped exactly like Dashboard — every rule belongs to an organization;
+// `projectId` is null for org-wide rules (the metric runs across all the org's
+// projects) and set for a single-project rule.
 enum AlertChannel {
   Webhook
   Email
+}
+
+// Which side of the threshold fires the alert.
+enum AlertOperator {
+  Above
+  Below
+}
+
+// The trailing window the metric is evaluated over.
+enum AlertWindow {
+  LastHour
+  Last24Hours
+  Last7Days
 }
 
 model AlertRule {
@@ -19,9 +29,12 @@ model AlertRule {
   projectId      String?
   project        Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
   name           String
-  metric         AlertMetric
-  // CrashSpike: absolute crash count over the last hour that fires the alert.
-  // DauDrop: percent (0-100) the day's DAU must fall below the trailing average.
+  // The saved metric this rule watches. Deleting the metric removes its rules.
+  metricId       String
+  metric         Metric       @relation(fields: [metricId], references: [id], onDelete: Cascade)
+  operator       AlertOperator
+  window         AlertWindow
+  // The value the metric's scalar must cross to fire, in the operator direction.
   threshold      Float
   channel        AlertChannel
   // Webhook URL or destination email address, depending on `channel`.
@@ -35,5 +48,6 @@ model AlertRule {
 
   @@index([organizationId])
   @@index([projectId])
+  @@index([metricId])
   @@map("alert_rule")
 }

@@ -1,7 +1,8 @@
-// Pure threshold evaluation for the two MVP alert metrics. No DB/network — the
-// runner feeds these the numbers it queried from ClickHouse and acts on the
-// `fired` verdict. Each function also returns a human-readable `summary` so the
-// delivered notification can describe exactly what tripped.
+// Pure threshold evaluation for a metric-backed alert. No DB/network — the
+// runner feeds this the scalar it queried from ClickHouse and acts on the
+// `fired` verdict. It also returns a human-readable `summary` so the delivered
+// notification can describe exactly what tripped.
+import type { AlertOperator } from "@sbox-analytics/db";
 
 export interface AlertVerdict {
   fired: boolean;
@@ -9,41 +10,24 @@ export interface AlertVerdict {
   summary: string;
 }
 
-/**
- * Crash spike: fires when the crash count over the window reaches the absolute
- * threshold. A threshold of 0 would fire on no crashes, so it's clamped to 1.
- */
-export const evaluateCrashSpike = (
-  crashes: number,
-  threshold: number
-): AlertVerdict => {
-  const limit = Math.max(1, threshold);
-  return {
-    fired: crashes >= limit,
-    summary: `${crashes} crash${crashes === 1 ? "" : "es"} in the last hour (threshold ${limit}).`,
-  };
-};
+// Round to two decimals for display without affecting the comparison.
+const forDisplay = (value: number): number => Math.round(value * 100) / 100;
 
 /**
- * DAU drop: fires when the day's active players fall at least `thresholdPct`
- * percent below the trailing-window average. With no baseline (a brand-new or
- * idle scope) there is nothing to drop from, so it never fires.
+ * Compare a metric's scalar value against the threshold. `Above` fires at or
+ * above the threshold; `Below` fires at or below it — so a rule fires exactly
+ * when the value reaches the boundary it watches.
  */
-export const evaluateDauDrop = (
-  currentDau: number,
-  baselineDau: number,
-  thresholdPct: number
+export const evaluateThreshold = (
+  value: number,
+  operator: AlertOperator,
+  threshold: number,
+  metricName: string
 ): AlertVerdict => {
-  if (baselineDau <= 0) {
-    return {
-      fired: false,
-      summary: "No baseline activity yet — DAU drop not evaluated.",
-    };
-  }
-  const dropPct = ((baselineDau - currentDau) / baselineDau) * 100;
-  const rounded = Math.round(dropPct * 10) / 10;
+  const fired = operator === "Above" ? value >= threshold : value <= threshold;
+  const comparator = operator === "Above" ? "≥" : "≤";
   return {
-    fired: dropPct >= thresholdPct,
-    summary: `DAU ${currentDau} is ${rounded}% below the ${Math.round(baselineDau)} average (threshold ${thresholdPct}%).`,
+    fired,
+    summary: `${metricName} is ${forDisplay(value)} (threshold ${comparator} ${threshold}).`,
   };
 };

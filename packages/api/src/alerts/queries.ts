@@ -1,63 +1,45 @@
-// Pure ClickHouse query builders for alert evaluation. No DB/network access —
-// fully unit-testable. Both builders take a `projectIds` array so the same SQL
-// serves a single-project rule and an org-wide rule (every project in the org).
-import type { BuiltQuery } from "../queries/types";
+// Pure query construction for alert evaluation. No DB/network — fully unit-
+// testable. An alert evaluates its saved metric as a single scalar over a
+// trailing window across the rule's scope, so this merges the metric config
+// with a scalar view (`granularity: "none"`, no group-by), the rule's project
+// scope, and the window's time range into the shared query builder's input.
+import type { AlertWindow } from "@sbox-analytics/db";
 
-export interface CrashCountInput {
-  projectIds: string[];
-  // ISO timestamp; crashes at or after this instant are counted.
-  since: string;
-}
+import type { MetricConfig } from "../metrics";
+import type { QueryScope } from "../query-builder";
 
-// Crash events across the scope since `since` (the crash-spike window).
-export const buildCrashCountQuery = (input: CrashCountInput): BuiltQuery => {
-  const query = `
-          SELECT count() AS crashes
-          FROM analytics.events
-          WHERE project_id IN {projectIds:Array(String)}
-            AND event_type = 'crash'
-            AND timestamp >= parseDateTimeBestEffort({since:String})
-        `;
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
 
-  return {
-    params: { projectIds: input.projectIds, since: input.since },
-    query,
-  };
+const WINDOW_MS: Record<AlertWindow, number> = {
+  Last24Hours: DAY_MS,
+  Last7Days: 7 * DAY_MS,
+  LastHour: HOUR_MS,
 };
 
-export interface DauWindowInput {
+export const windowMs = (window: AlertWindow): number => WINDOW_MS[window];
+
+export interface AlertMetricQueryInput {
+  config: MetricConfig;
+  // Every project the rule covers (one for a project rule, all org projects).
   projectIds: string[];
-  // Day being checked (YYYY-MM-DD).
-  today: string;
-  // Earliest day of the trailing baseline window (YYYY-MM-DD), inclusive.
-  baselineFrom: string;
+  window: AlertWindow;
+  // Evaluation instant; the window is the span ending here.
+  now: Date;
 }
 
-// Current-day DAU and the trailing-window average, from the daily rollup.
-// Grouping by date merges every project + event_type for that day, so the
-// per-day figure is distinct players across the scope (i.e. DAU).
-export const buildDauWindowQuery = (input: DauWindowInput): BuiltQuery => {
-  const query = `
-          SELECT
-            sumIf(daily, d = {today:Date})                      AS current_dau,
-            ifNotFinite(avgIf(daily, d < {today:Date}), 0)      AS baseline_dau
-          FROM (
-            SELECT
-              event_date                            AS d,
-              toUInt64(uniqMerge(unique_players))   AS daily
-            FROM analytics.events_daily
-            WHERE project_id IN {projectIds:Array(String)}
-              AND event_date BETWEEN {baselineFrom:Date} AND {today:Date}
-            GROUP BY event_date
-          )
-        `;
-
-  return {
-    params: {
-      baselineFrom: input.baselineFrom,
-      projectIds: input.projectIds,
-      today: input.today,
-    },
-    query,
-  };
-};
+// Build the scalar metric query for one rule: the metric measured over the
+// window across the scope, with no time bucket or grouping so a single `value`
+// comes back to compare against the threshold.
+export const buildAlertMetricQuery = (
+  input: AlertMetricQueryInput
+): QueryScope => ({
+  ...input.config,
+  granularity: "none",
+  limit: 1,
+  projectId: input.projectIds,
+  timeRange: {
+    from: new Date(input.now.getTime() - windowMs(input.window)).toISOString(),
+    to: input.now.toISOString(),
+  },
+});

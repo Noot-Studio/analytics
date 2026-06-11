@@ -1,39 +1,32 @@
 import { describe, expect, it } from "bun:test";
 
-import { evaluateCrashSpike, evaluateDauDrop } from "./evaluate";
+import { evaluateThreshold } from "./evaluate";
 
-describe("evaluateCrashSpike", () => {
-  it("fires when crashes reach the threshold", () => {
-    expect(evaluateCrashSpike(5, 5).fired).toBe(true);
-    expect(evaluateCrashSpike(6, 5).fired).toBe(true);
+describe("evaluateThreshold", () => {
+  it("fires Above at or over the threshold", () => {
+    expect(evaluateThreshold(10, "Above", 10, "Crashes").fired).toBe(true);
+    expect(evaluateThreshold(11, "Above", 10, "Crashes").fired).toBe(true);
   });
 
-  it("does not fire below the threshold", () => {
-    expect(evaluateCrashSpike(4, 5).fired).toBe(false);
+  it("does not fire Above under the threshold", () => {
+    expect(evaluateThreshold(9, "Above", 10, "Crashes").fired).toBe(false);
   });
 
-  it("clamps a zero threshold to 1 so no crashes never fires", () => {
-    expect(evaluateCrashSpike(0, 0).fired).toBe(false);
-    expect(evaluateCrashSpike(1, 0).fired).toBe(true);
-  });
-});
-
-describe("evaluateDauDrop", () => {
-  it("fires when the drop meets the percent threshold", () => {
-    // 100 -> 50 is a 50% drop.
-    expect(evaluateDauDrop(50, 100, 50).fired).toBe(true);
-    expect(evaluateDauDrop(40, 100, 50).fired).toBe(true);
+  it("fires Below at or under the threshold", () => {
+    expect(evaluateThreshold(30, "Below", 30, "Avg FPS").fired).toBe(true);
+    expect(evaluateThreshold(20, "Below", 30, "Avg FPS").fired).toBe(true);
   });
 
-  it("does not fire for a shallower drop", () => {
-    expect(evaluateDauDrop(70, 100, 50).fired).toBe(false);
+  it("does not fire Below over the threshold", () => {
+    expect(evaluateThreshold(31, "Below", 30, "Avg FPS").fired).toBe(false);
   });
 
-  it("never fires without a baseline", () => {
-    expect(evaluateDauDrop(0, 0, 50).fired).toBe(false);
-  });
-
-  it("does not fire when activity grows", () => {
-    expect(evaluateDauDrop(150, 100, 20).fired).toBe(false);
+  it("summarizes the observed value rounded to two decimals", () => {
+    expect(evaluateThreshold(12.345, "Above", 10, "Crashes").summary).toBe(
+      "Crashes is 12.35 (threshold ≥ 10)."
+    );
+    expect(evaluateThreshold(7, "Below", 30, "Avg FPS").summary).toBe(
+      "Avg FPS is 7 (threshold ≤ 30)."
+    );
   });
 });

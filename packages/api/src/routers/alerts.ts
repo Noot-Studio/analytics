@@ -9,6 +9,7 @@ import type { ResolvedAlertRule } from "../alerts/runner";
 import type { AlertRuleSnapshot } from "../alerts/schema";
 import { alertRuleInputSchema } from "../alerts/schema";
 import { protectedProcedure } from "../index";
+import { metricConfigSchema } from "../metrics";
 
 // Alerts resolve their scope the same way metrics do: an explicit project makes
 // the rule project-scoped; otherwise it's an org-wide rule over the active (or
@@ -24,11 +25,14 @@ const alertSelect = {
   enabled: true,
   id: true,
   lastFiredAt: true,
-  metric: true,
+  metric: { select: { config: true, name: true } },
+  metricId: true,
   name: true,
+  operator: true,
   projectId: true,
   threshold: true,
   updatedAt: true,
+  window: true,
 } as const;
 
 interface AlertRow {
@@ -37,11 +41,14 @@ interface AlertRow {
   enabled: boolean;
   id: string;
   lastFiredAt: Date | null;
-  metric: AlertRuleSnapshot["metric"];
+  metric: { config: unknown; name: string };
+  metricId: string;
   name: string;
+  operator: AlertRuleSnapshot["operator"];
   projectId: string | null;
   threshold: number;
   updatedAt: Date;
+  window: AlertRuleSnapshot["window"];
 }
 
 const toSnapshot = (rule: AlertRow): AlertRuleSnapshot => ({
@@ -50,12 +57,30 @@ const toSnapshot = (rule: AlertRow): AlertRuleSnapshot => ({
   enabled: rule.enabled,
   id: rule.id,
   lastFiredAt: rule.lastFiredAt?.toISOString() ?? null,
-  metric: rule.metric,
+  metricId: rule.metricId,
+  metricName: rule.metric.name,
   name: rule.name,
+  operator: rule.operator,
   projectId: rule.projectId,
   threshold: rule.threshold,
   updatedAt: rule.updatedAt.toISOString(),
+  window: rule.window,
 });
+
+// Guards that a metric id belongs to the rule's org, so a rule can't be
+// pointed at another org's metric.
+const assertMetricInOrg = async (
+  metricId: string,
+  organizationId: string
+): Promise<void> => {
+  const metric = await prisma.metric.findFirst({
+    select: { id: true },
+    where: { id: metricId, organizationId },
+  });
+  if (!metric) {
+    throw new ORPCError("BAD_REQUEST", { message: "Metric not found" });
+  }
+};
 
 // Project rules are filtered by project; org rules are the org's project-less
 // rules. Both pin organizationId so a stray id can't reach another org's rules.
@@ -94,17 +119,20 @@ export const alertsRouter = {
       const { organizationId, role } = await resolveOrgScope(context, input);
       requireWriteRole(role);
       assertDestination(input.channel, input.destination);
+      await assertMetricInOrg(input.metricId, organizationId);
 
       const rule = await prisma.alertRule.create({
         data: {
           channel: input.channel,
           destination: input.destination,
           enabled: input.enabled,
-          metric: input.metric,
+          metricId: input.metricId,
           name: input.name,
+          operator: input.operator,
           organizationId,
           projectId: input.projectId ?? null,
           threshold: input.threshold,
+          window: input.window,
         },
         select: alertSelect,
       });
@@ -173,11 +201,14 @@ export const alertsRouter = {
         destination: rule.destination,
         id: rule.id,
         lastFiredAt: rule.lastFiredAt,
-        metric: rule.metric,
+        metricConfig: metricConfigSchema.parse(rule.metric.config),
+        metricName: rule.metric.name,
         name: rule.name,
+        operator: rule.operator,
         projectIds,
         scopeLabel,
         threshold: rule.threshold,
+        window: rule.window,
       }));
 
       const results = await runAlerts(
@@ -240,6 +271,10 @@ export const alertsRouter = {
         );
       }
 
+      if (input.metricId !== undefined) {
+        await assertMetricInOrg(input.metricId, organizationId);
+      }
+
       const rule = await prisma.alertRule.update({
         data: {
           ...(input.channel === undefined ? {} : { channel: input.channel }),
@@ -247,11 +282,13 @@ export const alertsRouter = {
             ? {}
             : { destination: input.destination }),
           ...(input.enabled === undefined ? {} : { enabled: input.enabled }),
-          ...(input.metric === undefined ? {} : { metric: input.metric }),
+          ...(input.metricId === undefined ? {} : { metricId: input.metricId }),
           ...(input.name === undefined ? {} : { name: input.name }),
+          ...(input.operator === undefined ? {} : { operator: input.operator }),
           ...(input.threshold === undefined
             ? {}
             : { threshold: input.threshold }),
+          ...(input.window === undefined ? {} : { window: input.window }),
         },
         select: alertSelect,
         where: { id: input.id },
