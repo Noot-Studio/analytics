@@ -9,25 +9,34 @@ import {
 } from "@sbox-analytics/ui/components/dialog";
 import { Field, FieldLabel } from "@sbox-analytics/ui/components/field";
 import { Input } from "@sbox-analytics/ui/components/input";
-import { useState } from "react";
+import type { ReactNode } from "react";
+import { useId, useState } from "react";
 
-interface DeleteOrgDialogProps {
+interface DeleteEntityDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  organizationName: string;
+  /** Lowercase noun shown in the title and confirm button, e.g. "project". */
+  entityLabel: string;
+  /** Exact name the user must type to enable deletion. */
+  entityName: string;
+  /** Consequences copy explaining what gets removed. */
+  description: ReactNode;
   onConfirm: () => void;
   isPending: boolean;
 }
 
-export const DeleteOrgDialog = ({
+export const DeleteEntityDialog = ({
   open,
   onOpenChange,
-  organizationName,
+  entityLabel,
+  entityName,
+  description,
   onConfirm,
   isPending,
-}: DeleteOrgDialogProps) => {
+}: DeleteEntityDialogProps) => {
+  const inputId = useId();
   const [confirmation, setConfirmation] = useState("");
-  const canDelete = confirmation === organizationName;
+  const canDelete = confirmation === entityName;
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
@@ -40,21 +49,16 @@ export const DeleteOrgDialog = ({
     <Dialog onOpenChange={handleOpenChange} open={open}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Delete organization</DialogTitle>
-          <DialogDescription>
-            This permanently deletes {organizationName}, including all of its
-            projects, API keys, dashboards, and analytics data. This cannot be
-            undone.
-          </DialogDescription>
+          <DialogTitle>Delete {entityLabel}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <Field>
-          <FieldLabel htmlFor="delete-org-confirmation">
-            Type <span className="font-semibold">{organizationName}</span> to
-            confirm
+          <FieldLabel htmlFor={inputId}>
+            Type <span className="font-semibold">{entityName}</span> to confirm
           </FieldLabel>
           <Input
             autoComplete="off"
-            id="delete-org-confirmation"
+            id={inputId}
             onChange={(e) => setConfirmation(e.target.value)}
             value={confirmation}
           />
@@ -72,7 +76,7 @@ export const DeleteOrgDialog = ({
             onClick={onConfirm}
             variant="destructive"
           >
-            {isPending ? "Deleting…" : "Delete organization"}
+            {isPending ? "Deleting…" : `Delete ${entityLabel}`}
           </Button>
         </DialogFooter>
       </DialogContent>
