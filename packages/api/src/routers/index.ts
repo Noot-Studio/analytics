@@ -11,6 +11,7 @@ import { metricsRouter } from "./metrics";
 import { orgAnalyticsRouter } from "./org-analytics";
 import { projectsRouter } from "./projects";
 import { teamsRouter } from "./teams";
+import { widgetsRouter } from "./widgets";
 
 export const appRouter = {
   apiKeys: apiKeysRouter,
@@ -28,6 +29,7 @@ export const appRouter = {
   })),
   projects: projectsRouter,
   teams: teamsRouter,
+  widgets: widgetsRouter,
 };
 export type AppRouter = typeof appRouter;
 export type AppRouterClient = RouterClient<typeof appRouter>;
