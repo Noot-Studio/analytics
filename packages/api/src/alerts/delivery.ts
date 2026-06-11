@@ -4,8 +4,10 @@ import type { AlertChannel } from "@sbox-analytics/db";
 // deliver pipeline is exercised in tests with an in-memory notifier. The
 // production notifier's two transports (webhook, email) are themselves
 // injectable so each can be unit-tested without real network or Resend.
-import { env } from "@sbox-analytics/env/server";
-import { Resend } from "resend";
+import { sendEmail } from "@sbox-analytics/email";
+import type { EmailMessage } from "@sbox-analytics/email";
+
+export type { EmailMessage } from "@sbox-analytics/email";
 
 export interface AlertNotification {
   ruleName: string;
@@ -28,12 +30,6 @@ export interface AlertNotifier {
   notify(notification: AlertNotification): Promise<void>;
 }
 
-export interface EmailMessage {
-  to: string;
-  subject: string;
-  html: string;
-}
-
 export interface NotifierTransports {
   fetchFn: (url: string, init?: RequestInit) => Promise<Response>;
   sendEmail: (message: EmailMessage) => Promise<void>;
@@ -48,23 +44,16 @@ const buildEmailHtml = (notification: AlertNotification): string => `
   </div>
 `;
 
-// Production email transport: Resend when configured, otherwise a dev warning so
-// the alert is still visible in logs. Mirrors packages/auth/src/emails.ts.
-const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
-
+// Production email transport: the shared @sbox-analytics/email package sends via
+// Resend when configured and reports back when it isn't, so we surface a dev
+// warning to keep the alert visible in logs.
 const defaultSendEmail = async (message: EmailMessage): Promise<void> => {
-  if (!resend) {
+  const sent = await sendEmail(message);
+  if (!sent) {
     console.warn(
       `[alerts] RESEND_API_KEY not set — email to ${message.to}: ${message.subject}`
     );
-    return;
   }
-  await resend.emails.send({
-    from: env.EMAIL_FROM,
-    html: message.html,
-    subject: message.subject,
-    to: message.to,
-  });
 };
 
 const productionTransports: NotifierTransports = {

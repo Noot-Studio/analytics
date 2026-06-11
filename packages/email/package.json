@@ -1,0 +1,23 @@
+{
+  "name": "@sbox-analytics/email",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "check-types": "tsc -b"
+  },
+  "dependencies": {
+    "@sbox-analytics/env": "workspace:*",
+    "resend": "^6.12.4"
+  },
+  "devDependencies": {
+    "@sbox-analytics/config": "workspace:*",
+    "@types/bun": "catalog:",
+    "typescript": "catalog:"
+  }
+}
