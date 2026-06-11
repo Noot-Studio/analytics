@@ -11,6 +11,7 @@
     "check-types": "tsc -b"
   },
   "dependencies": {
+    "@sbox-analytics/api": "workspace:*",
     "@sbox-analytics/db": "workspace:*",
     "@sbox-analytics/env": "workspace:*",
     "@sbox-analytics/events": "workspace:*",

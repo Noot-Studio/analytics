@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 
-import { createKeyResolver, InvalidApiKeyError } from "./keys";
+import {
+  createKeyResolver,
+  createSecretKeyResolver,
+  hashSecret,
+  InvalidApiKeyError,
+} from "./keys";
 import type { KeyCache, KeyDirectory, KeyResolver } from "./keys";
 
 const INVALID_MARKER = "-";
@@ -105,6 +110,49 @@ describe("createKeyResolver", () => {
 
   it("rejects an empty key without touching cache or directory", async () => {
     await expect(resolver.resolve("")).rejects.toThrow(InvalidApiKeyError);
+    expect(fakeDir.lookups).toBe(0);
+    expect(fakeCache.setCalls).toBe(0);
+  });
+});
+
+describe("createSecretKeyResolver", () => {
+  const SECRET = "sk_test_secret";
+
+  let fakeCache: ReturnType<typeof createFakeCache>;
+  let fakeDir: ReturnType<typeof createFakeDirectory>;
+  let resolver: KeyResolver;
+
+  beforeEach(() => {
+    fakeCache = createFakeCache();
+    // The directory (and cache) are keyed by the sha256 hash, never the raw
+    // secret — mirrors the secretHash column lookup in Postgres.
+    fakeDir = createFakeDirectory({ [hashSecret(SECRET)]: "proj_1" });
+    resolver = createSecretKeyResolver({
+      cache: fakeCache.cache,
+      directory: fakeDir.directory,
+    });
+  });
+
+  it("hashes the raw secret before directory lookup and cache writes", async () => {
+    const projectId = await resolver.resolve(SECRET);
+
+    expect(projectId).toBe("proj_1");
+    expect(fakeCache.peek(hashSecret(SECRET))).toBe("proj_1");
+    // The raw secret must never appear as a cache key.
+    expect(fakeCache.peek(SECRET)).toBeNull();
+  });
+
+  it("rejects an unknown secret with InvalidApiKeyError and negative-caches its hash", async () => {
+    await expect(resolver.resolve("sk_wrong")).rejects.toThrow(
+      InvalidApiKeyError
+    );
+    expect(fakeCache.peek(hashSecret("sk_wrong"))).toBe(INVALID_MARKER);
+  });
+
+  it("rejects an empty secret without touching cache or directory", async () => {
+    await expect((async () => await resolver.resolve(""))()).rejects.toThrow(
+      InvalidApiKeyError
+    );
     expect(fakeDir.lookups).toBe(0);
     expect(fakeCache.setCalls).toBe(0);
   });

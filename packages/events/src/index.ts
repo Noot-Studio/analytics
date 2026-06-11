@@ -1,4 +1,4 @@
-export { apiKeyCacheKey } from "./api-key-cache";
+export { apiKeyCacheKey, apiSecretCacheKey } from "./api-key-cache";
 export {
   CORE_EVENT_TYPES,
   type ClickHouseEvent,

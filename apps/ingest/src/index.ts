@@ -1,3 +1,4 @@
+import { createChClient } from "@sbox-analytics/api/ch-client";
 import { env } from "@sbox-analytics/env/server";
 import type { ClickHouseEvent } from "@sbox-analytics/events";
 import { batchSchema, toClickHouseEvent } from "@sbox-analytics/events";
@@ -8,9 +9,14 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { HTTPException } from "hono/http-exception";
 
-import { createRedisKeyResolver, InvalidApiKeyError } from "./keys";
+import {
+  createRedisKeyResolver,
+  createRedisSecretKeyResolver,
+  InvalidApiKeyError,
+} from "./keys";
 import { createProducer } from "./producer";
 import { MAX_BODY_BYTES, MAX_PROPERTIES_BYTES } from "./schema";
+import { createSpatialRoutes } from "./spatial";
 
 initLogger({
   env: { service: "sbox-analytics-ingest" },
@@ -27,6 +33,15 @@ const app = new Hono<EvlogVariables>();
 app.use(evlog());
 
 app.get("/healthz", (c) => c.text("ok"));
+
+// Editor-tool read path: voxel/scene queries. Authenticated with the SECRET
+// key (sk_), not the publishable key — the publishable key ships inside game
+// builds and must never grant read access to analytics data.
+const secretKeys = createRedisSecretKeyResolver(env.REDIS_URL);
+app.route(
+  "/v1/spatial",
+  createSpatialRoutes({ ch: createChClient(), keys: secretKeys })
+);
 
 app.post(
   "/v1/events",

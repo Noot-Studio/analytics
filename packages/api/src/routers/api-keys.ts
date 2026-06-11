@@ -3,7 +3,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { ORPCError } from "@orpc/server";
 import prisma from "@sbox-analytics/db";
 import { env } from "@sbox-analytics/env/server";
-import { apiKeyCacheKey } from "@sbox-analytics/events";
+import { apiKeyCacheKey, apiSecretCacheKey } from "@sbox-analytics/events";
 import { RedisClient } from "bun";
 import { z } from "zod";
 
@@ -22,9 +22,13 @@ import { filterSchema } from "../query-builder";
 // outage must not fail the mutation (Postgres is already updated) — the positive
 // TTL bounds how long a revoked key stays cached-valid.
 const redis = new RedisClient(env.REDIS_URL);
-const revokeApiKeyCache = async (publishableKey: string): Promise<void> => {
+const revokeApiKeyCache = async (
+  publishableKey: string,
+  secretHash: string
+): Promise<void> => {
   try {
     await redis.del(apiKeyCacheKey(publishableKey));
+    await redis.del(apiSecretCacheKey(secretHash));
   } catch {
     // Cache eviction is best-effort; the key's positive TTL is the backstop.
   }
@@ -124,7 +128,7 @@ export const apiKeysRouter = {
     .input(z.object({ id: z.string().min(1) }))
     .handler(async ({ context, input }) => {
       const apiKey = await prisma.apiKey.findFirst({
-        select: { projectId: true, publishableKey: true },
+        select: { projectId: true, publishableKey: true, secretHash: true },
         where: { id: input.id, revokedAt: null },
       });
 
@@ -142,7 +146,7 @@ export const apiKeysRouter = {
         data: { revokedAt: new Date() },
         where: { id: input.id },
       });
-      await revokeApiKeyCache(apiKey.publishableKey);
+      await revokeApiKeyCache(apiKey.publishableKey, apiKey.secretHash);
 
       return { id: input.id };
     }),
@@ -151,7 +155,7 @@ export const apiKeysRouter = {
     .input(z.object({ id: z.string().min(1) }))
     .handler(async ({ context, input }) => {
       const apiKey = await prisma.apiKey.findFirst({
-        select: { projectId: true, publishableKey: true },
+        select: { projectId: true, publishableKey: true, secretHash: true },
         where: { id: input.id, revokedAt: null },
       });
 
@@ -170,7 +174,7 @@ export const apiKeysRouter = {
         data: { publishableKey, secretHash },
         where: { id: input.id },
       });
-      await revokeApiKeyCache(apiKey.publishableKey);
+      await revokeApiKeyCache(apiKey.publishableKey, apiKey.secretHash);
 
       return { publishableKey, secretKey };
     }),

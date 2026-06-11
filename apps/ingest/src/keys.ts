@@ -1,5 +1,7 @@
+import { createHash } from "node:crypto";
+
 import prisma from "@sbox-analytics/db";
-import { apiKeyCacheKey } from "@sbox-analytics/events";
+import { apiKeyCacheKey, apiSecretCacheKey } from "@sbox-analytics/events";
 import { RedisClient } from "bun";
 
 const POSITIVE_TTL_SECONDS = 5 * 60;
@@ -65,6 +67,30 @@ export const createKeyResolver = ({
   },
 });
 
+// Secret-key (sk_) resolver for the editor read endpoints. Only the sha256
+// hash is stored (Postgres) or used as a lookup/cache key (Redis) — the raw
+// secret never persists anywhere. Same cache policy as the publishable path.
+export const hashSecret = (secret: string): string =>
+  createHash("sha256").update(secret).digest("hex");
+
+export const createSecretKeyResolver = ({
+  directory,
+  cache,
+}: {
+  directory: KeyDirectory;
+  cache: KeyCache;
+}): KeyResolver => {
+  const inner = createKeyResolver({ cache, directory });
+  return {
+    resolve(secretKey: string): Promise<string> {
+      if (!secretKey) {
+        throw new InvalidApiKeyError();
+      }
+      return inner.resolve(hashSecret(secretKey));
+    },
+  };
+};
+
 const prismaDirectory: KeyDirectory = {
   async findProjectId(publishableKey: string): Promise<string | null> {
     const row = await prisma.apiKey.findFirst({
@@ -75,20 +101,29 @@ const prismaDirectory: KeyDirectory = {
   },
 };
 
-const createRedisCache = (redisUrl: string): KeyCache => {
+// Lookup for the secret-key path: the resolver hands us the sha256 hash.
+const prismaSecretDirectory: KeyDirectory = {
+  async findProjectId(secretHash: string): Promise<string | null> {
+    const row = await prisma.apiKey.findFirst({
+      select: { projectId: true },
+      where: { revokedAt: null, secretHash },
+    });
+    return row?.projectId ?? null;
+  },
+};
+
+const createRedisCache = (
+  redisUrl: string,
+  cacheKey: (key: string) => string
+): KeyCache => {
   const redis = new RedisClient(redisUrl);
   return {
-    async del(publishableKey) {
-      await redis.del(apiKeyCacheKey(publishableKey));
+    async del(key) {
+      await redis.del(cacheKey(key));
     },
-    get: (publishableKey) => redis.get(apiKeyCacheKey(publishableKey)),
-    async set(publishableKey, value, ttlSeconds) {
-      await redis.send("SET", [
-        apiKeyCacheKey(publishableKey),
-        value,
-        "EX",
-        String(ttlSeconds),
-      ]);
+    get: (key) => redis.get(cacheKey(key)),
+    async set(key, value, ttlSeconds) {
+      await redis.send("SET", [cacheKey(key), value, "EX", String(ttlSeconds)]);
     },
   };
 };
@@ -97,6 +132,12 @@ const createRedisCache = (redisUrl: string): KeyCache => {
 // index.ts call site a one-liner.
 export const createRedisKeyResolver = (redisUrl: string): KeyResolver =>
   createKeyResolver({
-    cache: createRedisCache(redisUrl),
+    cache: createRedisCache(redisUrl, apiKeyCacheKey),
     directory: prismaDirectory,
+  });
+
+export const createRedisSecretKeyResolver = (redisUrl: string): KeyResolver =>
+  createSecretKeyResolver({
+    cache: createRedisCache(redisUrl, apiSecretCacheKey),
+    directory: prismaSecretDirectory,
   });
