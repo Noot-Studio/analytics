@@ -1,35 +1,30 @@
 import { describe, expect, it } from "bun:test";
 
-import type { MetricConfig } from "./metrics";
 import {
   compatibleVisualizations,
   defaultVisualization,
-  metricConfigSchema,
   resultShape,
 } from "./metrics";
 
-const config = (overrides: Partial<MetricConfig>): MetricConfig =>
-  metricConfigSchema.parse({ aggregation: "count", ...overrides });
-
 describe("resultShape", () => {
   it("is scalar without granularity or group-by", () => {
-    expect(resultShape(config({ granularity: "none" }))).toBe("scalar");
+    expect(resultShape({ granularity: "none" })).toBe("scalar");
   });
 
   it("is series with a time granularity", () => {
-    expect(resultShape(config({ granularity: "day" }))).toBe("series");
+    expect(resultShape({ granularity: "day" })).toBe("series");
   });
 
   it("is groups with group-by and no granularity", () => {
-    expect(
-      resultShape(config({ granularity: "none", groupBy: ["weapon"] }))
-    ).toBe("groups");
+    expect(resultShape({ granularity: "none", groupBy: ["weapon"] })).toBe(
+      "groups"
+    );
   });
 
   it("is grouped-series with both", () => {
-    expect(
-      resultShape(config({ granularity: "day", groupBy: ["weapon"] }))
-    ).toBe("grouped-series");
+    expect(resultShape({ granularity: "day", groupBy: ["weapon"] })).toBe(
+      "grouped-series"
+    );
   });
 });
 
@@ -47,12 +42,10 @@ describe("compatibleVisualizations", () => {
 
 describe("defaultVisualization", () => {
   it("uses the first compatible visualization", () => {
-    expect(defaultVisualization(config({ granularity: "none" }))).toBe(
-      "number"
-    );
-    expect(defaultVisualization(config({ granularity: "day" }))).toBe("area");
+    expect(defaultVisualization({ granularity: "none" })).toBe("number");
+    expect(defaultVisualization({ granularity: "day" })).toBe("area");
     expect(
-      defaultVisualization(config({ granularity: "none", groupBy: ["map"] }))
+      defaultVisualization({ granularity: "none", groupBy: ["map"] })
     ).toBe("table");
   });
 });

@@ -1,39 +1,50 @@
-import { EVENT_COLUMNS, toClickHouseDateTime } from "@sbox-analytics/events";
+import { toClickHouseDateTime } from "@sbox-analytics/events";
 import { z } from "zod";
 
-export const filterOperator = z.enum([
-  "eq",
-  "neq",
-  "gt",
-  "gte",
-  "lt",
-  "lte",
-  "contains",
-  "not_contains",
-  "starts_with",
-  "in",
-  "is_empty",
-  "is_not_empty",
+import {
+  compileMetricExpression,
+  validateMetricExpression,
+} from "./metric-expression";
+import {
+  buildFilterCondition,
+  buildPropertyAccessor,
+  filterOperator,
+  filterSchema,
+  getPropertyParamName,
+  getValueType,
+} from "./query-fragments";
+import type { Filter } from "./query-fragments";
+
+// Re-export the shared fragment primitives so existing importers of
+// `query-builder` (routers, web filters) keep working through this module.
+export {
+  buildFilterCondition,
+  buildPropertyAccessor,
+  type Filter,
+  filterOperator,
+  filterSchema,
+  getValueType,
+};
+
+export const aggregationSchema = z.enum([
+  "avg",
+  "count",
+  "max",
+  "min",
+  "sum",
+  "unique_players",
+  "unique_sessions",
 ]);
 
-export const filterSchema = z.object({
-  operator: filterOperator,
-  property: z.string().min(1),
-  value: z.union([z.string(), z.number(), z.array(z.string())]),
-});
+export type Aggregation = z.infer<typeof aggregationSchema>;
 
 export const queryConfigSchema = z.object({
   aggregateProperty: z.string().min(1).optional(),
-  aggregation: z.enum([
-    "avg",
-    "count",
-    "max",
-    "min",
-    "sum",
-    "unique_players",
-    "unique_sessions",
-  ]),
+  // A metric is either a single aggregation (`aggregation`) or a combined
+  // expression (`expression`); `withMetricConfigRules` enforces exactly one.
+  aggregation: aggregationSchema.optional(),
   eventType: z.string().min(1).optional(),
+  expression: z.string().min(1).optional(),
   filters: z.array(filterSchema).max(10).optional(),
   granularity: z.enum(["hour", "day", "week", "month", "none"]).default("day"),
   groupBy: z.array(z.string().min(1)).max(5).optional(),
@@ -46,154 +57,44 @@ export const queryConfigSchema = z.object({
 });
 
 export type QueryConfig = z.infer<typeof queryConfigSchema>;
-export type Filter = z.infer<typeof filterSchema>;
+
+/**
+ * Layer the "exactly one of aggregation / expression" rule (plus expression
+ * syntax validation) onto a config schema. Applied at user-input boundaries
+ * (metric save, preview, raw JSON editor) — kept off the bare object schema so
+ * `.omit`/`.extend` still work for the widget and execution variants.
+ */
+export const withMetricConfigRules = <T extends z.ZodTypeAny>(schema: T) =>
+  schema.superRefine((value, ctx) => {
+    const config = value as { aggregation?: unknown; expression?: unknown };
+    const hasAggregation = Boolean(config.aggregation);
+    const hasExpression = Boolean(config.expression);
+    if (hasAggregation === hasExpression) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Provide either an aggregation or an expression, not both",
+      });
+      return;
+    }
+    if (hasExpression && typeof config.expression === "string") {
+      const error = validateMetricExpression(config.expression);
+      if (error) {
+        ctx.addIssue({
+          code: "custom",
+          message: error,
+          path: ["expression"],
+        });
+      }
+    }
+  });
 
 interface QueryResult {
   query: string;
   params: Record<string, unknown>;
 }
 
-const getPropertyParamName = (
-  property: string,
-  propertyParams: Map<string, string>
-): string => {
-  let paramName = propertyParams.get(property);
-  if (!paramName) {
-    paramName = `prop_${property}_name`;
-    propertyParams.set(property, paramName);
-  }
-  return paramName;
-};
-
-// Allowlist form of the shared event-column metadata: only these exact
-// identifiers are ever interpolated as raw SQL column names; everything else is
-// read out of the JSON `properties` blob via JSONExtract.
-const KNOWN_COLUMNS = new Set<string>(EVENT_COLUMNS);
-
-export const buildPropertyAccessor = (
-  property: string,
-  valueType: "string" | "number",
-  propertyParams: Map<string, string>
-): string => {
-  if (KNOWN_COLUMNS.has(property)) {
-    return property;
-  }
-  const paramName = getPropertyParamName(property, propertyParams);
-  if (valueType === "number") {
-    return `JSONExtractFloat(properties, {${paramName}:String})`;
-  }
-  return `JSONExtractString(properties, {${paramName}:String})`;
-};
-
-export const getValueType = (value: unknown): "string" | "number" => {
-  if (typeof value === "number") {
-    return "number";
-  }
-  return "string";
-};
-
-/** Operators that compare the accessor against a single bound value. */
-const BINARY_OPERATORS = {
-  eq: "=",
-  gt: ">",
-  gte: ">=",
-  lt: "<",
-  lte: "<=",
-  neq: "!=",
-} as const;
-
-export const buildFilterCondition = (
-  filter: Filter,
-  index: number,
-  propertyParams: Map<string, string>,
-  options?: { accessor?: string; valueType?: "string" | "number" }
-): { condition: string; paramName: string; paramValue: unknown } => {
-  const valueType =
-    options?.valueType ??
-    getValueType(Array.isArray(filter.value) ? filter.value[0] : filter.value);
-  const accessor =
-    options?.accessor ??
-    buildPropertyAccessor(filter.property, valueType, propertyParams);
-  const paramName = `filter_${index}_value`;
-
-  const binarySymbol =
-    BINARY_OPERATORS[filter.operator as keyof typeof BINARY_OPERATORS];
-  if (binarySymbol) {
-    // Only equality respects the string/number distinction; ordering is numeric.
-    const isEquality = filter.operator === "eq" || filter.operator === "neq";
-    const paramType =
-      isEquality && valueType === "string" ? "String" : "Float64";
-    return {
-      condition: `${accessor} ${binarySymbol} {${paramName}:${paramType}}`,
-      paramName,
-      paramValue: filter.value,
-    };
-  }
-
-  switch (filter.operator) {
-    case "contains": {
-      return {
-        condition: `${accessor} LIKE {${paramName}:String}`,
-        paramName,
-        paramValue: `%${filter.value}%`,
-      };
-    }
-    case "not_contains": {
-      return {
-        condition: `${accessor} NOT LIKE {${paramName}:String}`,
-        paramName,
-        paramValue: `%${filter.value}%`,
-      };
-    }
-    case "starts_with": {
-      return {
-        condition: `${accessor} LIKE {${paramName}:String}`,
-        paramName,
-        paramValue: `${filter.value}%`,
-      };
-    }
-    case "in": {
-      const values = Array.isArray(filter.value)
-        ? filter.value
-        : [String(filter.value)];
-      const placeholders = values
-        .map((_, i) => `{${paramName}_${i}:String}`)
-        .join(", ");
-      const params: Record<string, string> = {};
-      for (let i = 0; i < values.length; i += 1) {
-        const value = values[i];
-        if (value !== undefined) {
-          params[`${paramName}_${i}`] = value;
-        }
-      }
-      return {
-        condition: `${accessor} IN (${placeholders})`,
-        paramName,
-        paramValue: params,
-      };
-    }
-    case "is_empty": {
-      return {
-        condition: `empty(${accessor})`,
-        paramName,
-        paramValue: {},
-      };
-    }
-    case "is_not_empty": {
-      return {
-        condition: `notEmpty(${accessor})`,
-        paramName,
-        paramValue: {},
-      };
-    }
-    default: {
-      throw new Error(`Unsupported operator: ${filter.operator}`);
-    }
-  }
-};
-
 export const buildAggregation = (
-  aggregation: QueryConfig["aggregation"],
+  aggregation: Aggregation,
   aggregateProperty: string | undefined,
   propertyParams: Map<string, string>
 ): string => {
@@ -406,14 +307,25 @@ export const buildQuery = (config: QueryConfig): QueryResult => {
     }
   }
 
-  // Aggregation
-  selectColumns.push(
-    buildAggregation(
-      config.aggregation,
-      config.aggregateProperty,
-      propertyParams
-    )
-  );
+  // Value column: a combined expression compiles its own conditional
+  // aggregates (event selection lives in each `...If` predicate), otherwise a
+  // single aggregation drives the `WHERE event_type` / filter clauses below.
+  if (config.expression) {
+    const compiled = compileMetricExpression(config.expression);
+    selectColumns.push(`${compiled.valueExpr} AS value`);
+    Object.assign(params, compiled.params);
+  } else {
+    if (!config.aggregation) {
+      throw new Error("Metric requires an aggregation or an expression");
+    }
+    selectColumns.push(
+      buildAggregation(
+        config.aggregation,
+        config.aggregateProperty,
+        propertyParams
+      )
+    );
+  }
 
   // Build WHERE clauses
   const whereConditions: string[] = [
@@ -421,30 +333,32 @@ export const buildQuery = (config: QueryConfig): QueryResult => {
     "timestamp BETWEEN {from:DateTime64(3)} AND {to:DateTime64(3)}",
   ];
 
-  if (config.eventType) {
-    whereConditions.push("event_type = {eventType:String}");
-    params.eventType = config.eventType;
-  }
+  if (!config.expression) {
+    if (config.eventType) {
+      whereConditions.push("event_type = {eventType:String}");
+      params.eventType = config.eventType;
+    }
 
-  if (config.filters) {
-    for (let i = 0; i < config.filters.length; i += 1) {
-      const filter = config.filters[i];
-      if (filter) {
-        const { condition, paramName, paramValue } = buildFilterCondition(
-          filter,
-          i,
-          propertyParams
-        );
-        whereConditions.push(condition);
+    if (config.filters) {
+      for (let i = 0; i < config.filters.length; i += 1) {
+        const filter = config.filters[i];
+        if (filter) {
+          const { condition, paramName, paramValue } = buildFilterCondition(
+            filter,
+            i,
+            propertyParams
+          );
+          whereConditions.push(condition);
 
-        if (
-          typeof paramValue === "object" &&
-          paramValue !== null &&
-          !Array.isArray(paramValue)
-        ) {
-          Object.assign(params, paramValue);
-        } else {
-          params[paramName] = paramValue;
+          if (
+            typeof paramValue === "object" &&
+            paramValue !== null &&
+            !Array.isArray(paramValue)
+          ) {
+            Object.assign(params, paramValue);
+          } else {
+            params[paramName] = paramValue;
+          }
         }
       }
     }

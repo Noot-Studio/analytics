@@ -62,17 +62,20 @@ export const customWidgetConfigSchema = z
   });
 
 /**
- * Metric widgets reference a saved Metric and choose how to draw it. The query
- * (and thus the result shape) lives on the Metric row; `visualization` is the
- * widget's own choice and must be compatible with that shape — enforced at
- * save time, where the metric config can be fetched. `projectId` follows the
- * same pinning rules as built-in widgets.
+ * Metric widgets reference a saved Metric (the *what*) and own everything about
+ * *how* to fetch and draw it: `granularity` / `groupBy` / `limit` shape the
+ * result, and `visualization` must be compatible with that shape (enforced at
+ * save time). The same metric can therefore sit on several dashboards as a
+ * number, a daily chart, or a grouped table. `projectId` follows the same
+ * pinning rules as built-in widgets.
  */
-export const metricWidgetConfigSchema = z.object({
-  metricId: z.string().min(1),
-  projectId: z.string().min(1).optional(),
-  visualization: visualizationSchema,
-});
+export const metricWidgetConfigSchema = queryConfigSchema
+  .pick({ granularity: true, groupBy: true, limit: true })
+  .extend({
+    metricId: z.string().min(1),
+    projectId: z.string().min(1).optional(),
+    visualization: visualizationSchema,
+  });
 
 export const widgetSchema = z.discriminatedUnion("widgetType", [
   z.object({

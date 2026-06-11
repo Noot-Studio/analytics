@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { FolderX } from "lucide-react";
 
 import { ApiKeysSection } from "@/features/api-keys/components/organisms/api-keys-section";
+import { MetricsSection } from "@/features/dashboards/components/organisms/metrics-section";
 import { orpc } from "@/utils/orpc";
 
 import { EnvironmentBadge } from "../atoms/environment-badge";
@@ -60,7 +61,7 @@ export const ProjectSettingsView = ({ projectId }: { projectId: string }) => {
       <div>
         <h1 className="font-semibold text-2xl">Settings</h1>
         <p className="text-muted-foreground">
-          Manage API keys and SDK integration for this project.
+          Manage metrics, API keys and SDK integration for this project.
         </p>
       </div>
 
@@ -68,6 +69,8 @@ export const ProjectSettingsView = ({ projectId }: { projectId: string }) => {
         <h2 className="font-medium text-sm">Environment</h2>
         <EnvironmentBadge environment={project.environment} />
       </section>
+
+      <MetricsSection projectId={projectId} />
 
       <ApiKeysSection projectId={projectId} />
 

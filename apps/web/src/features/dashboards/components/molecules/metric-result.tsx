@@ -1,4 +1,4 @@
-import type { MetricConfig, Visualization } from "@sbox-analytics/api/metrics";
+import type { ShapeParams, Visualization } from "@sbox-analytics/api/metrics";
 import { resultShape } from "@sbox-analytics/api/metrics";
 import { Area, Bar } from "@sbox-analytics/ui/components/chart-series";
 import {
@@ -59,8 +59,8 @@ const ChartFrame = ({
  * their group columns. ClickHouse JSON output serializes 64-bit aggregates as
  * strings, so values are coerced.
  */
-const toPoints = (config: MetricConfig, rows: MetricRows) => {
-  const groupBy = config.groupBy ?? [];
+const toPoints = (view: ShapeParams, rows: MetricRows) => {
+  const groupBy = view.groupBy ?? [];
   return rows.map((row) => {
     const groups = groupBy.map((_, column) =>
       String(row[`group_col_${column}`] ?? "")
@@ -72,19 +72,19 @@ const toPoints = (config: MetricConfig, rows: MetricRows) => {
 };
 
 /**
- * Render a metric's result rows with the visualization the widget chose. The
- * metric's config determines the result shape; the visualization is the
- * widget's (validated) drawing choice over that shape.
+ * Render a metric's result rows with the visualization the consumer chose. The
+ * view params (granularity + group-by) determine the result shape; the
+ * visualization is the (validated) drawing choice over that shape.
  */
 export const MetricResult = ({
-  config,
   rows,
   title,
+  view,
   visualization,
 }: {
-  config: MetricConfig;
   rows: MetricRows;
   title: string;
+  view: ShapeParams;
   visualization: Visualization;
 }) => {
   if (visualization === "number") {
@@ -97,7 +97,7 @@ export const MetricResult = ({
     return <WidgetMessage message="No data for this period." title={title} />;
   }
 
-  const points = toPoints(config, rows);
+  const points = toPoints(view, rows);
 
   if (visualization === "area") {
     return (
@@ -131,8 +131,8 @@ export const MetricResult = ({
     );
   }
 
-  const groupBy = config.groupBy ?? [];
-  const hasBucket = resultShape(config) !== "groups";
+  const groupBy = view.groupBy ?? [];
+  const hasBucket = resultShape(view) !== "groups";
   return (
     <div className="h-full rounded-lg border border-border p-4">
       <h2 className="mb-4 font-medium text-sm">{title}</h2>
