@@ -1,10 +1,18 @@
-import type { DashboardWidgetInput } from "@sbox-analytics/api/dashboard-widgets";
+import type {
+  DashboardWidgetInput,
+  WidgetLayout,
+} from "@sbox-analytics/api/dashboard-widgets";
+import {
+  GRID_COLUMNS,
+  WIDGET_MIN_H,
+  WIDGET_MIN_W,
+} from "@sbox-analytics/api/dashboard-widgets";
 import {
   useMutation,
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { orpc } from "@/utils/orpc";
 
@@ -14,18 +22,54 @@ export type DashboardScopeValue = "OrgOverview" | "ProjectOverview";
 type WithId<T> = T extends unknown ? Omit<T, "id"> & { id: string } : never;
 export type DashboardWidgetItem = WithId<DashboardWidgetInput>;
 
+export interface GridLayoutItem extends WidgetLayout {
+  i: string;
+}
+
 interface UseDashboardEditorParams {
   organizationId?: string;
   projectId?: string;
   scope: DashboardScopeValue;
 }
 
+// Width (in grid columns) for legacy widgets saved before free layout existed.
+const WIDTH_FOR_SIZE: Record<DashboardWidgetItem["size"], number> = {
+  Full: GRID_COLUMNS,
+  Half: GRID_COLUMNS / 2,
+  Third: GRID_COLUMNS / 3,
+  TwoThirds: (GRID_COLUMNS / 3) * 2,
+};
+
+// Charts and tables need vertical room; single stats read fine short.
+const heightForType = (widgetType: string): number =>
+  widgetType.startsWith("chart.") || widgetType.startsWith("list.") ? 10 : 4;
+
 /**
- * Working state for one dashboard. Outside edit mode the persisted (or
- * default) layout renders as-is; entering edit mode forks it into a local
- * draft that is only persisted when the user explicitly saves. Cancelling
- * discards the draft.
+ * Build the react-grid-layout layout from the widgets, honoring saved
+ * coordinates and shelf-packing any legacy widget that predates free layout.
  */
+const deriveLayout = (widgets: DashboardWidgetItem[]): GridLayoutItem[] => {
+  let cursorX = 0;
+  let cursorY = 0;
+  let rowHeight = 0;
+  return widgets.map((widget) => {
+    if (widget.layout) {
+      return { i: widget.id, ...widget.layout };
+    }
+    const w = WIDTH_FOR_SIZE[widget.size];
+    const h = heightForType(widget.widgetType);
+    if (cursorX + w > GRID_COLUMNS) {
+      cursorX = 0;
+      cursorY += rowHeight;
+      rowHeight = 0;
+    }
+    const item = { h, i: widget.id, w, x: cursorX, y: cursorY };
+    cursorX += w;
+    rowHeight = Math.max(rowHeight, h);
+    return item;
+  });
+};
+
 export const useDashboardEditor = ({
   organizationId,
   projectId,
@@ -38,8 +82,6 @@ export const useDashboardEditor = ({
   const { data } = useSuspenseQuery(queryOptions);
 
   const [draft, setDraft] = useState<DashboardWidgetItem[] | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isDirty, setIsDirty] = useState(false);
 
   const saveMutation = useMutation(
     orpc.dashboards.save.mutationOptions({
@@ -49,96 +91,121 @@ export const useDashboardEditor = ({
     })
   );
 
-  const startEditing = useCallback(() => {
-    // Default (unpersisted) layouts carry shared placeholder ids; fork them
-    // into unique ids so they can become primary keys on first save.
-    const widgets = (data.widgets as DashboardWidgetItem[]).map((widget) =>
-      data.id === null ? { ...widget, id: crypto.randomUUID() } : { ...widget }
-    );
-    setDraft(widgets);
-    setIsEditing(true);
-    setIsDirty(false);
-  }, [data]);
+  // Fork default (unpersisted) layouts into unique ids so they can become
+  // primary keys on first save. Stable as long as `data` stays referential.
+  const baseWidgets = useMemo(
+    () =>
+      (data.widgets as DashboardWidgetItem[]).map((widget) =>
+        data.id === null
+          ? { ...widget, id: crypto.randomUUID() }
+          : { ...widget }
+      ),
+    [data]
+  );
 
-  const cancelEditing = useCallback(() => {
-    setIsEditing(false);
-    setDraft(null);
-    setIsDirty(false);
-  }, []);
+  const isDirty = draft !== null;
+  const widgets = draft ?? baseWidgets;
+  const layout = useMemo(() => deriveLayout(widgets), [widgets]);
 
-  const saveEditing = useCallback(async () => {
-    if (draft) {
-      await saveMutation.mutateAsync({
-        organizationId,
-        projectId,
-        scope,
-        widgets: draft,
-      });
-    }
-    setIsEditing(false);
-    setDraft(null);
-    setIsDirty(false);
-  }, [draft, organizationId, projectId, saveMutation, scope]);
+  // Merge react-grid-layout coordinates back onto the widgets after a drag or
+  // resize and fork the working draft.
+  const commitLayout = useCallback(
+    (next: GridLayoutItem[]) => {
+      const byId = new Map(next.map((item) => [item.i, item]));
+      setDraft(
+        widgets.map((widget) => {
+          const item = byId.get(widget.id);
+          return item
+            ? {
+                ...widget,
+                layout: { h: item.h, w: item.w, x: item.x, y: item.y },
+              }
+            : widget;
+        })
+      );
+    },
+    [widgets]
+  );
 
-  const widgets =
-    isEditing && draft ? draft : (data.widgets as DashboardWidgetItem[]);
-
-  const applyChange = useCallback((next: DashboardWidgetItem[]) => {
-    setDraft(next);
-    setIsDirty(true);
-  }, []);
-
-  const reorder = useCallback(
-    (next: DashboardWidgetItem[]) => applyChange(next),
-    [applyChange]
+  // Snap one widget's height to a row count (used by fit-to-content), keeping
+  // its current position and width.
+  const fitHeight = useCallback(
+    (id: string, h: number) => {
+      const current = layout.find((item) => item.i === id);
+      if (!current) {
+        return;
+      }
+      setDraft(
+        widgets.map((widget) =>
+          widget.id === id
+            ? {
+                ...widget,
+                layout: { h, w: current.w, x: current.x, y: current.y },
+              }
+            : widget
+        )
+      );
+    },
+    [layout, widgets]
   );
 
   const removeWidget = useCallback(
     (id: string) => {
-      if (!draft) {
-        return;
-      }
-      applyChange(draft.filter((widget) => widget.id !== id));
+      setDraft(widgets.filter((widget) => widget.id !== id));
     },
-    [applyChange, draft]
-  );
-
-  const setSize = useCallback(
-    (id: string, size: DashboardWidgetItem["size"]) => {
-      if (!draft) {
-        return;
-      }
-      applyChange(
-        draft.map((widget) => (widget.id === id ? { ...widget, size } : widget))
-      );
-    },
-    [applyChange, draft]
+    [widgets]
   );
 
   const addWidget = useCallback(
     (widget: DashboardWidgetInput) => {
-      if (!draft) {
-        return;
+      // Drop the new widget on a fresh row below everything else.
+      let nextY = 0;
+      for (const item of layout) {
+        nextY = Math.max(nextY, item.y + item.h);
       }
-      applyChange([
-        ...draft,
-        { ...widget, id: crypto.randomUUID() } as DashboardWidgetItem,
+      const w = WIDTH_FOR_SIZE[widget.size];
+      const h = heightForType(widget.widgetType);
+      setDraft([
+        ...widgets,
+        {
+          ...widget,
+          id: crypto.randomUUID(),
+          layout: { h, w, x: 0, y: nextY },
+        } as DashboardWidgetItem,
       ]);
     },
-    [applyChange, draft]
+    [layout, widgets]
   );
+
+  const cancel = useCallback(() => {
+    setDraft(null);
+  }, []);
+
+  const save = useCallback(async () => {
+    if (!draft) {
+      return;
+    }
+    await saveMutation.mutateAsync({
+      organizationId,
+      projectId,
+      scope,
+      widgets: draft,
+    });
+    setDraft(null);
+  }, [draft, organizationId, projectId, saveMutation, scope]);
 
   return {
     addWidget,
-    cancelEditing,
+    cancel,
+    commitLayout,
+    fitHeight,
     isDirty,
-    isEditing,
     isSaving: saveMutation.isPending,
+    layout,
+    minH: WIDGET_MIN_H,
+    minW: WIDGET_MIN_W,
     removeWidget,
-    reorder,
-    saveEditing,
-    setSize,
-    startEditing,
+    save,
     widgets,
   };
 };

@@ -14,8 +14,6 @@ import { dailySeries, typeBreakdown } from "../../lib/aggregate";
 import { useDailyMetric, useDailyRows } from "../../lib/widget-data";
 import type { WidgetRendererProps } from "../../lib/widget-registry";
 
-const CHART_HEIGHT = 240;
-
 interface DailyMetricWidgetProps extends WidgetRendererProps {
   label: string;
   metric: DailyMetricKey;
@@ -27,7 +25,14 @@ const DailyMetricWidget = ({
   ...props
 }: DailyMetricWidgetProps) => {
   const { trend, value } = useDailyMetric(props, metric);
-  return <MetricCard label={label} trend={trend} value={value} />;
+  return (
+    <MetricCard
+      className="h-full content-start"
+      label={label}
+      trend={trend}
+      value={value}
+    />
+  );
 };
 
 export const MetricEventsWidget = (props: WidgetRendererProps) => (
@@ -68,22 +73,24 @@ export const EventsPerDayWidget = (props: WidgetRendererProps) => {
   }
 
   return (
-    <div className="h-full rounded-lg border border-border p-4">
+    <div className="flex h-full flex-col rounded-lg border border-border p-4">
       <h2 className="mb-4 font-medium text-sm">Events per day</h2>
-      <ResponsiveContainer height={CHART_HEIGHT} width="100%">
-        <AreaChart data={series}>
-          <XAxis dataKey="date" fontSize={12} tickLine={false} />
-          <YAxis allowDecimals={false} fontSize={12} tickLine={false} />
-          <Tooltip />
-          <Area
-            dataKey="events"
-            fill="var(--primary)"
-            fillOpacity={0.2}
-            stroke="var(--primary)"
-            type="monotone"
-          />
-        </AreaChart>
-      </ResponsiveContainer>
+      <div className="min-h-0 flex-1">
+        <ResponsiveContainer height="100%" width="100%">
+          <AreaChart data={series}>
+            <XAxis dataKey="date" fontSize={12} tickLine={false} />
+            <YAxis allowDecimals={false} fontSize={12} tickLine={false} />
+            <Tooltip />
+            <Area
+              dataKey="events"
+              fill="var(--primary)"
+              fillOpacity={0.2}
+              stroke="var(--primary)"
+              type="monotone"
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 };
@@ -97,9 +104,9 @@ export const EventsByTypeWidget = (props: WidgetRendererProps) => {
   }
 
   return (
-    <div className="h-full rounded-lg border border-border p-4">
+    <div className="flex h-full flex-col rounded-lg border border-border p-4">
       <h2 className="mb-3 font-medium text-sm">Events by type</h2>
-      <ul className="flex flex-col gap-2">
+      <ul className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto">
         {types.map((entry) => (
           <li
             className="flex items-center justify-between text-sm"

@@ -31,50 +31,63 @@ export interface WidgetRendererProps {
 
 export interface WidgetDefinition {
   defaultSize: WidgetSizeValue;
+  /** Card height (px) used when a widget hasn't been explicitly resized. */
+  defaultHeight: number;
   description: string;
   Renderer: ComponentType<WidgetRendererProps>;
   title: string;
 }
 
+// Single-number stats read fine short; charts and tables need vertical room.
+const STAT_HEIGHT = 150;
+const CHART_HEIGHT = 320;
+
 export const WIDGET_REGISTRY: Record<DashboardWidgetType, WidgetDefinition> = {
   "chart.events-per-day": {
     Renderer: EventsPerDayWidget,
+    defaultHeight: CHART_HEIGHT,
     defaultSize: "Full",
     description: "Area chart of total events per day.",
     title: "Events per day",
   },
   "custom.stat": {
     Renderer: CustomStatWidget,
+    defaultHeight: STAT_HEIGHT,
     defaultSize: "Third",
     description: "A statistic you define from your own events.",
     title: "Custom statistic",
   },
   "list.events-by-type": {
     Renderer: EventsByTypeWidget,
+    defaultHeight: CHART_HEIGHT,
     defaultSize: "Full",
     description: "Event totals broken down by type.",
     title: "Events by type",
   },
   "metric.events": {
     Renderer: MetricEventsWidget,
+    defaultHeight: STAT_HEIGHT,
     defaultSize: "Third",
     description: "Total events with period-over-period trend.",
     title: "Total Events",
   },
   "metric.players": {
     Renderer: MetricPlayersWidget,
+    defaultHeight: STAT_HEIGHT,
     defaultSize: "Third",
     description: "Unique players summed per day, with trend.",
     title: "Unique Players",
   },
   "metric.saved": {
     Renderer: SavedMetricWidget,
+    defaultHeight: STAT_HEIGHT,
     defaultSize: "Third",
     description: "A saved metric from your library.",
     title: "Saved metric",
   },
   "metric.sessions": {
     Renderer: MetricSessionsWidget,
+    defaultHeight: STAT_HEIGHT,
     defaultSize: "Third",
     description: "Sessions summed per day, with trend.",
     title: "Sessions",

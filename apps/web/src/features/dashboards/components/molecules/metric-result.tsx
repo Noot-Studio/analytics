@@ -20,8 +20,6 @@ import {
 
 import { MetricCard } from "@/features/analytics/components/molecules/metric-card";
 
-const CHART_HEIGHT = 240;
-
 export type MetricRows = Record<string, unknown>[];
 
 export const WidgetMessage = ({
@@ -46,11 +44,13 @@ const ChartFrame = ({
   children: React.ReactElement;
   title: string;
 }) => (
-  <div className="h-full rounded-lg border border-border p-4">
+  <div className="flex h-full flex-col rounded-lg border border-border p-4">
     <h2 className="mb-4 font-medium text-sm">{title}</h2>
-    <ResponsiveContainer height={CHART_HEIGHT} width="100%">
-      {children}
-    </ResponsiveContainer>
+    <div className="min-h-0 flex-1">
+      <ResponsiveContainer height="100%" width="100%">
+        {children}
+      </ResponsiveContainer>
+    </div>
   </div>
 );
 
@@ -90,7 +90,13 @@ export const MetricResult = ({
   if (visualization === "number") {
     const raw = rows.at(0)?.value;
     const value = raw === null || raw === undefined ? undefined : Number(raw);
-    return <MetricCard label={title} value={value} />;
+    return (
+      <MetricCard
+        className="h-full content-start"
+        label={title}
+        value={value}
+      />
+    );
   }
 
   if (rows.length === 0) {

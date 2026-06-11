@@ -19,6 +19,7 @@ interface MetricCardProps {
   value?: number | string;
   format?: (value: number) => string;
   trend?: MetricTrend;
+  className?: string;
 }
 
 const TREND_ICON: Record<TrendDirection, typeof ArrowUp> = {
@@ -44,11 +45,12 @@ export const MetricCard = ({
   value,
   format,
   trend,
+  className,
 }: MetricCardProps) => {
   const TrendIcon = trend ? TREND_ICON[trend.direction] : null;
 
   return (
-    <Stat>
+    <Stat className={className}>
       <StatLabel>{label}</StatLabel>
       <StatValue>
         <MetricValue format={format} value={value} />

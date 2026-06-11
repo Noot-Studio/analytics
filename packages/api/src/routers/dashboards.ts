@@ -148,11 +148,43 @@ const assertReferencedMetrics = async (
 
 const widgetRowSelect = {
   config: true,
+  h: true,
   id: true,
   position: true,
   size: true,
+  w: true,
   widgetType: true,
+  x: true,
+  y: true,
 } as const;
+
+const toSnapshot = (widget: {
+  config: unknown;
+  h: number | null;
+  id: string;
+  position: number;
+  size: string;
+  w: number | null;
+  widgetType: string;
+  x: number | null;
+  y: number | null;
+}) => {
+  const hasLayout =
+    widget.x !== null &&
+    widget.y !== null &&
+    widget.w !== null &&
+    widget.h !== null;
+  return {
+    config: widget.config as unknown,
+    id: widget.id,
+    layout: hasLayout
+      ? { h: widget.h, w: widget.w, x: widget.x, y: widget.y }
+      : undefined,
+    position: widget.position,
+    size: widgetSizeSchema.parse(widget.size),
+    widgetType: widget.widgetType,
+  };
+};
 
 export const dashboardsRouter = {
   get: protectedProcedure
@@ -179,13 +211,7 @@ export const dashboardsRouter = {
       return {
         id: dashboard.id,
         scope: input.scope,
-        widgets: dashboard.widgets.map((widget) => ({
-          config: widget.config as unknown,
-          id: widget.id,
-          position: widget.position,
-          size: widgetSizeSchema.parse(widget.size),
-          widgetType: widget.widgetType,
-        })),
+        widgets: dashboard.widgets.map(toSnapshot),
       };
     }),
 
@@ -213,10 +239,14 @@ export const dashboardsRouter = {
           data: input.widgets.map((widget, index) => ({
             config: widget.config,
             dashboardId: dashboard.id,
+            h: widget.layout?.h ?? null,
             id: widget.id ?? crypto.randomUUID(),
             position: index,
             size: widget.size,
+            w: widget.layout?.w ?? null,
             widgetType: widget.widgetType,
+            x: widget.layout?.x ?? null,
+            y: widget.layout?.y ?? null,
           })),
         }),
         prisma.dashboardWidget.findMany({
@@ -229,13 +259,7 @@ export const dashboardsRouter = {
       return {
         id: dashboard.id,
         scope: input.scope,
-        widgets: saved.map((widget) => ({
-          config: widget.config as unknown,
-          id: widget.id,
-          position: widget.position,
-          size: widgetSizeSchema.parse(widget.size),
-          widgetType: widget.widgetType,
-        })),
+        widgets: saved.map(toSnapshot),
       };
     }),
 };
