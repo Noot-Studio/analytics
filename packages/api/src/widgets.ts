@@ -1,6 +1,9 @@
 import { z } from "zod";
 
-import { metricWidgetConfigSchema } from "./dashboard-widgets";
+import {
+  metricWidgetConfigBase,
+  refineWidgetVisualization,
+} from "./dashboard-widgets";
 
 const MAX_WIDGET_NAME_LENGTH = 80;
 
@@ -10,9 +13,9 @@ const MAX_WIDGET_NAME_LENGTH = 80;
  * metric reference, which lives in its own column so deleting a metric
  * cascades to its widgets.
  */
-export const widgetConfigSchema = metricWidgetConfigSchema.omit({
-  metricId: true,
-});
+export const widgetConfigSchema = metricWidgetConfigBase
+  .omit({ metricId: true })
+  .superRefine(refineWidgetVisualization);
 
 export const widgetInputSchema = z.object({
   config: widgetConfigSchema,
