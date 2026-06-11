@@ -1,7 +1,7 @@
 import prisma from "@sbox-analytics/db";
 import { z } from "zod";
 
-import { assertOrgAccess, requireActiveOrg } from "../access";
+import { resolveOrgScope } from "../access";
 import { protectedProcedure } from "../index";
 import { runQuery } from "../run-query";
 
@@ -27,8 +27,7 @@ export const orgAnalyticsRouter = {
   daily: protectedProcedure
     .input(dailyInput)
     .handler(async ({ context, input }) => {
-      const organizationId = input.organizationId ?? requireActiveOrg(context);
-      await assertOrgAccess(organizationId, context.session.user.id);
+      const { organizationId } = await resolveOrgScope(context, input);
 
       const projects = await prisma.project.findMany({
         select: { id: true },

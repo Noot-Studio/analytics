@@ -6,6 +6,7 @@ import {
   customWidgetConfigSchema,
   DEFAULT_ORG_OVERVIEW,
   DEFAULT_PROJECT_OVERVIEW,
+  metricWidgetConfigSchema,
 } from "./dashboard-widgets";
 
 const validCustomQuery = {
@@ -109,6 +110,57 @@ describe("customWidgetConfigSchema", () => {
       display: "metric",
       query: validCustomQuery,
       title: "",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("metricWidgetConfigSchema", () => {
+  it("accepts a scalar metric drawn as a number", () => {
+    const result = metricWidgetConfigSchema.safeParse({
+      granularity: "none",
+      metricId: "metric_1",
+      visualization: "number",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a series metric drawn as an area chart", () => {
+    const result = metricWidgetConfigSchema.safeParse({
+      granularity: "day",
+      metricId: "metric_1",
+      visualization: "area",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a scalar metric drawn as an area chart", () => {
+    const result = metricWidgetConfigSchema.safeParse({
+      granularity: "none",
+      metricId: "metric_1",
+      visualization: "area",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a series metric drawn as a number", () => {
+    const result = metricWidgetConfigSchema.safeParse({
+      granularity: "day",
+      metricId: "metric_1",
+      visualization: "number",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an incompatible pairing through the widget union", () => {
+    const result = widgetSchema.safeParse({
+      config: {
+        granularity: "none",
+        metricId: "metric_1",
+        visualization: "area",
+      },
+      size: "Third",
+      widgetType: "metric.saved",
     });
     expect(result.success).toBe(false);
   });

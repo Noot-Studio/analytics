@@ -5,6 +5,7 @@ import type {
 import {
   compatibleVisualizations,
   defaultVisualization,
+  isVisualizationCompatible,
   resultShape,
 } from "@sbox-analytics/api/metrics";
 import type { WidgetInput } from "@sbox-analytics/api/widgets";
@@ -100,11 +101,7 @@ export const WidgetBuilder = ({
   const handleGranularityChange = (value: string) => {
     const next = value as Granularity;
     setGranularity(next);
-    if (
-      !compatibleVisualizations(resultShape({ granularity: next })).includes(
-        visualization
-      )
-    ) {
+    if (!isVisualizationCompatible({ granularity: next }, visualization)) {
       setVisualization(defaultVisualization({ granularity: next }));
     }
   };

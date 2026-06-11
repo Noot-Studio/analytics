@@ -2,20 +2,15 @@ import { ORPCError } from "@orpc/server";
 import prisma from "@sbox-analytics/db";
 import { z } from "zod";
 
-import {
-  assertOrgAccess,
-  assertProjectAccess,
-  requireActiveOrg,
-} from "../access";
-import { protectedProcedure } from "../index";
+import { requireWriteRole, resolveOrgScope } from "../access";
+import { projectProcedure, protectedProcedure } from "../index";
 import type { MetricSnapshot } from "../metrics";
 import {
   metricConfigSchema,
   metricInputSchema,
   metricViewSchema,
 } from "../metrics";
-import { buildQuery } from "../query-builder";
-import { runQuery } from "../run-query";
+import { runMetric } from "../run-metric";
 
 // Metrics resolve their org like the dashboard library did: explicit org id,
 // via a project, or the session's active organization.
@@ -23,25 +18,6 @@ const orgScopeInput = z.object({
   organizationId: z.string().min(1).optional(),
   projectId: z.string().min(1).optional(),
 });
-
-interface SessionContext {
-  session: {
-    session: { activeOrganizationId?: string | null };
-    user: { id: string };
-  };
-}
-
-const resolveOrg = async (
-  context: SessionContext,
-  input: z.infer<typeof orgScopeInput>
-): Promise<string> => {
-  if (input.projectId) {
-    return await assertProjectAccess(input.projectId, context.session.user.id);
-  }
-  const organizationId = input.organizationId ?? requireActiveOrg(context);
-  await assertOrgAccess(organizationId, context.session.user.id);
-  return organizationId;
-};
 
 const metricSelect = {
   config: true,
@@ -83,7 +59,8 @@ export const metricsRouter = {
   create: protectedProcedure
     .input(orgScopeInput.extend(metricInputSchema.shape))
     .handler(async ({ context, input }) => {
-      const organizationId = await resolveOrg(context, input);
+      const { organizationId, role } = await resolveOrgScope(context, input);
+      requireWriteRole(role);
 
       const metric = await prisma.metric.create({
         data: {
@@ -100,7 +77,8 @@ export const metricsRouter = {
   delete: protectedProcedure
     .input(orgScopeInput.extend({ id: z.string().min(1) }))
     .handler(async ({ context, input }) => {
-      const organizationId = await resolveOrg(context, input);
+      const { organizationId, role } = await resolveOrgScope(context, input);
+      requireWriteRole(role);
 
       const { count } = await prisma.metric.deleteMany({
         where: { id: input.id, organizationId },
@@ -114,7 +92,7 @@ export const metricsRouter = {
   get: protectedProcedure
     .input(orgScopeInput.extend({ id: z.string().min(1) }))
     .handler(async ({ context, input }) => {
-      const organizationId = await resolveOrg(context, input);
+      const { organizationId } = await resolveOrgScope(context, input);
 
       const metric = await prisma.metric.findFirst({
         select: metricSelect,
@@ -129,7 +107,7 @@ export const metricsRouter = {
   list: protectedProcedure
     .input(orgScopeInput)
     .handler(async ({ context, input }) => {
-      const organizationId = await resolveOrg(context, input);
+      const { organizationId } = await resolveOrgScope(context, input);
 
       const metrics = await prisma.metric.findMany({
         orderBy: { createdAt: "asc" },
@@ -144,24 +122,14 @@ export const metricsRouter = {
    * Returns the rows plus the generated SQL so the builder can show exactly
    * what will execute.
    */
-  preview: protectedProcedure
-    .input(previewInput)
-    .handler(async ({ context, input }) => {
-      await assertProjectAccess(input.projectId, context.session.user.id);
-
-      const built = buildQuery({
-        ...input.config,
-        ...input.view,
-        projectId: input.projectId,
-        timeRange: input.timeRange,
-      });
-      const rows = await runQuery(
-        context.ch,
-        built,
-        z.record(z.string(), z.unknown())
-      );
-      return { rows, sql: built.query };
-    }),
+  preview: projectProcedure.input(previewInput).handler(({ context, input }) =>
+    runMetric(context.ch, {
+      ...input.config,
+      ...input.view,
+      projectId: input.projectId,
+      timeRange: input.timeRange,
+    })
+  ),
 
   update: protectedProcedure
     .input(
@@ -170,7 +138,8 @@ export const metricsRouter = {
         .extend(metricInputSchema.partial().shape)
     )
     .handler(async ({ context, input }) => {
-      const organizationId = await resolveOrg(context, input);
+      const { organizationId, role } = await resolveOrgScope(context, input);
+      requireWriteRole(role);
 
       const { count } = await prisma.metric.updateMany({
         data: {

@@ -1,6 +1,8 @@
 import { toClickHouseDateTime } from "@sbox-analytics/events";
 import { z } from "zod";
 
+import { aggregationRequiresProperty, emitAggregation } from "./aggregations";
+import type { AggregationKind } from "./aggregations";
 import {
   compileMetricExpression,
   validateMetricExpression,
@@ -93,53 +95,33 @@ interface QueryResult {
   params: Record<string, unknown>;
 }
 
+// The schema names the unique aggregations `unique_*`; the registry keys them
+// `uniq_*`. Everything else is shared verbatim.
+const AGGREGATION_KIND: Record<Aggregation, AggregationKind> = {
+  avg: "avg",
+  count: "count",
+  max: "max",
+  min: "min",
+  sum: "sum",
+  unique_players: "uniq_players",
+  unique_sessions: "uniq_sessions",
+};
+
 export const buildAggregation = (
   aggregation: Aggregation,
   aggregateProperty: string | undefined,
   propertyParams: Map<string, string>
 ): string => {
-  switch (aggregation) {
-    case "count": {
-      return "count() AS value";
+  const kind = AGGREGATION_KIND[aggregation];
+  let accessor: string | undefined;
+  if (aggregationRequiresProperty(kind)) {
+    if (!aggregateProperty) {
+      throw new Error(`aggregateProperty required for ${aggregation}`);
     }
-    case "unique_players": {
-      return "uniq(player_id) AS value";
-    }
-    case "unique_sessions": {
-      return "uniq(session_id) AS value";
-    }
-    case "avg": {
-      if (!aggregateProperty) {
-        throw new Error("aggregateProperty required for avg");
-      }
-      const paramName = getPropertyParamName(aggregateProperty, propertyParams);
-      return `avg(JSONExtractFloat(properties, {${paramName}:String})) AS value`;
-    }
-    case "sum": {
-      if (!aggregateProperty) {
-        throw new Error("aggregateProperty required for sum");
-      }
-      const paramName = getPropertyParamName(aggregateProperty, propertyParams);
-      return `sum(JSONExtractFloat(properties, {${paramName}:String})) AS value`;
-    }
-    case "min": {
-      if (!aggregateProperty) {
-        throw new Error("aggregateProperty required for min");
-      }
-      const paramName = getPropertyParamName(aggregateProperty, propertyParams);
-      return `min(JSONExtractFloat(properties, {${paramName}:String})) AS value`;
-    }
-    case "max": {
-      if (!aggregateProperty) {
-        throw new Error("aggregateProperty required for max");
-      }
-      const paramName = getPropertyParamName(aggregateProperty, propertyParams);
-      return `max(JSONExtractFloat(properties, {${paramName}:String})) AS value`;
-    }
-    default: {
-      throw new Error(`Unsupported aggregation: ${aggregation}`);
-    }
+    const paramName = getPropertyParamName(aggregateProperty, propertyParams);
+    accessor = `JSONExtractFloat(properties, {${paramName}:String})`;
   }
+  return `${emitAggregation(kind, { accessor })} AS value`;
 };
 
 export const buildTimeBucket = (

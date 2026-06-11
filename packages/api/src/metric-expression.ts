@@ -1,3 +1,9 @@
+import {
+  AGGREGATIONS,
+  aggregationRequiresProperty,
+  emitAggregation,
+} from "./aggregations";
+import type { AggregationKind } from "./aggregations";
 import { buildFilterCondition, buildPropertyAccessor } from "./query-fragments";
 import type { Filter } from "./query-fragments";
 
@@ -17,30 +23,12 @@ import type { Filter } from "./query-fragments";
 //   =  !=  =~ (contains)  !~ (not contains)  ^= (starts with)
 //   >  >=  <  <=  in ("a","b")  is empty  is not empty
 
-const PROPERTY_AGGREGATIONS = new Set(["avg", "max", "min", "sum"]);
-
 /** Aggregations that operate on a property value (vs counting rows/uniques). */
 export const isPropertyAggregation = (
   aggregation: MetricAggregation
-): boolean => PROPERTY_AGGREGATIONS.has(aggregation);
-const AGGREGATIONS = new Set([
-  "avg",
-  "count",
-  "max",
-  "min",
-  "sum",
-  "uniq_players",
-  "uniq_sessions",
-]);
+): boolean => aggregationRequiresProperty(aggregation);
 
-export type MetricAggregation =
-  | "avg"
-  | "count"
-  | "max"
-  | "min"
-  | "sum"
-  | "uniq_players"
-  | "uniq_sessions";
+export type MetricAggregation = AggregationKind;
 
 /** A selector matcher is exactly a query-builder {@link Filter}. */
 export type Matcher = Filter;
@@ -290,13 +278,13 @@ const parse = (tokens: Token[]): Node => {
 
   const parseAgg = (): Node => {
     const name = expect("ident").value;
-    if (!AGGREGATIONS.has(name)) {
+    if (!(name in AGGREGATIONS)) {
       throw new Error(`Unknown function "${name}"`);
     }
     const aggregation = name as MetricAggregation;
     expect("op", "(");
     let property: string | undefined;
-    if (PROPERTY_AGGREGATIONS.has(aggregation)) {
+    if (aggregationRequiresProperty(aggregation)) {
       const token = peek();
       if (token?.kind !== "ident" && token?.kind !== "str") {
         throw new Error(
@@ -412,35 +400,14 @@ export const compileMetricExpression = (
 
   const emitAgg = (node: AggNode): string => {
     const predicate = buildPredicate(node.matchers);
-    switch (node.aggregation) {
-      case "count": {
-        return predicate ? `countIf(${predicate})` : "count()";
+    let accessor: string | undefined;
+    if (aggregationRequiresProperty(node.aggregation)) {
+      if (!node.property) {
+        throw new Error(`${node.aggregation}() needs a property`);
       }
-      case "uniq_players": {
-        return predicate
-          ? `uniqIf(player_id, ${predicate})`
-          : "uniq(player_id)";
-      }
-      case "uniq_sessions": {
-        return predicate
-          ? `uniqIf(session_id, ${predicate})`
-          : "uniq(session_id)";
-      }
-      default: {
-        const { property } = node;
-        if (!property) {
-          throw new Error(`${node.aggregation}() needs a property`);
-        }
-        const accessor = buildPropertyAccessor(
-          property,
-          "number",
-          propertyParams
-        );
-        return predicate
-          ? `${node.aggregation}If(${accessor}, ${predicate})`
-          : `${node.aggregation}(${accessor})`;
-      }
+      accessor = buildPropertyAccessor(node.property, "number", propertyParams);
     }
+    return emitAggregation(node.aggregation, { accessor, predicate });
   };
 
   const emit = (node: Node): string => {

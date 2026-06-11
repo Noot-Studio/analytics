@@ -7,10 +7,9 @@ import prisma from "@sbox-analytics/db";
 import { env } from "@sbox-analytics/env/server";
 import { z } from "zod";
 
+import { loadMemberRole, requireWriteRole } from "../access";
 import { protectedProcedure } from "../index";
 
-// Roles allowed to invite or create members. "member" is read-only.
-const ELEVATED_ROLES = new Set(["owner", "admin"]);
 // Invite links stay valid for 7 days.
 const INVITE_LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const MIN_PASSWORD_LENGTH = 8;
@@ -53,20 +52,14 @@ const verifyInviteToken = (token: string): InviteLinkPayload | null => {
   }
 };
 
+// Members are managed by owners/admins only. Resolving the role through the
+// shared helper keeps the gate identical to every other write in the API.
 const assertCanManageMembers = async (
   userId: string,
   organizationId: string
 ): Promise<void> => {
-  const membership = await prisma.member.findFirst({
-    select: { role: true },
-    where: { organizationId, userId },
-  });
-
-  if (!membership || !ELEVATED_ROLES.has(membership.role)) {
-    throw new ORPCError("FORBIDDEN", {
-      message: "Only owners and admins can manage members",
-    });
-  }
+  const role = await loadMemberRole(organizationId, userId);
+  requireWriteRole(role);
 };
 
 export const teamsRouter = {

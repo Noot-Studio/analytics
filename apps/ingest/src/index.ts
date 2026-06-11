@@ -1,4 +1,6 @@
 import { env } from "@sbox-analytics/env/server";
+import type { ClickHouseEvent } from "@sbox-analytics/events";
+import { batchSchema, toClickHouseEvent } from "@sbox-analytics/events";
 import { initLogger } from "evlog";
 import { evlog } from "evlog/hono";
 import type { EvlogVariables } from "evlog/hono";
@@ -6,21 +8,15 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { HTTPException } from "hono/http-exception";
 
-import { createKeyResolver, InvalidApiKeyError } from "./keys";
+import { createRedisKeyResolver, InvalidApiKeyError } from "./keys";
 import { createProducer } from "./producer";
-import {
-  batchSchema,
-  MAX_BODY_BYTES,
-  MAX_PROPERTIES_BYTES,
-  toClickHouseEvent,
-} from "./schema";
-import type { ClickHouseEvent } from "./schema";
+import { MAX_BODY_BYTES, MAX_PROPERTIES_BYTES } from "./schema";
 
 initLogger({
   env: { service: "sbox-analytics-ingest" },
 });
 
-const keys = createKeyResolver(env.REDIS_URL);
+const keys = createRedisKeyResolver(env.REDIS_URL);
 const producer = await createProducer({
   brokers: env.KAFKA_BROKERS.split(",").map((b) => b.trim()),
   topic: env.KAFKA_EVENTS_TOPIC,
