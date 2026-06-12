@@ -6,6 +6,7 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 
 import { AppSidebar } from "@/components/dashboard/app-sidebar";
 import { SiteHeader } from "@/components/dashboard/site-header";
+import { UsageBanner } from "@/components/dashboard/usage-banner";
 import { authClient } from "@/lib/auth-client";
 
 const DashboardLayout = () => (
@@ -20,6 +21,7 @@ const DashboardLayout = () => (
     <AppSidebar variant="inset" />
     <SidebarInset>
       <SiteHeader />
+      <UsageBanner />
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">
           <Outlet />

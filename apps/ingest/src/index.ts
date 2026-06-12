@@ -15,6 +15,7 @@ import {
   InvalidApiKeyError,
 } from "./keys";
 import { createProducer } from "./producer";
+import { createRedisQuota, unlimitedQuota } from "./quota";
 import { MAX_BODY_BYTES, MAX_PROPERTIES_BYTES } from "./schema";
 import { createSpatialRoutes } from "./spatial";
 
@@ -23,6 +24,13 @@ initLogger({
 });
 
 const keys = createRedisKeyResolver(env.REDIS_URL);
+// Quota enforcement is cloud-only; self-hosted runs unlimited (docs/adr/0002).
+const quota = env.BILLING_ENABLED
+  ? createRedisQuota({
+      defaultLimit: env.FREE_PLAN_MONTHLY_EVENT_LIMIT,
+      redisUrl: env.REDIS_URL,
+    })
+  : unlimitedQuota;
 const producer = await createProducer({
   brokers: env.KAFKA_BROKERS.split(",").map((b) => b.trim()),
   topic: env.KAFKA_EVENTS_TOPIC,
@@ -77,6 +85,16 @@ app.post(
         throw new HTTPException(400, { message: "properties too large" });
       }
       records.push(toClickHouseEvent(ev, projectId, properties));
+    }
+
+    // Over-quota batches are dropped, not rejected: a 2xx keeps game-side SDKs
+    // from retry-storming while the org is capped for the month.
+    const admitted = await quota.admit(projectId, records.length);
+    if (!admitted) {
+      return c.json(
+        { accepted: 0, dropped: records.length, reason: "quota_exceeded" },
+        202
+      );
     }
 
     try {

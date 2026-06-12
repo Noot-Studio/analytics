@@ -12,6 +12,7 @@ import { metricsRouter } from "./metrics";
 import { orgAnalyticsRouter } from "./org-analytics";
 import { projectsRouter } from "./projects";
 import { teamsRouter } from "./teams";
+import { usageRouter } from "./usage";
 import { widgetsRouter } from "./widgets";
 
 export const appRouter = {
@@ -31,6 +32,7 @@ export const appRouter = {
   })),
   projects: projectsRouter,
   teams: teamsRouter,
+  usage: usageRouter,
   widgets: widgetsRouter,
 };
 export type AppRouter = typeof appRouter;

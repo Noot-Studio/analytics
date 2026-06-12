@@ -73,6 +73,11 @@ model Organization {
   metadata  String?
   createdAt DateTime @default(now())
 
+  // Cloud custom-plan override for the monthly ingested-event quota. Null means
+  // "no override": free-plan default in cloud, unlimited when billing is off
+  // (self-hosted). See docs/adr/0002.
+  eventLimit Int?
+
   members         Member[]
   invitations     Invitation[]
   projects        Project[]
