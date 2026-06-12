@@ -20,6 +20,19 @@ No manual tagging, no manual changelog edits — everything is derived from comm
 - Create the `main` branch (e.g. `git push origin dev:main`) — release automation only runs there.
 - In repo **Settings → Actions → General**, enable **"Allow GitHub Actions to create and approve pull requests"** (release-please opens the release PR with `GITHUB_TOKEN`).
 
+## Database migrations
+
+The `migrate` one-shot service in `docker-compose.yaml` (published to GHCR as `.../migrate` by `docker.yml`) runs before `server`/`ingest` start and applies both stores:
+
+- **Postgres**: `prisma migrate deploy` applies the committed history in `packages/db/prisma/migrations/`. Never use `prisma db push` against production — it has no history and can drop data. New migrations are authored in dev with `bun run db:migrate` (prisma migrate dev) and committed.
+- **ClickHouse**: `packages/db/clickhouse/migrate.ts` applies every file in `packages/db/clickhouse/migrations/` in filename order on every deploy. There is no history table, so every migration **must be idempotent** (`CREATE/ALTER ... IF NOT EXISTS`, `DROP ... IF EXISTS`).
+
+**Baselining a database that predates the migration history** (was provisioned with `db push`): mark the initial migration as already applied once, then `migrate deploy` works normally:
+
+```sh
+cd packages/db && bunx prisma migrate resolve --applied 0_init
+```
+
 ## SDK coordination (`Noot-Studio/analytics-library`)
 
 The s&box SDK is versioned and released from its own repository, but ingest API changes may require lockstep releases in either direction.
