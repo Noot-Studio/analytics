@@ -13,21 +13,30 @@ const redis = new RedisClient(env.REDIS_URL);
 export const usageRouter = {
   current: orgProcedure.handler(async ({ context }) => {
     if (!env.BILLING_ENABLED) {
-      return { billingEnabled: false as const, limit: null, used: 0 };
+      return {
+        billingEnabled: false as const,
+        limit: null,
+        plan: null,
+        used: 0,
+      };
     }
 
     const { organizationId } = context;
     const org = await prisma.organization.findUnique({
-      select: { eventLimit: true },
+      select: { eventLimit: true, plan: true },
       where: { id: organizationId },
     });
-    const limit = org?.eventLimit ?? env.FREE_PLAN_MONTHLY_EVENT_LIMIT;
+    const plan = org?.plan ?? "Free";
+    // Custom plans without an explicit cap are unlimited (limit null).
+    const limit =
+      org?.eventLimit ??
+      (plan === "Custom" ? null : env.FREE_PLAN_MONTHLY_EVENT_LIMIT);
 
     const counter = await redis.get(
       usageCounterKey(organizationId, usagePeriod(new Date()))
     );
     const used = counter === null ? 0 : Number(counter);
 
-    return { billingEnabled: true as const, limit, used };
+    return { billingEnabled: true as const, limit, plan, used };
   }),
 };

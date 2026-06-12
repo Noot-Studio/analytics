@@ -16,15 +16,20 @@ const WARNING_THRESHOLD = 0.8;
 const SELF_HOST_HINT =
   "Self-host for unlimited events, or contact us for a custom plan with higher limits.";
 
-// Cloud-plan usage banner: shows this month's ingested-event usage against the
-// org's quota and points at the two ways out of it (self-hosting or a custom
-// plan). Renders nothing on self-hosted deployments, where billing is disabled
-// and no limits exist (docs/adr/0002).
+// Cloud free-plan usage banner: shows this month's ingested-event usage
+// against the org's quota and points at the two ways out of it (self-hosting
+// or a custom plan). Renders nothing on self-hosted deployments (billing
+// disabled) and for custom-plan orgs, who already have negotiated limits
+// (docs/adr/0002).
 export const UsageBanner = () => {
   const usageQuery = useQuery(orpc.usage.current.queryOptions());
 
   const usage = usageQuery.data;
-  if (!usage?.billingEnabled || usage.limit === null) {
+  if (
+    !usage?.billingEnabled ||
+    usage.plan === "Custom" ||
+    usage.limit === null
+  ) {
     return null;
   }
 

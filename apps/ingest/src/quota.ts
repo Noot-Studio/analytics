@@ -11,10 +11,11 @@ const PLAN_TTL_SECONDS = 5 * 60;
 // last month's usage, then expire on their own.
 const COUNTER_TTL_SECONDS = 62 * 24 * 60 * 60;
 
-// Monthly quota for an organization. eventLimit null means the org has no
-// custom-plan override and falls back to the deployment's free-plan default.
+// Monthly quota for an organization. eventLimit null falls back by plan:
+// free-plan default for Free, unlimited for Custom.
 export interface OrgPlan {
   organizationId: string;
+  plan: "Free" | "Custom";
   eventLimit: number | null;
 }
 
@@ -86,7 +87,11 @@ export const createQuota = ({
       if (plan === null) {
         return true;
       }
-      const limit = plan.eventLimit ?? defaultLimit;
+      // Custom plans without an explicit cap are unlimited; usage is still
+      // counted so the dashboard can report it.
+      const limit =
+        plan.eventLimit ??
+        (plan.plan === "Custom" ? Number.POSITIVE_INFINITY : defaultLimit);
       const period = usagePeriod(now());
       const used = await counter.get(plan.organizationId, period);
       if (used >= limit) {
@@ -102,7 +107,7 @@ const prismaPlanDirectory: PlanDirectory = {
   async findPlan(projectId: string): Promise<OrgPlan | null> {
     const row = await prisma.project.findUnique({
       select: {
-        organization: { select: { eventLimit: true, id: true } },
+        organization: { select: { eventLimit: true, id: true, plan: true } },
       },
       where: { id: projectId },
     });
@@ -112,6 +117,7 @@ const prismaPlanDirectory: PlanDirectory = {
     return {
       eventLimit: row.organization.eventLimit,
       organizationId: row.organization.id,
+      plan: row.organization.plan,
     };
   },
 };

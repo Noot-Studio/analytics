@@ -86,8 +86,17 @@ describe("createQuota", () => {
   beforeEach(() => {
     fakeCache = createFakeCache();
     fakeDir = createFakeDirectory({
-      proj_custom: { eventLimit: 1000, organizationId: "org_custom" },
-      proj_free: { eventLimit: null, organizationId: "org_free" },
+      proj_custom: {
+        eventLimit: 1000,
+        organizationId: "org_custom",
+        plan: "Custom",
+      },
+      proj_custom_uncapped: {
+        eventLimit: null,
+        organizationId: "org_custom_uncapped",
+        plan: "Custom",
+      },
+      proj_free: { eventLimit: null, organizationId: "org_free", plan: "Free" },
     });
     fakeCounter = createFakeCounter();
     quota = createQuota({
@@ -124,6 +133,17 @@ describe("createQuota", () => {
     expect(fakeCounter.peek("org_custom", PERIOD)).toBe(DEFAULT_LIMIT + 6);
   });
 
+  it("treats a custom plan without an explicit cap as unlimited but still counts usage", async () => {
+    fakeCounter.seed("org_custom_uncapped", PERIOD, DEFAULT_LIMIT * 100);
+
+    const admitted = await quota.admit("proj_custom_uncapped", 5);
+
+    expect(admitted).toBe(true);
+    expect(fakeCounter.peek("org_custom_uncapped", PERIOD)).toBe(
+      DEFAULT_LIMIT * 100 + 5
+    );
+  });
+
   it("resets usage on a new month because the period key changes", async () => {
     fakeCounter.seed("org_free", "2026-05", DEFAULT_LIMIT);
 
@@ -142,7 +162,11 @@ describe("createQuota", () => {
   });
 
   it("serves the plan from cache without hitting the directory", async () => {
-    fakeCache.seed("proj_free", { eventLimit: 2, organizationId: "org_free" });
+    fakeCache.seed("proj_free", {
+      eventLimit: 2,
+      organizationId: "org_free",
+      plan: "Free",
+    });
 
     await quota.admit("proj_free", 1);
 

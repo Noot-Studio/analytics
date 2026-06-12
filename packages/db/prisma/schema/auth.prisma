@@ -65,6 +65,13 @@ model Verification {
   @@map("verification")
 }
 
+// Cloud plan tier. Free is the signup default; Custom is set manually by an
+// admin after contact and hides quota UI in the dashboard (docs/adr/0002).
+enum OrganizationPlan {
+  Free
+  Custom
+}
+
 model Organization {
   id        String   @id
   name      String
@@ -73,9 +80,11 @@ model Organization {
   metadata  String?
   createdAt DateTime @default(now())
 
-  // Cloud custom-plan override for the monthly ingested-event quota. Null means
-  // "no override": free-plan default in cloud, unlimited when billing is off
-  // (self-hosted). See docs/adr/0002.
+  plan OrganizationPlan @default(Free)
+
+  // Monthly ingested-event quota override. Null falls back by plan: free-plan
+  // default for Free, unlimited for Custom. Ignored entirely when billing is
+  // off (self-hosted). See docs/adr/0002.
   eventLimit Int?
 
   members         Member[]
