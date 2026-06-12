@@ -1,12 +1,4 @@
 {
   "title": "s&box Analytics",
-  "pages": [
-    "index",
-    "organizations",
-    "projects",
-    "api-keys",
-    "dashboards",
-    "api",
-    "sdk"
-  ]
+  "pages": ["index", "local-setup", "application", "api", "sdk"]
 }

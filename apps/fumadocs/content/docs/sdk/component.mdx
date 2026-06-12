@@ -1,36 +1,44 @@
 ---
-title: Drop-in component
-description: The AnalyticsComponent — zero-code setup that configures the SDK and emits the scene and connection events for you.
+title: Drop-in components
+description: The Analytics Session Helper and Movement Tracker — zero-code components that configure the SDK and emit events for you.
 icon: MousePointerClick
 ---
 
-The **`AnalyticsComponent`** is the zero-code entry point. Add it to a scene and set your key: it initializes the SDK core from its inspector fields and emits the default events that need a scene or network presence.
+The SDK ships two optional components:
 
-## Add it to a scene
+- **`AnalyticsComponent`** ("Analytics Session Helper") — the zero-code entry point. It initializes the SDK core from its inspector fields and emits the default events that need a scene or network presence.
+- **`AnalyticsMovementComponent`** ("Analytics Movement Tracker") — attach to a pawn to record its position as throttled spatial events, feeding [movement heatmaps](/docs/sdk/heatmap).
 
-In the editor menu, choose **`Analytics → Add to scene`**. This creates a GameObject named **Analytics** with the component attached. You can also add it to any existing GameObject via **Add Component → Analytics → Analytics**.
+## Analytics Session Helper
 
-## Properties
+### Add it to a scene
+
+In the hierarchy panel, open the **Create** menu (the **+** button, or right-click) and choose **Analytics Helper**. This drops a prefab with the component attached. You can also add it to any existing GameObject via **Add Component**.
+
+### Properties
 
 Every field is exposed in the inspector.
 
-| Field                  | Type     | Default                             | Purpose                                                        |
-| ---------------------- | -------- | ----------------------------------- | -------------------------------------------------------------- |
-| `ApiKey`               | `string` | `""`                                | Your project's publishable `pk_…` key. Empty disables the SDK. |
-| `IngestUrl`            | `string` | `https://ingest.sbox-analytics.com` | Override for self-host / local dev.                            |
-| `TrackSessions`        | `bool`   | `true`                              | Emit `session_start` / `session_end`.                          |
-| `TrackSceneLoads`      | `bool`   | `true`                              | Emit `scene_loaded` when the component starts.                 |
-| `TrackConnections`     | `bool`   | `true`                              | Emit `player_connected` / `player_disconnected` (host only).   |
-| `FlushIntervalSeconds` | `float`  | `10`                                | Background flush cadence in real seconds.                      |
-| `MaxBatchSize`         | `int`    | `50`                                | Events per request. Clamped to the ingest cap (500).           |
+| Field                  | Type     | Default                             | Purpose                                                                                                                             |
+| ---------------------- | -------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `ApiKey`               | `string` | `""`                                | Your project's publishable `pk_…` key. Empty disables the SDK.                                                                      |
+| `IngestUrl`            | `string` | `https://ingest.sbox-analytics.com` | Override for self-host / local dev.                                                                                                 |
+| `TrackSessions`        | `bool`   | `true`                              | Emit `session_start` / `session_end`.                                                                                               |
+| `TrackSceneLoads`      | `bool`   | `true`                              | Emit `scene_loaded` (and `map_loaded` once a map instance loads).                                                                   |
+| `TrackConnections`     | `bool`   | `true`                              | Emit `player_connected` / `player_disconnected` (host only).                                                                        |
+| `AutoScene`            | `bool`   | `true`                              | Tag every event with the active scene's title when no scene is passed explicitly.                                                   |
+| `AutoPosition`         | `bool`   | `true`                              | Tag events with the player's pawn position when no position is passed explicitly. Events whose player has no pawn stay non-spatial. |
+| `FlushIntervalSeconds` | `float`  | `10`                                | Background flush cadence in real seconds.                                                                                           |
+| `MaxBatchSize`         | `int`    | `50`                                | Events per request. Clamped to the ingest cap (500).                                                                                |
 
-## Events it emits
+### Events it emits
 
-| Event                 | When               | Notes                                               |
-| --------------------- | ------------------ | --------------------------------------------------- |
-| `scene_loaded`        | On component start | Carries the scene name. Gated on `TrackSceneLoads`. |
-| `player_connected`    | A player joins     | **Host only.** Gated on `TrackConnections`.         |
-| `player_disconnected` | A player leaves    | **Host only.** Gated on `TrackConnections`.         |
+| Event                 | When                        | Notes                                               |
+| --------------------- | --------------------------- | --------------------------------------------------- |
+| `scene_loaded`        | On component start          | Carries the scene name. Gated on `TrackSceneLoads`. |
+| `map_loaded`          | Once the map instance loads | Carries the map name. Gated on `TrackSceneLoads`.   |
+| `player_connected`    | A player joins              | **Host only.** Gated on `TrackConnections`.         |
+| `player_disconnected` | A player leaves             | **Host only.** Gated on `TrackConnections`.         |
 
 `session_start` and `session_end` are owned by the core, not the component — they fire on init and shutdown when `TrackSessions` is on. See [Default events](/docs/sdk/events) for the complete list.
 
@@ -39,7 +47,7 @@ Every field is exposed in the inspector.
   listener lives. Clients won't emit `player_connected` / `player_disconnected`.
 </Callout>
 
-## Working alongside code
+### Working alongside code
 
 The component checks whether the core is already initialized before touching it:
 
@@ -48,7 +56,25 @@ The component checks whether the core is already initialized before touching it:
 
 Pick one owner: either configure everything through the component, or `Init` in code and use the component only for its scene/connection events.
 
+## Analytics Movement Tracker
+
+Attach **`AnalyticsMovementComponent`** to an entity — typically a player pawn — to record its position as periodic spatial events. Those events feed the movement and traversal heatmaps in the [editor's Analytics dock](/docs/sdk/heatmap) and the dashboard.
+
+Traffic is bounded by design: samples are throttled, stationary entities emit nothing, only the host samples by default, and events ride the SDK's existing batched flush — never one HTTP request per sample.
+
+| Field                   | Type     | Default           | Purpose                                                                                              |
+| ----------------------- | -------- | ----------------- | ---------------------------------------------------------------------------------------------------- |
+| `EventType`             | `string` | `position_sample` | Event type recorded for each sample.                                                                 |
+| `SampleIntervalSeconds` | `float`  | `2`               | Seconds between samples. Clamped to a 0.25 s minimum.                                                |
+| `MinMoveDistance`       | `float`  | `64`              | Minimum distance (units) moved since the last sample. Stationary entities emit no events.            |
+| `HostOnly`              | `bool`   | `true`            | Sample on the host only — one emitter per entity in multiplayer instead of one per connected client. |
+
+Samples are attributed to the entity's network owner when it has one, so per-player movement lines up with the rest of that player's events. Unowned (world/NPC) entities fall back to the session's default id.
+
 <Cards>
+  <Card title="In-editor heatmaps" href="/docs/sdk/heatmap">
+    Visualize the spatial events these components emit.
+  </Card>
   <Card title="Methods" href="/docs/sdk/methods">
     Initialize and track from code instead.
   </Card>

@@ -1,0 +1,66 @@
+---
+title: In-editor heatmaps
+description: The Analytics dock — render fog and voxel heatmaps of spatial events directly in the s&box scene view.
+icon: Flame
+---
+
+The SDK ships an editor-only **Analytics dock** that pulls your project's [spatial events](/docs/api/spatial) and renders them over the open scene as a volumetric heatmap — either raymarched **fog** or instanced **voxel cubes**. Use it to find kill zones, traversal routes, or performance hotspots without leaving the editor.
+
+Open it from the editor's **Editor → Analytics** dock menu.
+
+## Connection
+
+The dock authenticates with your project's **secret key** (`sk_…`) — never the publishable key, since these endpoints _read_ analytics data. Set:
+
+- **Ingest URL** — defaults to `https://ingest.sbox-analytics.com`; override for self-host.
+- **Secret API Key** — entered in a masked field and stored editor-local (project cookie). It never ships with your game.
+
+**Test Connection** validates the key before you query.
+
+<Callout type="warn">
+  The secret key is shown once at [key creation](/docs/application/api-keys). Treat it like
+  a password — it stays on your machine, in the editor only.
+</Callout>
+
+## Querying
+
+The dock has two visualizer sections — **Fog Heatmap** and **Voxel Heatmap** — each with its own query controls:
+
+| Control                | Meaning                                                                                       |
+| ---------------------- | --------------------------------------------------------------------------------------------- |
+| **Scene**              | Which scene/map's events to aggregate. **Load Scenes** populates the dropdown from your data. |
+| **Event Type**         | Optional filter to a single event type (e.g. `player_death`).                                 |
+| **From / To**          | Date range (`YYYY-MM-DD`). Defaults to the last 30 days.                                      |
+| **Voxel Size**         | World units per cube edge (default 64). Smaller = finer grid.                                 |
+| **Metric Key**         | Optional event property to aggregate (e.g. `fps`). Empty = pure event density.                |
+| **Metric Aggregation** | `Avg`, `Max`, `Min`, or `Sum` of the metric key.                                              |
+
+**Refresh** fetches the voxels and rebuilds the overlay. The two render modes are exclusive — refreshing a section makes it the active visualizer.
+
+## Fog mode
+
+Fog mode builds a 3D density texture from the voxels (blurred, normalized against the 95th percentile) and raymarches it in a shader — the same look as the dashboard's web heatmap, with an inferno color ramp. Look-only sliders update in place without re-fetching:
+
+| Control      | Range    | Default | Effect                           |
+| ------------ | -------- | ------- | -------------------------------- |
+| **Show Fog** | on/off   | —       | Toggle the overlay.              |
+| **Density**  | 0.1 – 20 | 3.5     | Overall fog opacity.             |
+| **Falloff**  | 0.25 – 5 | 1.8     | How sharply intensity drops off. |
+| **Steps**    | 16 – 256 | 96      | Raymarch quality vs cost.        |
+
+## Voxel mode
+
+Voxel mode draws an instanced cube at each occupied cell, colored by the same inferno ramp and scaled by intensity. A single **Show Cubes** toggle controls the overlay — useful as a cheaper, exact-grid alternative to fog.
+
+## Where the data comes from
+
+The dock calls two read endpoints on the ingest service, authenticated with the secret key — see [Spatial events](/docs/api/spatial) for the full reference. The events themselves come from anything that sends a `position`: the [Movement Tracker component](/docs/sdk/component#analytics-movement-tracker), `AutoPosition` on the session helper, or explicit `Analytics.Track(..., position: …)` calls.
+
+<Cards>
+  <Card title="Spatial events" href="/docs/api/spatial">
+    The event fields and read endpoints behind heatmaps.
+  </Card>
+  <Card title="Drop-in components" href="/docs/sdk/component">
+    Emit spatial events without writing code.
+  </Card>
+</Cards>

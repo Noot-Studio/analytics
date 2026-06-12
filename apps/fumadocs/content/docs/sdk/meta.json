@@ -1,5 +1,5 @@
 {
   "title": "SDK (s&box)",
   "icon": "Package",
-  "pages": ["index", "component", "attribute", "methods", "events"]
+  "pages": ["index", "component", "attribute", "methods", "events", "heatmap"]
 }

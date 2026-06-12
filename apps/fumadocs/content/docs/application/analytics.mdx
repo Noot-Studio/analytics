@@ -1,0 +1,138 @@
+---
+title: Built-in analytics
+description: Ready-made Players, Sessions, and Maps views — and the event fields that power each one.
+icon: Users
+---
+
+Three views come built in and need no special setup beyond sending events: **Players**, **Sessions**, and **Maps & Modes**. Each is derived from fields you already send, and each page below names exactly which fields it reads — if a view is empty, send those.
+
+## Players
+
+The **Players** view reads how many people are actively playing and whether you're gaining or retaining them.
+
+| Metric               | What it measures                                                       |
+| -------------------- | ---------------------------------------------------------------------- |
+| **WAU / MAU**        | Unique players with ≥ 1 event in the last 7 / 30 days.                 |
+| **DAU chart**        | Unique players per calendar day over the window.                       |
+| **New vs returning** | Per day — players whose first-ever event is that day vs everyone else. |
+
+No special event type is required: **every event with a non-empty `player_id`** feeds this view. The platform records each player's first-seen date on their first ingested event; all later events count as returning.
+
+Below the charts, every non-anonymous player is listed with first/last-seen dates, session count, and event count. Click one to open their profile.
+
+### Player profiles
+
+A profile aggregates everything known about one `player_id`: **lifetime stats** (events, sessions, active days, average session length, total playtime), **retention badges** (active on D1/D7/D30), an **activity calendar** and **when-they-play heatmap**, an **event/map breakdown**, and **session history** linking to each [session profile](#session-profiles).
+
+#### Hardware & client specs
+
+The specs panel reads well-known keys from the `properties` of the player's **most recent** `session_start` event. All optional — send what you have:
+
+```json title="session_start with spec properties"
+{
+  "type": "session_start",
+  "session_id": "sess_abc123",
+  "player_id": "76561198000000000",
+  "properties": {
+    "platform": "windows",
+    "version": "1.4.2",
+    "os": "Windows 11",
+    "cpu": "AMD Ryzen 7 5800X",
+    "gpu": "NVIDIA RTX 3080",
+    "ram_gb": 32,
+    "resolution": "2560x1440"
+  }
+}
+```
+
+<Callout type="info">
+  **Use stable player IDs.** If a player's ID changes between sessions, they're
+  counted as new the first time the new ID appears. First-seen dates are derived
+  from a materialized view that only captures events ingested after it was
+  created, so historical new-vs-returning can be inaccurate until players
+  generate a fresh event — request a one-time backfill for production.
+</Callout>
+
+## Sessions
+
+The **Sessions** view shows how long players spend in your game and when they play.
+
+| Chart                  | What it shows                                                    |
+| ---------------------- | ---------------------------------------------------------------- |
+| **Duration histogram** | Sessions bucketed 0–1, 1–5, 5–15, 15–30, 30 min+.                |
+| **Avg duration trend** | Daily average session length (seconds) over the window.          |
+| **Activity heatmap**   | Hour × weekday grid of when sessions started (hour axis in UTC). |
+
+Duration is derived automatically from event timestamps — **no `session_end` event is required**. The platform records the earliest and latest timestamp per `session_id` and computes `max − min`:
+
+```json title="Minimal events that populate Sessions"
+[
+  {
+    "type": "session_start",
+    "session_id": "sess_abc123",
+    "timestamp": "2025-06-01T12:00:00.000Z"
+  },
+  {
+    "type": "player_moved",
+    "session_id": "sess_abc123",
+    "timestamp": "2025-06-01T12:14:37.000Z"
+  }
+]
+```
+
+These two produce a ~14 min 37 s session.
+
+### Session profiles
+
+Click any session to open its profile: duration, event count, the map it was played on, hardware/client specs (from the session's `session_start` properties, see [above](#hardware--client-specs)), a paginated event list, and a performance panel.
+
+#### Performance events
+
+The performance panel reads well-known event types — none required, metrics just stay empty without them:
+
+| Metric                            | Event type      | Property          |
+| --------------------------------- | --------------- | ----------------- |
+| Avg / min / max FPS and FPS chart | `fps_sample`    | `fps` (number)    |
+| Deaths                            | `player_death`  | —                 |
+| Crash badge and reason            | `crash`         | `reason` (string) |
+| Load time                         | `load_complete` | `ms` (number)     |
+
+A periodic `fps_sample` (every 30–60 s) does double duty: it draws the FPS chart **and** acts as a heartbeat that keeps duration accurate. For finer duration, send a final event (`session_end` / `player_disconnect`) when the player leaves.
+
+## Maps & Modes
+
+The **Maps & Modes** view breaks down which maps players spend time on.
+
+| Chart / table                | What it shows                                        |
+| ---------------------------- | ---------------------------------------------------- |
+| **Sessions per map**         | Bar chart of total sessions per map.                 |
+| **Map breakdown table**      | Per map: sessions, unique players, average duration. |
+| **Map popularity over time** | Daily session counts for the top 5 maps.             |
+
+This view is driven exclusively by `session_start` events that include a `map` property. Sessions without a matching `session_start` aren't counted.
+
+```json title="session_start with map (and optional mode)"
+{
+  "type": "session_start",
+  "session_id": "sess_abc123",
+  "properties": { "map": "dm_canyon", "mode": "deathmatch" }
+}
+```
+
+The `map` value is a free-form string and appears exactly as sent — use consistent casing so `dm_canyon` and `DM_Canyon` don't split into separate rows. Only `map` drives this view today; `mode` is stored and queryable from the raw **Events** view. Events sent without a `map` are still ingested, just not counted here.
+
+<Callout type="info">
+  Send `session_start` as the **first** event of every session — the map is read
+  from the earliest `session_start` for each `session_id`.
+</Callout>
+
+## Next steps
+
+<Cards>
+  <Card title="Send these events" href="/docs/sdk">
+    The SDK emits session_start and more for you.
+  </Card>
+  <Card title="Build custom views" href="/docs/application/dashboards">
+    Turn any event into a metric, chart, or alert.
+  </Card>
+</Cards>

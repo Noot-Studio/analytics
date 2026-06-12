@@ -1,0 +1,90 @@
+---
+title: Run it locally
+description: Stand up the whole analytics platform on your own machine with Docker Compose, then point your game at it.
+icon: Server
+---
+
+You don't need the hosted cloud to develop against analytics. The entire platform — dashboard, API, ingest, and data stores — ships as Docker images orchestrated by a single `docker-compose.yaml`. This page gets a self-contained stack running locally so the [Quick start](/docs) flow works end to end on your machine.
+
+<Callout type="info">
+  This is for local development and self-hosting. If you're using the hosted
+  cloud platform, skip this — your ingest URL is already provisioned.
+</Callout>
+
+## Prerequisites
+
+- **Docker Engine** with the Compose plugin (`docker compose`).
+- A clone of the [platform repository](https://github.com/Noot-Studio/analytics).
+- A [Steam Web API key](https://steamcommunity.com/dev/apikey) (auth uses Steam).
+
+## 1. Configure
+
+Create a `.env` next to `docker-compose.yaml`. The `infra` profile bundles Postgres, Redis, Redpanda, and ClickHouse as containers, so this one file is all you need:
+
+```bash title=".env"
+# Bundle all data services as containers
+COMPOSE_PROFILES=infra
+
+# Secrets
+BETTER_AUTH_SECRET=replace-with-32-plus-random-chars   # openssl rand -hex 32
+STEAM_API_KEY=replace-me
+
+# Public URLs (localhost defaults)
+BETTER_AUTH_URL=http://localhost:3000
+CORS_ORIGIN=http://localhost:3001
+VITE_SERVER_URL=http://localhost:3000
+VITE_DOCS_URL=http://localhost:3002
+
+# Host ports
+SERVER_PORT=3000
+INGEST_PORT=8080
+WEB_PORT=3001
+FUMADOCS_PORT=3002
+
+# Bundled-infra credentials (dev-only defaults)
+POSTGRES_DB=sbox-analytics
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=password
+CLICKHOUSE_DATABASE=analytics
+CLICKHOUSE_USER=analytics
+CLICKHOUSE_PASSWORD=analytics
+```
+
+## 2. Start everything
+
+```bash
+docker compose up -d --build
+```
+
+A one-shot `migrate` job pushes the database schema before the apps boot. Once it's up:
+
+| Service       | URL                     |
+| ------------- | ----------------------- |
+| **Dashboard** | `http://localhost:3001` |
+| **API**       | `http://localhost:3000` |
+| **Ingest**    | `http://localhost:8080` |
+| **Docs**      | `http://localhost:3002` |
+
+## 3. Point your game at it
+
+Open the dashboard, create an [Organization, Project, and API key](/docs/application/workspace), then set the SDK's ingest URL to your local ingest host:
+
+```csharp
+Analytics.Init( "pk_your_local_key", new AnalyticsOptions
+{
+    IngestUrl = "http://localhost:8080",
+} );
+```
+
+Using the [drop-in component](/docs/sdk/component) instead? Set its **IngestUrl** field to `http://localhost:8080`. Now follow the [Quick start](/docs) from step 3 — events flow into your local stack.
+
+## Going further
+
+- **Managed infrastructure** (point the apps at your own Postgres/ClickHouse/Redpanda), **scaling across a fleet**, and **upgrades** are covered in the repository `README.md`.
+- For contributing to the platform itself (running apps with `turbo dev` instead of Docker), see `CONTRIBUTING.md`.
+
+<Callout type="warn">
+  The bundled credentials above are dev-only. Before exposing a self-hosted
+  instance, set a strong `BETTER_AUTH_SECRET` and real database passwords, and
+  put TLS in front of the published ports. See the README's security notes.
+</Callout>

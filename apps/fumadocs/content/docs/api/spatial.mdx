@@ -51,6 +51,66 @@ sum`, e.g. average `fps`), optional `bounds`, and an optional `limit` (max 50000
 Call `spatial.scenes` first to list scenes that contain spatial data along with their
 coordinate bounds, so you can frame the heatmap.
 
+## Read endpoints (editor tooling)
+
+Two HTTP endpoints on the ingest service expose the same queries to external tools — the
+[SDK's in-editor Analytics dock](/docs/sdk/heatmap) uses them. They read analytics data, so
+they authenticate with the **secret key** (`sk_…`) in the `x-api-key` header — never the
+publishable key. The project is resolved from the key; there is no `projectId` parameter.
+
+### `GET /v1/spatial/scenes`
+
+Lists scenes containing spatial data in the range, with their coordinate bounds.
+
+| Query param | Type     | Required |
+| ----------- | -------- | -------- |
+| `from`      | ISO date | Yes      |
+| `to`        | ISO date | Yes      |
+
+```json
+{
+  "scenes": [
+    {
+      "scene": "dm_arena",
+      "eventCount": 18204,
+      "bounds": {
+        "minX": -2048,
+        "minY": -2048,
+        "minZ": 0,
+        "maxX": 2048,
+        "maxY": 2048,
+        "maxZ": 512
+      }
+    }
+  ]
+}
+```
+
+### `GET /v1/spatial/voxels`
+
+Aggregates spatial events into a voxel grid.
+
+| Query param | Type                             | Required              |
+| ----------- | -------------------------------- | --------------------- |
+| `scene`     | string                           | Yes                   |
+| `voxelSize` | positive number                  | Yes                   |
+| `from`      | ISO date                         | Yes                   |
+| `to`        | ISO date                         | Yes                   |
+| `eventType` | string                           | No                    |
+| `metricKey` | string                           | No                    |
+| `metricAgg` | `avg` \| `min` \| `max` \| `sum` | If `metricKey` is set |
+| `limit`     | integer 1–50000 (default 50000)  | No                    |
+
+```json
+{
+  "voxels": [{ "x": 128, "y": -64, "z": 32, "count": 41, "value": null }],
+  "voxelSize": 64,
+  "truncated": false
+}
+```
+
+Both endpoints return `401` on a missing/invalid key and `400` on invalid parameters.
+
 ## Use cases
 
 - **Death heatmaps** — emit `player_death` with `position`; render density to find kill zones.

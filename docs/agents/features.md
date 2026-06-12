@@ -6,6 +6,7 @@
 - **Organizations**: Multi-user orgs with permission levels (Owner, Admin, Viewer)
 - **Projects**: Create and configure projects, receive API key pairs (publishable + secret)
 - **Event Ingestion API**: HTTP POST `/v1/events` with batch support
+- **Spatial Read API**: HTTP GET `/v1/spatial/voxels` + `/v1/spatial/scenes` on ingest, secret-key (`sk_`) auth, consumed by the SDK's editor heatmap tooling
 - **Dashboard**: Real-time event stream, DAU/WAU/MAU, session count, average session duration
 
 ## Analytics Capabilities
@@ -15,18 +16,24 @@
 - **Funnel Analysis**: Visual funnel builder for player progression
 - **Player Profiles**: Anonymous player journey tracking (not PII-linked)
 - **Performance Events**: FPS drops, load times, crash reporting
-- **Alerts**: Webhook and email alerts for anomaly detection (error spikes, DAU drops)
+- **Metrics**: Named, saved query definitions (aggregation or expression, event-type + property filters) reused by widgets and alerts
+- **Alerts**: Threshold rules on saved metrics (Above/Below, LastHour/Last24Hours/Last7Days windows) with webhook and email delivery, 1-hour cooldown; org-wide or per-project scope; evaluation is on-demand ("Run check") — scheduler is a follow-up
 
 ## Advanced Features
 
 - **Raw Data Export**: Parquet/CSV export to S3
-- **Custom Dashboards**: User-built dashboards with drag-and-drop widgets
+- **Custom Dashboards**: Free-form 12-column grid (react-grid-layout) of saved widgets — a widget pairs a metric with a visualization (number, area, bar, table) — with explicit save / unsaved-changes bar and a two-step add-widget flow
 - **A/B Testing Framework**: Built-in experiment assignment and significance testing
 - **Billing & Usage**: Polar.sh integration, usage-based pricing, invoices
 
 ## SDK
 
-NuGet package `Noot.Analytics.Sdk` with automatic s&box integration.
+s&box library `noot.analytics` (namespace `Noot.Analytics`), mounted at `apps/sdk`:
+
+- **Core**: `Analytics.Init/Track/Flush/Shutdown` facade over a buffered, batched HTTP sender
+- **Components**: `AnalyticsComponent` ("Analytics Session Helper" — init, session/scene/connection events, AutoScene/AutoPosition tagging) and `AnalyticsMovementComponent` ("Analytics Movement Tracker" — throttled `position_sample` spatial events)
+- **Declarative**: `[Track]` attribute on methods/properties
+- **Editor tooling**: "Analytics" dock with fog (raymarched volume) and voxel (instanced cubes) heatmap visualizers, querying `/v1/spatial/*` with the secret key (stored editor-local)
 
 ## API Contract (v1)
 

@@ -1,0 +1,79 @@
+---
+title: Organizations & projects
+description: The workspace that owns your games, team, and billing — and the projects your events are scoped to.
+icon: Folder
+---
+
+An **Organization** is the top-level container. Everything lives inside one: your games (Projects), your [API keys](/docs/application/api-keys), your teammates, and your subscription. A **Project** is a single game inside that organization, and every event you send is scoped to a project.
+
+## Organizations
+
+An organization represents a team or studio. It exists to **group your games**, **share access** with teammates by role, and **own billing**.
+
+You can belong to more than one (a personal workspace and a studio, say). The one you're working in is your **active** organization — projects and keys you create land there.
+
+### Creating one
+
+1. Open the **Organization switcher** in the top-left and choose **Create Organization**.
+2. Enter a **name** (≥ 2 characters). A URL-friendly **slug** is filled in from it — adjust if you like (lowercase, numbers, hyphens; must be unique).
+3. Confirm. The new organization becomes active, and the account that created it is its **owner**.
+
+### Members and roles
+
+Each member has a role:
+
+| Role     | Capabilities                                                            |
+| -------- | ----------------------------------------------------------------------- |
+| `owner`  | Full control, including deleting the organization and managing billing. |
+| `admin`  | Manage projects, API keys, members, and invitations.                    |
+| `member` | Access projects and API keys within the organization.                   |
+
+Manage people from the **Team** page. Owners and admins add members (as `admin` or `member`) by **email invitation**, a shareable **invite link** (role baked in, expires after **7 days**), or by creating the account directly. They can also remove members and cancel invitations. An organization holds up to **100 members**.
+
+### Settings and deletion
+
+Owners and admins can rename the organization, change its slug, and upload a logo (PNG/JPEG/WebP, ≤ 512 KB) from its settings page. Non-owner members can **leave** from there.
+
+<Callout type="warn">
+  Deleting an organization is irreversible and cascades to every project, API
+  key, and their events. Only an owner can do it.
+</Callout>
+
+## Projects
+
+A **Project** represents one game. It's the unit your analytics are grouped by, and [API keys](/docs/application/api-keys) are issued per project. It has a **name**, a URL-friendly **slug** (unique within the organization), and an **environment** — `Development`, `Staging`, or `Production`.
+
+Because the slug is unique per organization, you can run separate projects per environment of the same game (e.g. `my-game-dev` and `my-game-prod`) so test traffic never pollutes production numbers.
+
+### Creating one
+
+A project is created inside your **active** organization, so select the right one first.
+
+1. Open **Projects** and choose **Create Project**.
+2. Enter a **name** (1–100 chars); the slug is generated from it and must be unique in the organization.
+3. Pick an **environment** (`Development` by default).
+4. Choose **Create**, then [generate an API key](/docs/application/api-keys) for it.
+
+An organization holds up to **100 projects**.
+
+### Viewing, listing, and deleting
+
+Open a project to see its details and attached API keys (name, publishable key, last used). The **Projects** page lists every project in the active organization, most recent first, with its environment and active key count.
+
+<Callout type="warn">
+  Deleting a project is irreversible and cascades to its API keys. Any game
+  still sending events with those keys starts receiving `401 invalid api key`.
+</Callout>
+
+Only members of the owning organization can view, create, or delete its projects.
+
+## Next steps
+
+<Cards>
+  <Card title="Generate API keys" href="/docs/application/api-keys">
+    Create the credentials a project uses to send events.
+  </Card>
+  <Card title="Send events" href="/docs/sdk">
+    Wire up the SDK and start tracking.
+  </Card>
+</Cards>

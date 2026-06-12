@@ -1,54 +1,71 @@
 ---
-title: Introduction
-description: Real-time game analytics built for s&box developers — not marketers.
+title: Quick start
+description: From signup to your first chart in under 10 minutes — install the SDK, drop in one component, and watch events arrive.
 icon: Rocket
 ---
 
-s&box Analytics is a real-time analytics platform purpose-built for [s&box](https://sbox.game) game developers. It gives you player-behavior insights, session tracking, and performance monitoring without the bloat of general-purpose marketing analytics.
+s&box Analytics is real-time game analytics built for [s&box](https://sbox.game) developers — player behavior, sessions, and performance, without the marketing bloat.
 
-## How it fits together
+This guide takes you from nothing to a live chart in under ten minutes. You'll create a project, grab a key, drop one component into your game, and watch the events land.
 
-You organize your work into three layers. Each one nests inside the one above it:
+<Callout type="info">
+  You need a running analytics platform to send events to. Use the hosted cloud
+  platform, or [run it locally](/docs/local-setup) for development. The steps
+  below are identical either way — only the ingest URL changes.
+</Callout>
+
+## 1. Create a project and key
+
+Events are scoped to a [Project](/docs/application/workspace#projects), and your game authenticates with that project's **publishable key** (`pk_…`).
+
+1. In the dashboard, create (or pick) an [Organization](/docs/application/workspace).
+2. Create a **Project** for your game.
+3. Open the project, choose **Create API key**, and copy the **publishable key** (`pk_…`).
+
+Use the `pk_` key in your game — never the secret `sk_` key. See [API keys](/docs/application/api-keys) for the difference.
+
+## 2. Install the SDK
+
+1. Browse to **[sbox.game/noot](https://sbox.game/noot)** and open the **Analytics** (`noot.analytics`) library.
+2. Add it to your project under **Project Settings → Packages** in the s&box editor.
+
+## 3. Drop in the component
+
+The zero-code path needs no scripting:
+
+1. In the hierarchy panel's **Create** menu (the **+** button, or right-click), choose **Analytics Helper**.
+2. Select it and paste your `pk_…` key into the **ApiKey** field.
+3. Press **play**.
+
+That's it. `session_start`, `scene_loaded`, and connection events now flow automatically.
+
+<Callout type="info">
+  Running the platform locally? Set the component's **IngestUrl** field to your
+  local ingest host (e.g. `http://localhost:8080`) instead of the cloud default.
+</Callout>
+
+## 4. See your first chart
+
+Buffered events flush every 10 seconds, so give it a moment. Then open your project's **Overview** in the dashboard — the **Total events** and **Events per day** widgets light up as data arrives.
+
+If nothing shows after a minute, check that the key is a `pk_…` key for the right project and that the ingest URL matches your platform.
+
+## Next: track your own events
+
+The component gets you default events for free. To record what's unique to your game — kills, purchases, level completions — head to the [SDK reference](/docs/sdk). It's the primary way to send events and the most important section of these docs.
 
 <Cards>
-  <Card title="Organizations" href="/docs/organizations">
-    The top-level workspace that owns your games, billing, and teammates.
+  <Card title="SDK reference" href="/docs/sdk">
+    Custom tracking — components, the [Track] attribute, and the Analytics
+    facade.
   </Card>
-  <Card title="Projects" href="/docs/projects">
-    A single game (or one environment of it) that events are scoped to.
+  <Card title="Run it locally" href="/docs/local-setup">
+    Stand up the whole platform on your machine for development.
   </Card>
-  <Card title="API Keys" href="/docs/api-keys">
-    Per-project credentials your game uses to send events.
+  <Card title="The application" href="/docs/application">
+    Organizations, projects, dashboards, and the built-in analytics views.
+  </Card>
+  <Card title="Ingest API" href="/docs/api">
+    The raw HTTP endpoint the SDK posts to.
   </Card>
 </Cards>
-
-```text
-Organization
-└── Project (Development / Staging / Production)
-    └── API Key (pk_… / sk_…)
-        └── Events  →  POST /v1/events
-```
-
-## Getting started
-
-1. **Create an Organization** — your workspace. See [Organizations](/docs/organizations).
-2. **Create a Project** for your game. See [Projects](/docs/projects).
-3. **Generate an API Key** for that project. See [API Keys](/docs/api-keys).
-4. **Send events** from your game. Use the [s&box SDK](/docs/sdk) for a one-component setup, or call the [Ingestion API](/docs/api) directly.
-
-## Send your first event
-
-Once you have a publishable key, ingestion is a single HTTP request:
-
-```bash
-curl -X POST https://ingest.sbox-analytics.com/v1/events \
-  -H "x-api-key: pk_your_publishable_key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "events": [
-      { "type": "level_completed", "session_id": "sess_123", "player_id": "76561198000000000" }
-    ]
-  }'
-```
-
-Head to [API Usage](/docs/api) for the full reference, authentication details, and interactive requests you can run from the page.

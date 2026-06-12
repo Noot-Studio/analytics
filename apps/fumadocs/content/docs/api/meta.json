@@ -1,5 +1,5 @@
 {
-  "title": "API Usage",
+  "title": "Ingest API",
   "icon": "Plug",
-  "pages": ["index", "events", "errors", "---", "players", "sessions", "maps"]
+  "pages": ["index", "events", "spatial", "errors"]
 }

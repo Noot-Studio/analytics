@@ -1,0 +1,119 @@
+---
+title: Dashboards, metrics & alerts
+description: Build custom overviews from saved metrics, and get notified when one crosses a threshold.
+icon: ChartLine
+---
+
+Three things work together here: a **metric** defines _what_ to measure, a **dashboard widget** decides _how_ it's drawn, and an **alert** watches it and notifies you when it crosses a line. One metric can power a chart and an alert at the same time.
+
+## Metrics
+
+A **metric** is a named, saved query owned by your organization. It captures _what_ to measure without fixing how it's displayed or which time range it covers — [widgets](#dashboards) and [alerts](#alerts) reference it by id.
+
+The builder lives in **Project Settings → Metrics**, and is reachable inline from the widget builder and alert form. A metric is:
+
+- **Aggregation** — one of `count`, `sum`, `avg`, `min`, `max`, `unique_players`, `unique_sessions`. The numeric ones read a `properties` key you name (e.g. `avg` over `fps`).
+- **Expression** — alternatively, a formula over several aggregations, e.g. a conversion rate:
+
+  ```text
+  count({event_type="purchase"}) / count({event_type="add_cart"}) * 100
+  ```
+
+- **Event type** — restrict to one type, or span all events.
+- **Filters** — up to 10 property conditions (`eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `contains`, `not_contains`, `starts_with`, `in`, `is_empty`, `is_not_empty`).
+- **Name** (≤ 80 chars) and optional **description** (≤ 500 chars).
+
+The builder shows a **live preview** (and the generated SQL) as you edit. Raw SQL is never user-editable.
+
+<Callout type="info">
+  A metric stores no project or time range — the consumer supplies those. A
+  widget applies the dashboard's time-range picker and optional project pin; an
+  alert applies its own window and scope.
+</Callout>
+
+Deleting a metric removes the widgets that reference it.
+
+## Dashboards
+
+The **Overview** page — both organization-wide and per [project](/docs/application/workspace#projects) — is a free-form grid of **widgets** you add, drag, and resize on a 12-column grid. The layout is saved per organization or per project and shared by everyone. A widget is a saved presentation of a metric: the same metric can be a number on one dashboard and a chart on another.
+
+### Editing
+
+Drag a widget by its header to move it, by its corner to resize. Edits stay local until you commit them — an **unsaved changes** bar offers **Save** (persists the layout) and **Cancel** (reverts). The page's global time-range picker applies to every widget.
+
+### Adding a widget
+
+A two-step flow:
+
+1. **Choose a source** — the drawer lists **built-in widgets** and your organization's **saved widgets** (searchable). Pick one, or start a new widget.
+2. **Configure** — pick a saved metric (or create one inline), set the **shape** (granularity `none`/`hour`/`day`/`week`/`month`, up to 5 group-by columns, row limit 1–1000), choose a compatible **visualization** with a live preview, name it (≤ 80 chars), and save. Saved widgets are reusable and update everywhere when edited.
+
+### Visualizations
+
+| Visualization | Renders                              | Compatible shapes              |
+| ------------- | ------------------------------------ | ------------------------------ |
+| **number**    | A single-value stat.                 | scalar                         |
+| **area**      | A filled time-series chart.          | series                         |
+| **bar**       | Time-series or grouped bars.         | series, groups                 |
+| **table**     | Rows, with a time column for series. | series, groups, grouped-series |
+
+The shape follows from the view settings: no granularity and no group-by gives a **scalar**; a granularity gives a **series**; a group-by gives **groups**; both give a **grouped series**. Compatibility is enforced in the picker and on save.
+
+### Built-in widgets
+
+| Widget             | Shows                                                       |
+| ------------------ | ----------------------------------------------------------- |
+| **Total events**   | Event count for the range, with change vs the prior period. |
+| **Unique players** | Distinct players, with change vs the prior period.          |
+| **Sessions**       | Distinct sessions, with change vs the prior period.         |
+| **Events per day** | Daily event-volume time series.                             |
+| **Events by type** | Breakdown of the most common event types.                   |
+
+On the **organization overview** a widget aggregates across every project by default, or can be pinned to one. On a **project overview** widgets always show that project's data.
+
+## Alerts
+
+An **alert rule** watches a metric over a window and notifies you — by webhook or email — when its value crosses a threshold. Use it for crash spikes, DAU drops, or anything a metric can measure.
+
+Rules live **organization-wide** (Organization Settings → Alerts, evaluated across all projects) or **per project** (Project Settings → Alerts). Choose **New alert** and fill in:
+
+| Field           | Values                                        | Meaning                             |
+| --------------- | --------------------------------------------- | ----------------------------------- |
+| **Name**        | 1–100 chars                                   | Label in the list and notification. |
+| **Metric**      | any saved metric                              | What to measure (create inline).    |
+| **Operator**    | `Above` / `Below`                             | Direction the threshold is crossed. |
+| **Threshold**   | number                                        | The boundary value.                 |
+| **Window**      | `Last hour` / `Last 24 hours` / `Last 7 days` | Span the metric is evaluated over.  |
+| **Channel**     | `Webhook` / `Email`                           | How to deliver the notification.    |
+| **Destination** | URL or email address                          | Validated against the channel.      |
+
+Rules can be **enabled/disabled** (disabled ones are never evaluated). **Run check** evaluates every enabled rule in scope on demand. A rule that fires won't notify again for **1 hour** (cooldown), so a sustained breach can't flood you.
+
+### Webhook delivery
+
+An HTTP `POST` with a JSON body:
+
+```json
+{
+  "firedAt": "2026-06-11T11:00:00.000Z",
+  "metric": "Crash spike",
+  "rule": "Crash watch",
+  "scope": "project Galaxy Wars",
+  "summary": "Crashes is 12 (threshold ≥ 10)."
+}
+```
+
+### Email delivery
+
+Email goes to the **Destination** address with subject `[s&box Analytics] {metric} alert: {rule}` and a body of the rule, scope, summary, and fire time.
+
+## Next steps
+
+<Cards>
+  <Card title="Built-in analytics" href="/docs/application/analytics">
+    Ready-made Players, Sessions, and Maps views.
+  </Card>
+  <Card title="Send events" href="/docs/sdk">
+    Dashboards only show what you send.
+  </Card>
+</Cards>

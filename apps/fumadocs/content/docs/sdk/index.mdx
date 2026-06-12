@@ -8,11 +8,11 @@ The **s&box Analytics SDK** is a C# library you drop into your s&box game. It ba
 
 It gives you three ways to send events, all funneling into the same core:
 
-| Style                        | Best for                | Reference                        |
-| ---------------------------- | ----------------------- | -------------------------------- |
-| **Drop-in component**        | Zero-code setup         | [Component](/docs/sdk/component) |
-| **`[Track]` attribute**      | Declarative tracking    | [Attribute](/docs/sdk/attribute) |
-| **`Analytics.Track` (code)** | Full imperative control | [Methods](/docs/sdk/methods)     |
+| Style                        | Best for                | Reference                         |
+| ---------------------------- | ----------------------- | --------------------------------- |
+| **Drop-in components**       | Zero-code setup         | [Components](/docs/sdk/component) |
+| **`[Track]` attribute**      | Declarative tracking    | [Attribute](/docs/sdk/attribute)  |
+| **`Analytics.Track` (code)** | Full imperative control | [Methods](/docs/sdk/methods)      |
 
 ## Install
 
@@ -26,13 +26,13 @@ using Noot.Analytics;
 
 ## Get your key
 
-Events are scoped to a [Project](/docs/projects) by its **publishable key** (`pk_…`). Create one under [API Keys](/docs/api-keys), and use the publishable (`pk_`) key in the game — never the secret (`sk_`) key.
+Events are scoped to a [Project](/docs/application/workspace#projects) by its **publishable key** (`pk_…`). Create one under [API Keys](/docs/application/api-keys), and use the publishable (`pk_`) key in the game — never the secret (`sk_`) key.
 
 ## Set up with the drop-in component
 
 The fastest path needs no code:
 
-1. In the editor menu, choose **`Analytics → Add to scene`**. This creates an `Analytics` GameObject with an **Analytics** component attached.
+1. In the hierarchy panel's **Create** menu (the **+** button, or right-click), choose **Analytics Helper**. This drops a prefab with the **Analytics Session Helper** component attached.
 2. Select it and paste your `pk_…` key into the **ApiKey** field.
 3. Press play.
 
@@ -57,14 +57,14 @@ See [Methods](/docs/sdk/methods) for the full facade and options.
 <Callout type="info">
   A blank or missing API key disables the SDK — events are dropped and a warning
   is logged. Buffered events flush every 10 seconds by default, so allow a
-  moment before they appear on your [dashboard](/docs/dashboards).
+  moment before they appear on your [dashboard](/docs/application/dashboards).
 </Callout>
 
 ## Next steps
 
 <Cards>
-  <Card title="Drop-in component" href="/docs/sdk/component">
-    Every field on the AnalyticsComponent and the events it emits.
+  <Card title="Drop-in components" href="/docs/sdk/component">
+    The Session Helper and Movement Tracker components.
   </Card>
   <Card title="The [Track] attribute" href="/docs/sdk/attribute">
     Declarative tracking on methods and properties.
@@ -74,5 +74,8 @@ See [Methods](/docs/sdk/methods) for the full facade and options.
   </Card>
   <Card title="Default events" href="/docs/sdk/events">
     What the SDK emits for you, and how identity is anonymized.
+  </Card>
+  <Card title="In-editor heatmaps" href="/docs/sdk/heatmap">
+    Render fog and voxel heatmaps in the scene view via the Analytics dock.
   </Card>
 </Cards>

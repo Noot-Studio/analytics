@@ -4,7 +4,7 @@ description: How to authenticate and talk to the s&box Analytics Ingestion API.
 icon: Plug
 ---
 
-The **Ingestion API** is the public HTTP endpoint your game sends events to. It is the only API authenticated with an [API key](/docs/api-keys), and it does exactly one thing: accept batches of analytics events and queue them for processing.
+The **Ingestion API** is the public HTTP endpoint your game sends events to. It is the only API authenticated with an [API key](/docs/application/api-keys), and it does exactly one thing: accept batches of analytics events and queue them for processing.
 
 ## Base URL
 
@@ -26,9 +26,9 @@ Every request to the Ingestion API must include your **publishable key** in the 
 x-api-key: pk_your_publishable_key
 ```
 
-- The key identifies which [Project](/docs/projects) the events belong to — there is no separate project ID in the request.
+- The key identifies which [Project](/docs/application/workspace#projects) the events belong to — there is no separate project ID in the request.
 - A missing, unknown, or revoked key is rejected with [`401 invalid api key`](/docs/api/errors).
-- Use the **publishable** (`pk_`) key here, not the secret (`sk_`) key. See [API Keys](/docs/api-keys) for how to create one.
+- Use the **publishable** (`pk_`) key here, not the secret (`sk_`) key. See [API Keys](/docs/application/api-keys) for how to create one.
 
 ```bash
 curl -X POST https://ingest.sbox-analytics.com/v1/events \
@@ -45,12 +45,19 @@ Requests carry a JSON body and must set `Content-Type: application/json`. Respon
 
 | Method | Path         | Auth        | Description                         |
 | ------ | ------------ | ----------- | ----------------------------------- |
-| `POST` | `/v1/events` | `x-api-key` | Ingest a batch of analytics events. |
-| `GET`  | `/healthz`   | None        | Liveness check. Returns `ok`.       |
+| `POST` | `/v1/events`         | `x-api-key` | Ingest a batch of analytics events. |
+| `GET`  | `/v1/spatial/scenes` | `x-api-key` | List scenes with spatial data.      |
+| `GET`  | `/v1/spatial/voxels` | `x-api-key` | Aggregate spatial events into a voxel grid. |
+| `GET`  | `/healthz`           | None        | Liveness check. Returns `ok`.       |
+
+The spatial read endpoints authenticate with the **secret key** (`sk_…`), not the publishable key — see [Spatial events](/docs/api/spatial).
 
 <Cards>
   <Card title="Events reference" href="/docs/api/events">
     Full request and response reference for POST /v1/events.
+  </Card>
+  <Card title="Spatial events" href="/docs/api/spatial">
+    Emit 3D positions and query voxel heatmaps.
   </Card>
   <Card title="Errors & status codes" href="/docs/api/errors">
     Every status code the API can return and what it means.

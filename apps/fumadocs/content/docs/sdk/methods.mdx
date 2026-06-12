@@ -46,13 +46,15 @@ Analytics.Track( "player_death",
 
 Pass an `AnalyticsOptions` to `Init` for full configuration:
 
-| Option                 | Type      | Default                             | Purpose                                                             |
-| ---------------------- | --------- | ----------------------------------- | ------------------------------------------------------------------- |
-| `IngestUrl`            | `string`  | `https://ingest.sbox-analytics.com` | Override for self-host / local dev.                                 |
-| `TrackSessions`        | `bool`    | `true`                              | Emit `session_start` on `Init`, `session_end` on `Shutdown`.        |
-| `FlushIntervalSeconds` | `float`   | `10`                                | Background flush cadence in real seconds.                           |
-| `MaxBatchSize`         | `int`     | `50`                                | Events per send. Clamped to the ingest cap (500).                   |
-| `PlayerId`             | `string?` | `null`                              | Override the anonymous player id. Null = hash of the local SteamID. |
+| Option                 | Type                      | Default                             | Purpose                                                                                                                                        |
+| ---------------------- | ------------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `IngestUrl`            | `string`                  | `https://ingest.sbox-analytics.com` | Override for self-host / local dev.                                                                                                            |
+| `TrackSessions`        | `bool`                    | `true`                              | Emit `session_start` on `Init`, `session_end` on `Shutdown`.                                                                                   |
+| `FlushIntervalSeconds` | `float`                   | `10`                                | Background flush cadence in real seconds.                                                                                                      |
+| `MaxBatchSize`         | `int`                     | `50`                                | Events per send. Clamped to the ingest cap (500).                                                                                              |
+| `PlayerId`             | `string?`                 | `null`                              | Override the anonymous player id. Null = hash of the local SteamID.                                                                            |
+| `SceneProvider`        | `Func<string?>?`          | `null`                              | Default `scene` for events tracked without one. Called per event; null/empty = no scene. The component wires this to the active scene's title. |
+| `PositionResolver`     | `Func<string, Vector3?>?` | `null`                              | Default `position` for events tracked without one. Receives the event's anonymous player id; return null to leave the event non-spatial.       |
 
 ```csharp
 Analytics.Init( "pk_your_publishable_key", new AnalyticsOptions

@@ -1,0 +1,48 @@
+---
+title: Overview
+description: How the platform is organized — organizations, projects, keys — and what it does with your events.
+icon: Building2
+---
+
+The **application** is the dashboard side of s&box Analytics: where you manage your games, hold your keys, and read the data your [SDK](/docs/sdk) sends in. This section explains how it's organized and what each view shows.
+
+## How it fits together
+
+Your work nests in three layers, each scoped to the one above it:
+
+```text
+Organization
+└── Project (Development / Staging / Production)
+    └── API Key (pk_… / sk_…)
+        └── Events  →  POST /v1/events
+```
+
+<Cards>
+  <Card title="Organizations & projects" href="/docs/application/workspace">
+    The workspace that owns your games, team, and billing — and the projects
+    events are scoped to.
+  </Card>
+  <Card title="API keys" href="/docs/application/api-keys">
+    The publishable and secret credentials your game and tools use.
+  </Card>
+</Cards>
+
+## What you get once data flows in
+
+| Area                                                | What it gives you                                                                         |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| [Dashboards & alerts](/docs/application/dashboards) | Build custom overviews from saved metrics, and get notified when a metric crosses a line. |
+| [Built-in analytics](/docs/application/analytics)   | Ready-made Players, Sessions, and Maps views derived from the events you already send.    |
+
+Everything here is fed by events. If a view is empty, the answer is almost always "send the events that power it" — each page below names exactly which fields it reads.
+
+## Next steps
+
+<Cards>
+  <Card title="Set up a workspace" href="/docs/application/workspace">
+    Create an organization and a project for your game.
+  </Card>
+  <Card title="Built-in analytics" href="/docs/application/analytics">
+    Players, sessions, and maps — and the events behind them.
+  </Card>
+</Cards>
