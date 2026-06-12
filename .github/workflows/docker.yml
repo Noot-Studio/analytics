@@ -1,10 +1,11 @@
 name: Docker
 
 # Build all app images on every push and PR (validation); publish to GHCR only
-# on pushes to dev/master and version tags.
+# on pushes to dev/main and version tags. Version tags come from release.yml
+# (release-please), which produces the semver-tagged production images.
 on:
   push:
-    branches: [dev, master]
+    branches: [dev, main]
     tags: ["v*"]
   pull_request:
 
