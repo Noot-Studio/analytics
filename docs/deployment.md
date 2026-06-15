@@ -172,29 +172,49 @@ ClickHouse.
 
 #### Bundled vs. managed infrastructure
 
-- **Bundled** (`COMPOSE_PROFILES=infra`) — Postgres, Redis, Redpanda, and
-  ClickHouse run as containers with named volumes. Fully self-contained. The
-  stateful services are **not** published to the host; the apps reach them over
-  the Compose network.
-- **Managed** (`COMPOSE_PROFILES=` empty) — only the app images run. Point them
-  at your own services with the host/credential vars (connection strings are
-  assembled from these, so a stray `DATABASE_URL` in a local `.env` can't leak
-  localhost into a container):
+Each of the four data services has its own Compose profile, plus a shared
+`infra` umbrella. List the ones to **bundle** in `COMPOSE_PROFILES`; omit a
+service to run it **managed** (external) and point the app env at it.
 
-  ```bash
-  POSTGRES_HOST=db.example.com            # POSTGRES_DB_PORT defaults to 5432
-  POSTGRES_USER=sbox
-  POSTGRES_PASSWORD=…
-  POSTGRES_DB=sbox-analytics
-  REDIS_HOST=cache.example.com            # REDIS_DB_PORT defaults to 6379
-  KAFKA_HOST=broker.example.com           # KAFKA_DB_PORT defaults to 9092
-  CLICKHOUSE_HOST=clickhouse.example.com  # CLICKHOUSE_DB_PORT defaults to 8123
-  CLICKHOUSE_USER=…
-  CLICKHOUSE_PASSWORD=…
-  ```
+- **Bundled** — the service runs as a container with a named volume, unpublished;
+  the apps reach it over the Compose network.
+- **Managed** — the service is left out; set its `*_HOST` + credential vars so the
+  apps connect to your own instance. Connection strings are assembled from these
+  parts, so a stray `DATABASE_URL` in a local `.env` can't leak localhost into a
+  container.
 
-  In managed mode, apply `packages/db/clickhouse/init.sql` to your ClickHouse and
-  ensure the `events` topic exists (see [migrations](#database-migrations)).
+| Setup                         | `COMPOSE_PROFILES`          | Bundled                               | You provide                    |
+| ----------------------------- | --------------------------- | ------------------------------------- | ------------------------------ |
+| All bundled (default)         | `infra`                     | Postgres, Redis, Redpanda, ClickHouse | —                              |
+| Managed Postgres              | `redis,redpanda,clickhouse` | Redis, Redpanda, ClickHouse           | Postgres                       |
+| Managed Postgres + Redis      | `redpanda,clickhouse`       | Redpanda, ClickHouse                  | Postgres, Redis                |
+| Managed Postgres + ClickHouse | `redis`                     | Redis                                 | Postgres, Redpanda, ClickHouse |
+| Fully managed                 | _(empty)_                   | —                                     | all four                       |
+
+> **ClickHouse and Redpanda are a pipeline pair.** ClickHouse's Kafka-engine
+> table reads from the broker, so the bundled `clickhouse` service `depends_on`
+> `redpanda`. Bundle or manage the two together — bundling ClickHouse without
+> Redpanda fails fast at startup
+> (`depends on undefined service "redpanda"`).
+
+Set the host/credential vars for every service you manage:
+
+```bash
+POSTGRES_HOST=db.example.com            # POSTGRES_DB_PORT defaults to 5432
+POSTGRES_USER=sbox
+POSTGRES_PASSWORD=…
+POSTGRES_DB=sbox-analytics
+REDIS_HOST=cache.example.com            # REDIS_DB_PORT defaults to 6379
+KAFKA_HOST=broker.example.com           # KAFKA_DB_PORT defaults to 9092
+CLICKHOUSE_HOST=clickhouse.example.com  # CLICKHOUSE_DB_PORT defaults to 8123
+CLICKHOUSE_USER=…
+CLICKHOUSE_PASSWORD=…
+```
+
+When you manage ClickHouse, apply `packages/db/clickhouse/init.sql` to it and
+ensure the `events` topic exists on your broker (see
+[migrations](#database-migrations)). The bundled ClickHouse does both
+automatically on a fresh volume.
 
 ### A single app from a prebuilt image
 

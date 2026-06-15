@@ -1,8 +1,14 @@
 # s&box Analytics — self-host deployment.
 #
-# Two modes, switched with COMPOSE_PROFILES (set in .env):
-#   COMPOSE_PROFILES=infra   -> apps + bundled Postgres/Redis/Redpanda/ClickHouse (default)
+# Data services are selected with COMPOSE_PROFILES (set in .env):
+#   COMPOSE_PROFILES=infra   -> apps + ALL bundled data services (Postgres/Redis/Redpanda/ClickHouse)
 #   COMPOSE_PROFILES=        -> apps only; point *_HOST env at your managed services
+#
+# Each data service also has its own profile (postgres, redis, redpanda, clickhouse),
+# so you can bundle some and manage others — e.g. managed Postgres, the rest bundled:
+#   COMPOSE_PROFILES=redis,redpanda,clickhouse
+# ClickHouse and Redpanda are a pipeline pair (the Kafka-engine table reads the
+# broker) — bundle or manage the two together.
 #
 #   docker compose up -d --build
 #
@@ -114,7 +120,7 @@ services:
   # Not published to the host — apps reach them over the compose network.
   postgres:
     image: postgres:17-alpine
-    profiles: ["infra"]
+    profiles: ["infra", "postgres"]
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-sbox-analytics}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -130,7 +136,7 @@ services:
 
   redis:
     image: redis:8-alpine
-    profiles: ["infra"]
+    profiles: ["infra", "redis"]
     command: ["redis-server", "--save", "", "--appendonly", "no"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -141,7 +147,7 @@ services:
 
   redpanda:
     image: redpandadata/redpanda:v24.3.1
-    profiles: ["infra"]
+    profiles: ["infra", "redpanda"]
     command:
       - redpanda
       - start
@@ -163,7 +169,7 @@ services:
 
   redpanda-init:
     image: redpandadata/redpanda:v24.3.1
-    profiles: ["infra"]
+    profiles: ["infra", "redpanda"]
     depends_on:
       redpanda:
         condition: service_healthy
@@ -174,7 +180,7 @@ services:
 
   clickhouse:
     image: clickhouse/clickhouse-server:24.10-alpine
-    profiles: ["infra"]
+    profiles: ["infra", "clickhouse"]
     depends_on:
       redpanda:
         condition: service_healthy
