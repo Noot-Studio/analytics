@@ -1,0 +1,25 @@
+# Host-port overlay — publish the app services directly on the host.
+#
+# The base docker-compose.yaml publishes nothing: behind a reverse proxy
+# (Traefik, Caddy, nginx) or a PaaS like Dokploy, the apps are reached over the
+# Docker network, and a host publish would only risk a port collision. Layer
+# this file on when you run plain Docker with no proxy and want to hit the apps
+# at localhost:
+#
+#   docker compose -f docker-compose.yaml -f docker-compose.expose.yml up -d --build
+#
+# Override the host-side ports with SERVER_PORT / INGEST_PORT / WEB_PORT /
+# FUMADOCS_PORT (the container ports are fixed).
+services:
+  server:
+    ports:
+      - "${SERVER_PORT:-3000}:3000"
+  ingest:
+    ports:
+      - "${INGEST_PORT:-8080}:8080"
+  web:
+    ports:
+      - "${WEB_PORT:-3001}:80"
+  docs:
+    ports:
+      - "${FUMADOCS_PORT:-3002}:80"

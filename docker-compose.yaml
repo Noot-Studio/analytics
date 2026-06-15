@@ -10,11 +10,15 @@
 # ClickHouse and Redpanda are a pipeline pair (the Kafka-engine table reads the
 # broker) — bundle or manage the two together.
 #
-#   docker compose up -d --build
+# The app services do NOT publish host ports. Behind a reverse proxy (Traefik,
+# Caddy, nginx, or a PaaS like Dokploy) they're reached over the Docker network,
+# so a host publish is redundant — and would collide with whatever already owns
+# that port (e.g. the Dokploy dashboard on :3000). To hit the apps directly on
+# the host with no proxy, layer on the expose overlay:
+#   docker compose -f docker-compose.yaml -f docker-compose.expose.yml up -d --build
 #
 # Images are stateless and 12-factor (all config via env), so the same images
-# run on plain Docker, Swarm, Nomad, or Kubernetes. For >1 replica per app,
-# drop the published `ports` below and route traffic through your own load balancer.
+# run on plain Docker, Swarm, Nomad, or Kubernetes.
 
 name: sbox-analytics
 
@@ -70,8 +74,6 @@ services:
     environment:
       <<: *app-env
       SERVER_PORT: 3000
-    ports:
-      - "${SERVER_PORT:-3000}:3000"
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -85,8 +87,6 @@ services:
     environment:
       <<: *app-env
       INGEST_PORT: 8080
-    ports:
-      - "${INGEST_PORT:-8080}:8080"
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -100,8 +100,6 @@ services:
         VITE_SERVER_URL: ${VITE_SERVER_URL:-http://localhost:3000}
         VITE_DOCS_URL: ${VITE_DOCS_URL:-http://localhost:3002}
     image: ${IMAGE_PREFIX:-sbox-analytics}/web:${IMAGE_TAG:-latest}
-    ports:
-      - "${WEB_PORT:-3001}:80"
     restart: *restart
 
   docs:
@@ -112,8 +110,6 @@ services:
       # host networking lets the crawler reach it (standalone: --network=host).
       network: host
     image: ${IMAGE_PREFIX:-sbox-analytics}/docs:${IMAGE_TAG:-latest}
-    ports:
-      - "${FUMADOCS_PORT:-3002}:80"
     restart: *restart
 
   # ---- Bundled infrastructure (profile: infra) ----

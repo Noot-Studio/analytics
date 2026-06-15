@@ -155,12 +155,14 @@ ClickHouse.
 2. Build and start everything:
 
    ```bash
-   docker compose up -d --build
+   docker compose -f docker-compose.yaml -f docker-compose.expose.yml up -d --build
    ```
 
-   Dashboard → `http://localhost:3001`, API → `:3000`, ingest → `:8080`,
-   docs → `:3002`. The `migrate` job runs first and `server`/`ingest` wait for
-   it to finish.
+   The base compose publishes no host ports — behind a reverse proxy the apps are
+   reached over the Docker network. The `expose` overlay publishes them for direct
+   access: dashboard → `http://localhost:3001`, API → `:3000`, ingest → `:8080`,
+   docs → `:3002`. The `migrate` job runs first and `server`/`ingest` wait for it
+   to finish.
 
 > `VITE_*` values are compiled into the web bundle, so changing them needs a
 > `docker compose build web`. The other apps read config at runtime.
@@ -363,10 +365,10 @@ Or, from a checkout with Bun installed:
 
 `server`, `ingest`, `web`, and `docs` are stateless and scale horizontally.
 
-- **Docker** — push the images to a registry and pull them anywhere. To run more
-  than one replica per app, **remove the published `ports`** from
-  `docker-compose.yaml` (a host port binds one container) and route traffic
-  through your own load balancer / ingress.
+- **Docker** — push the images to a registry and pull them anywhere. The base
+  compose publishes no host ports, so the app services scale to multiple replicas
+  as-is — route traffic through your own load balancer / ingress (don't add the
+  `expose` overlay; a published host port binds only one container).
 - **Nixpacks** — scale replicas through the platform; it fronts them with its own
   router.
 
@@ -375,9 +377,10 @@ replicas behind the load balancer.
 
 ## Upgrades
 
-- **Docker Compose** — `git pull && docker compose up -d --build`. The `migrate`
-  job re-applies both stores. ClickHouse `init.sql` only runs on a **fresh**
-  volume; schema changes after first boot come from
+- **Docker Compose** — `git pull`, then re-run your `up` (append
+  `-f docker-compose.expose.yml` for direct host access). The `migrate` job
+  re-applies both stores. ClickHouse `init.sql` only runs on a **fresh** volume;
+  schema changes after first boot come from
   `packages/db/clickhouse/migrations/`, which `db:deploy` applies.
 - **Nixpacks** — redeploy each service, and run the `migrate` one-off whenever a
   release adds migrations.

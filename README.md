@@ -42,12 +42,14 @@ Quick start — create a `.env` next to `docker-compose.yaml` with your secrets 
 `COMPOSE_PROFILES=infra` (bundles Postgres/Redis/Redpanda/ClickHouse), then:
 
 ```bash
-docker compose up -d --build
+docker compose -f docker-compose.yaml -f docker-compose.expose.yml up -d --build
 ```
 
-Dashboard → `http://localhost:3001`, API → `:3000`, ingest → `:8080`, docs → `:3002`.
-A one-shot `migrate` job applies the Postgres and ClickHouse schemas before
-`server` and `ingest` start.
+The base compose publishes no host ports — behind a reverse proxy the apps are
+reached over the Docker network. The `expose` overlay publishes them for direct
+access: dashboard → `http://localhost:3001`, API → `:3000`, ingest → `:8080`,
+docs → `:3002`. A one-shot `migrate` job applies the Postgres and ClickHouse
+schemas before `server` and `ingest` start.
 
 **Full guide** — whole monorepo or individual apps, Docker **or** Nixpacks, the
 complete environment reference, migrations, scaling, and the production checklist:
