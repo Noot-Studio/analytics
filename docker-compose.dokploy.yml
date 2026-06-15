@@ -17,6 +17,12 @@
 # project `default` network; only the app services bridge to dokploy-network.
 # Listing both networks is required: once a service names `networks:`, it no
 # longer joins the default network implicitly.
+#
+# It also drops each app service's host port publish (`ports: !reset []`). On
+# Dokploy, Traefik routes to the containers over dokploy-network (internal
+# ports), so the base compose's host publishes are redundant — and the server's
+# "${SERVER_PORT:-3000}:3000" collides with the Dokploy dashboard, which already
+# owns host port 3000 (server would fail to bind and stay in Created).
 
 include:
   - docker-compose.yaml
@@ -31,9 +37,13 @@ services:
     networks: [dokploy-network, default]
   server:
     networks: [dokploy-network, default]
+    ports: !reset []
   ingest:
     networks: [dokploy-network, default]
+    ports: !reset []
   web:
     networks: [dokploy-network, default]
+    ports: !reset []
   docs:
     networks: [dokploy-network, default]
+    ports: !reset []
