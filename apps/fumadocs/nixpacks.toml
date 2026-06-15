@@ -1,0 +1,32 @@
+# Nixpacks build for apps/fumadocs (Public docs — fumadocs + TanStack Start).
+# The build context is the monorepo root; point your platform's config-file
+# setting at this path (Railway: "Config as code"; Dokploy/Coolify: Nixpacks
+# config path). Full guide: docs/deployment.md.
+
+# Bun-only toolchain, mirroring the oven/bun Docker image (no Node needed).
+[phases.setup]
+nixPkgs = ['bun']
+
+# Install the whole workspace. The db package's postinstall runs `prisma
+# generate`; a placeholder DATABASE_URL satisfies it (docs needs no DB) and is
+# scoped to this command. No --linker=hoisted: the prerendered output is fully
+# static, so no node_modules is needed at runtime.
+[phases.install]
+cmds = [
+  'DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder bun install --frozen-lockfile',
+]
+
+# Prerender the site to static HTML → apps/fumadocs/dist/client. The prerender
+# boots a loopback server and crawls it; this runs inside the single build
+# container, so loopback works without extra flags. (The Docker image needs
+# --network=host only because buildx sandboxes the build network.) If your
+# platform's builder blocks loopback, fall back to apps/fumadocs/Dockerfile.
+[phases.build]
+dependsOn = ['install']
+cmds = ['bunx turbo build --filter=fumadocs']
+cacheDirectories = ['.turbo']
+
+# Serve the prerendered site (real .html files — no SPA rewrite needed). `serve`
+# is fetched on first boot via bunx; bind the platform port if injected, else 80.
+[start]
+cmd = 'bunx serve@14 apps/fumadocs/dist/client -l ${PORT:-80}'

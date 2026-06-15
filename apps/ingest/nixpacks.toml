@@ -1,0 +1,31 @@
+# Nixpacks build for apps/ingest (Event ingestion API — Hono + Bun.serve).
+# The build context is the monorepo root; point your platform's config-file
+# setting at this path (Railway: "Config as code"; Dokploy/Coolify: Nixpacks
+# config path). Full guide: docs/deployment.md.
+
+# Bun-only toolchain, mirroring the oven/bun Docker image (no Node needed).
+[phases.setup]
+nixPkgs = ['bun']
+
+# Install the whole workspace. The db package's postinstall runs `prisma
+# generate` (used by API-key lookup); a placeholder DATABASE_URL satisfies it
+# and is scoped to this command so it never reaches the runtime environment.
+#
+# --linker=hoisted flattens every transitive dependency into one node_modules.
+# tsdown bundles the @sbox-analytics/* packages into dist but leaves third-party
+# deps (Prisma client, kafkajs, …) external, and the repo's default isolated
+# linker would hide those transitives from the bundle at runtime.
+[phases.install]
+cmds = [
+  'DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder bun install --frozen-lockfile --linker=hoisted',
+]
+
+# Bundle just this app's closure with Turbo → apps/ingest/dist/index.mjs.
+[phases.build]
+dependsOn = ['install']
+cmds = ['bunx turbo build --filter=ingest']
+cacheDirectories = ['.turbo']
+
+# Bind the platform port if one is injected ($PORT), else the app default (8080).
+[start]
+cmd = 'cd apps/ingest && INGEST_PORT="${PORT:-8080}" bun run dist/index.mjs'
