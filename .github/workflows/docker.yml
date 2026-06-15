@@ -1,10 +1,11 @@
 name: Docker
 
 # Build all app images on every push and PR (validation); publish to GHCR only
-# on pushes to dev/master and version tags.
+# on pushes to dev/main and version tags. Version tags come from release.yml
+# (release-please), which produces the semver-tagged production images.
 on:
   push:
-    branches: [dev, master]
+    branches: [dev, main]
     tags: ["v*"]
   pull_request:
 
@@ -33,6 +34,11 @@ jobs:
         include:
           - app: server
             dockerfile: apps/server/Dockerfile
+          # One-shot migration runner referenced by docker-compose.yaml
+          # (prisma migrate deploy + ClickHouse migrations).
+          - app: migrate
+            dockerfile: apps/server/Dockerfile
+            target: build
           - app: ingest
             dockerfile: apps/ingest/Dockerfile
           - app: web
@@ -70,6 +76,7 @@ jobs:
         with:
           context: .
           file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
           build-args: ${{ matrix.build-args }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}

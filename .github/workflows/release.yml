@@ -1,0 +1,60 @@
+name: Release
+
+# Release automation via release-please. Every merge to main updates a
+# rolling "release PR" that accumulates conventional commits into a
+# CHANGELOG and version bump. Merging that PR tags vX.Y.Z and publishes a
+# GitHub Release (source archives attached automatically). The v* tag then
+# triggers docker.yml, which builds and pushes semver-tagged GHCR images.
+#
+# workflow_dispatch allows manual / SDK-coordinated runs (the SDK lives in
+# Noot-Studio/analytics-library and can trigger this via the GitHub API).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  # Tell the SDK repo a platform release happened so its release can be
+  # coordinated. Requires a RELEASE_DISPATCH_TOKEN secret (fine-grained PAT
+  # with contents:write on Noot-Studio/analytics-library). Skips quietly if
+  # the secret is not configured.
+  notify-sdk:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    env:
+      DISPATCH_TOKEN: ${{ secrets.RELEASE_DISPATCH_TOKEN }}
+    steps:
+      - name: Dispatch to analytics-library
+        if: env.DISPATCH_TOKEN != ''
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ env.DISPATCH_TOKEN }}
+          repository: Noot-Studio/analytics-library
+          event-type: analytics-release
+          client-payload: |
+            {
+              "tag": "${{ needs.release-please.outputs.tag_name }}",
+              "version": "${{ needs.release-please.outputs.version }}"
+            }

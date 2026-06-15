@@ -37,8 +37,10 @@ x-app-env: &app-env
 x-restart: &restart unless-stopped
 
 services:
-  # ---- One-shot: push the Prisma schema to Postgres, then exit. ----
-  # Runs in both modes. Retries until the database accepts connections.
+  # ---- One-shot: apply Postgres + ClickHouse migrations, then exit. ----
+  # Runs in both modes. Retries until the databases accept connections.
+  # Prisma applies the committed history in prisma/migrations; ClickHouse
+  # migrations are idempotent SQL applied in order by clickhouse/migrate.ts.
   migrate:
     build:
       context: .
@@ -50,7 +52,7 @@ services:
       [
         "sh",
         "-c",
-        "cd packages/db && until bunx prisma db push; do echo 'waiting for postgres...'; sleep 3; done",
+        "cd packages/db && until bun run db:deploy; do echo 'waiting for databases...'; sleep 3; done",
       ]
     restart: "no"
 
