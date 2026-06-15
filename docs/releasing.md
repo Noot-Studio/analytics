@@ -15,6 +15,8 @@ Releases are automated with [release-please](https://github.com/googleapis/relea
 
 No manual tagging, no manual changelog edits — everything is derived from commit messages.
 
+To **deploy** those images (or build from source, with Docker or Nixpacks), see [deployment.md](./deployment.md).
+
 ## One-time repository setup
 
 - Create the `main` branch (e.g. `git push origin dev:main`) — release automation only runs there.

@@ -1,0 +1,35 @@
+# Nixpacks build for apps/web (Dashboard SPA — React + TanStack Router, Vite).
+# The build context is the monorepo root; point your platform's config-file
+# setting at this path (Railway: "Config as code"; Dokploy/Coolify: Nixpacks
+# config path). Full guide: docs/deployment.md.
+#
+# VITE_SERVER_URL and VITE_DOCS_URL are read by Vite and baked into the bundle
+# during the build phase — set them as build-time env on your platform BEFORE
+# building. They are validated as URLs, so the build fails fast if unset. A
+# nicer production option for static files is the nginx Docker image (see
+# apps/web/Dockerfile); this config is the platform-native alternative.
+
+# Bun-only toolchain, mirroring the oven/bun Docker image (no Node needed).
+[phases.setup]
+nixPkgs = ['bun']
+
+# Install the whole workspace. The db package's postinstall runs `prisma
+# generate`; a placeholder DATABASE_URL satisfies it (the browser bundle never
+# touches the DB) and is scoped to this command. No --linker=hoisted: the Vite
+# output is fully static, so no node_modules is needed at runtime.
+[phases.install]
+cmds = [
+  'DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder bun install --frozen-lockfile',
+]
+
+# Produce the static bundle → apps/web/dist.
+[phases.build]
+dependsOn = ['install']
+cmds = ['bunx turbo build --filter=web']
+cacheDirectories = ['.turbo']
+
+# Serve the static SPA. -s rewrites unknown paths to index.html for client-side
+# routing (the nginx image does the same with try_files). `serve` is fetched on
+# first boot via bunx; bind the platform port if injected, else 80.
+[start]
+cmd = 'bunx serve@14 apps/web/dist -s -l ${PORT:-80}'
