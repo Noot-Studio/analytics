@@ -1,0 +1,39 @@
+# Dokploy deployment overlay.
+#
+# Adds the `dokploy-network` wiring so the app services — and the one-shot
+# `migrate` job — can reach a Dokploy-managed Postgres, which lives on the
+# external `dokploy-network`. Without this, `migrate` joins only the project's
+# default bridge, `prisma migrate deploy` fails with P1001, the retry loop spins
+# forever, and `server`/`ingest` stay stuck on `service_completed_successfully`.
+#
+# The base docker-compose.yaml stays portable — plain `docker compose up` does
+# not need this network. Use this overlay only on Dokploy (or wherever the apps
+# must reach an external managed database). Point your Dokploy Compose service's
+# file path at this file:
+#
+#   docker-compose.dokploy.yml
+#
+# Bundled infra (clickhouse/redpanda/redis under COMPOSE_PROFILES) stays on the
+# project `default` network; only the app services bridge to dokploy-network.
+# Listing both networks is required: once a service names `networks:`, it no
+# longer joins the default network implicitly.
+
+include:
+  - docker-compose.yaml
+
+networks:
+  dokploy-network:
+    external: true
+  default:
+
+services:
+  migrate:
+    networks: [dokploy-network, default]
+  server:
+    networks: [dokploy-network, default]
+  ingest:
+    networks: [dokploy-network, default]
+  web:
+    networks: [dokploy-network, default]
+  docs:
+    networks: [dokploy-network, default]

@@ -216,6 +216,16 @@ ensure the `events` topic exists on your broker (see
 [migrations](#database-migrations)). The bundled ClickHouse does both
 automatically on a fresh volume.
 
+**Managed database on the same host (Dokploy, etc.).** When the managed service
+runs as a sibling container behind an orchestrator, the app services must share
+its Docker network to resolve `*_HOST`. The base compose keeps its own project
+network, so use the **`docker-compose.dokploy.yml`** overlay: it leaves the base
+portable and attaches `server`, `ingest`, `web`, `docs`, and the one-shot
+`migrate` job to the external `dokploy-network` where a Dokploy-managed Postgres
+lives. Point your Dokploy Compose service's file path at it. Without it, `migrate`
+can't reach Postgres, loops on `P1001`, and `server`/`ingest` never leave
+`Created`.
+
 ### A single app from a prebuilt image
 
 CI publishes every app to GHCR, so you can pull and run one without a build:
