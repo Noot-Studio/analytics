@@ -17,7 +17,12 @@ MIGRATIONS_DIR="packages/db/clickhouse/migrations"
 IMAGE="clickhouse/clickhouse-server:24.10-alpine"
 CONTAINER="ch-migration-check-$$"
 
-docker run -d --name "$CONTAINER" -e CLICKHOUSE_DB=analytics "$IMAGE" >/dev/null
+# NB: do not set CLICKHOUSE_DB — it makes the image's entrypoint spin up a
+# throwaway server to create the database, then kill it and restart the real
+# one. The readiness probe below can connect to that throwaway server moments
+# before it's torn down, so init.sql races into a dropped connection
+# (ATTEMPT_TO_READ_AFTER_EOF). Start the server once and create the DB by hand.
+docker run -d --name "$CONTAINER" "$IMAGE" >/dev/null
 trap 'docker rm -f "$CONTAINER" >/dev/null' EXIT
 
 for _ in $(seq 1 60); do
@@ -26,6 +31,8 @@ for _ in $(seq 1 60); do
 done
 
 ch() { docker exec -i "$CONTAINER" clickhouse-client -n "$@"; }
+
+ch -q "CREATE DATABASE IF NOT EXISTS analytics"
 
 dump_schema() {
   ch -q "SELECT table, name, type, default_expression
