@@ -8,7 +8,7 @@ import {
 } from "@sbox-analytics/ui/components/reui/stepper";
 import { useNavigate } from "@tanstack/react-router";
 import { BarChart3, CheckIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { authClient } from "@/lib/auth-client";
@@ -26,15 +26,8 @@ const STEP_INDEX: Record<OnboardingStep, number> = {
 
 export const OnboardingView = () => {
   const navigate = useNavigate();
-  const { data: orgs, isPending } = authClient.useListOrganizations();
   const [isCreating, setIsCreating] = useState(false);
   const [step, setStep] = useState<OnboardingStep>("org");
-
-  useEffect(() => {
-    if (step === "org" && !isPending && orgs && orgs.length > 0) {
-      navigate({ to: "/dashboard" });
-    }
-  }, [isPending, orgs, navigate, step]);
 
   const handleCreateOrg = async (values: { name: string; slug: string }) => {
     setIsCreating(true);
