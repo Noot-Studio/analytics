@@ -8,7 +8,7 @@ const SiteFooter = () => (
         <Logo className="size-6" />
         <span className="font-medium text-foreground">Noot Analytics</span>
         <span className="hidden sm:inline">
-          — open-source analytics for s&box games.
+          open-source analytics for s&box games.
         </span>
       </div>
       <nav className="flex items-center gap-6">

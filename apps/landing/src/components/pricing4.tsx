@@ -58,7 +58,7 @@ const defaultProps: Pricing4Props = {
       buttonText: "Start free",
       buttonUrl: APP_URL,
       features: [
-        "Fully managed — zero ops",
+        "Fully managed, zero ops",
         "500K events per month, free",
         "Real-time dashboard and alerts",
         "Discord and Steam auth built in",

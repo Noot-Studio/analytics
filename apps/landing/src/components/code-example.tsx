@@ -9,11 +9,11 @@ public sealed class Player : Component
 {
     protected override void OnStart()
     {
-        // One call, once — every event flows through one sender.
+        // One call, once. Every event flows through one sender.
         Analytics.Init( "pk_live_xxxxxxxx" );
     }
 
-    // Tag a hook you already have — it fires on every call,
+    // Tag a hook you already have. It fires on every call,
     // capturing the method arguments as event properties.
     [Track( "level_complete", Params = true )]
     public void CompleteLevel( string map, int seconds ) { }

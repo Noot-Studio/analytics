@@ -44,7 +44,7 @@ const defaultProps: HeroBasicProps = {
     },
   },
   description:
-    "Track any in-game event in real time, then explore it through dashboards and in-editor heatmaps. Self-host it, or run free in our cloud.",
+    "Track any in-game event in real time, then explore it through dashboards and in-editor.",
   heading: "Open-source analytics for your s&box game",
   image: {
     alt: "Noot Analytics dashboard showing the project overview with the events-per-day chart and event breakdown",

@@ -20,11 +20,11 @@ export const Route = createRootRoute({
     ],
     meta: [
       {
-        title: "Noot Analytics — Open-source analytics for s&box",
+        title: "Noot Analytics: Open-source analytics for s&box",
       },
       {
         content:
-          "Open-source, real-time analytics for s&box games. See why players die, where maps fail, and how economies flow — self-host it or run it free in the cloud.",
+          "Open-source, real-time analytics for s&box games. See why players die, where maps fail, and how economies flow. Self-host it or run it free in the cloud.",
         name: "description",
       },
     ],
