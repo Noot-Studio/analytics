@@ -13,6 +13,7 @@ export default defineConfig({
     ".codegraph",
     // Vendored shadcn/ui design-system components — kept close to upstream.
     "packages/ui",
+    "apps/landing/src/components/ui",
   ],
   overrides: [
     {

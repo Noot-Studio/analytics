@@ -1,0 +1,23 @@
+# Dependencies
+/node_modules
+/.pnp
+.pnp.*
+
+# Build outputs
+/dist/
+.output
+.tanstack/
+.nitro/
+
+# Environment & local files
+.env*
+!.env.example
+.DS_Store
+*.pem
+*.local
+
+# Logs
+*.log*
+
+# TypeScript
+*.tsbuildinfo

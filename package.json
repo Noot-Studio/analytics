@@ -20,6 +20,7 @@
       "next-themes": "^0.4.6",
       "react": "^19.2.6",
       "react-dom": "^19.2.6",
+      "recharts": "^3.8.1",
       "@orpc/client": "^1.13.14",
       "@types/react": "^19.2.15",
       "@types/react-dom": "^19.2.3"
@@ -29,8 +30,10 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
+    "start": "turbo start",
     "check-types": "turbo check-types",
     "dev:web": "turbo -F web dev",
+    "dev:landing": "turbo -F landing dev",
     "dev:server": "turbo -F server dev",
     "dev:ingest": "turbo -F ingest dev",
     "db:push": "turbo -F @sbox-analytics/db db:push",

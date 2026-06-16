@@ -9,7 +9,7 @@
 #   docker compose -f docker-compose.yaml -f docker-compose.expose.yml up -d --build
 #
 # Override the host-side ports with SERVER_PORT / INGEST_PORT / WEB_PORT /
-# FUMADOCS_PORT (the container ports are fixed).
+# FUMADOCS_PORT / LANDING_PORT (the container ports are fixed).
 services:
   server:
     ports:
@@ -23,3 +23,7 @@ services:
   docs:
     ports:
       - "${FUMADOCS_PORT:-3002}:80"
+  # Only binds when the `landing` profile is active (off by default).
+  landing:
+    ports:
+      - "${LANDING_PORT:-3003}:80"

@@ -1,0 +1,12 @@
+@import "@sbox-analytics/ui/globals.css";
+
+/* Center every `container` and give it horizontal breathing room — Tailwind v4's
+   default container has neither, leaving sections flush to the viewport edges. */
+@utility container {
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+
+  @media (width >= 1024px) {
+    padding-inline: 2rem;
+  }
+}

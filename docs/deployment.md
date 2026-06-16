@@ -120,6 +120,11 @@ The repo-root `docker-compose.yaml` runs all four apps, a one-shot `migrate`
 job, and — under the `infra` profile — bundled Postgres, Redis, Redpanda, and
 ClickHouse.
 
+> Noot's marketing **landing page** is not part of a self-host. It sits behind an
+> opt-in `landing` profile, off by default — a plain `up` never builds or runs it.
+> Add `landing` to `COMPOSE_PROFILES` (e.g. `infra,landing`) only if you want to
+> serve it; the `expose` overlay then publishes it on `LANDING_PORT` (`:3003`).
+
 1. Create a `.env` next to `docker-compose.yaml`. Compose reads it for variable
    interpolation **and** for `COMPOSE_PROFILES`. Minimum:
 
