@@ -47,10 +47,10 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
     ],
     meta: [
       {
-        title: "sbox-analytics",
+        title: "Noot Analytics",
       },
       {
-        content: "sbox-analytics is a web application",
+        content: "Noot Analytics is a web application",
         name: "description",
       },
     ],

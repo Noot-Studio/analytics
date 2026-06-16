@@ -106,7 +106,7 @@ export const LoginForm = ({
               <BarChart3 className="size-6" aria-hidden="true" />
             </div>
             <h1 className="text-xl font-bold">
-              {isSignUp ? "Create your account" : "Welcome to sbox analytics"}
+              {isSignUp ? "Create your account" : "Welcome to Noot Analytics"}
             </h1>
             <FieldDescription>
               {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
