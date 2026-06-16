@@ -12,13 +12,13 @@ import { Input } from "@sbox-analytics/ui/components/input";
 import { cn } from "@sbox-analytics/ui/lib/utils";
 import { useForm } from "@tanstack/react-form";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { BarChart3 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import z from "zod";
 
 import { authClient } from "@/lib/auth-client";
 
+import { LogoMark } from "../atoms/logo-mark";
 import { SteamIcon } from "../atoms/steam-icon";
 
 type Mode = "signin" | "signup";
@@ -102,9 +102,7 @@ export const LoginForm = ({
       >
         <FieldGroup>
           <div className="flex flex-col items-center gap-2 text-center">
-            <div className="flex size-8 items-center justify-center rounded-md">
-              <BarChart3 className="size-6" aria-hidden="true" />
-            </div>
+            <LogoMark className="size-8" />
             <h1 className="text-xl font-bold">
               {isSignUp ? "Create your account" : "Welcome to Noot Analytics"}
             </h1>
