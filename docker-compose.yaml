@@ -10,6 +10,10 @@
 # ClickHouse and Redpanda are a pipeline pair (the Kafka-engine table reads the
 # broker) — bundle or manage the two together.
 #
+# The `landing` profile is Noot's marketing site — NOT part of a self-host. It is
+# opt-in: omitted from the default profiles, it never builds or runs. Add it only
+# if you actually want to serve the landing page:  COMPOSE_PROFILES=infra,landing
+#
 # The app services do NOT publish host ports. Behind a reverse proxy (Traefik,
 # Caddy, nginx, or a PaaS like Dokploy) they're reached over the Docker network,
 # so a host publish is redundant — and would collide with whatever already owns
@@ -110,6 +114,22 @@ services:
       # host networking lets the crawler reach it (standalone: --network=host).
       network: host
     image: ${IMAGE_PREFIX:-sbox-analytics}/docs:${IMAGE_TAG:-latest}
+    restart: *restart
+
+  # ---- Marketing landing page (profile: landing) ----
+  # Noot's own marketing site — NOT part of a self-host. Opt-in only: it stays off
+  # unless `landing` is in COMPOSE_PROFILES, so a default `up` never builds or runs it.
+  landing:
+    build:
+      context: .
+      dockerfile: apps/landing/Dockerfile
+      args:
+        VITE_APP_URL: ${VITE_APP_URL:-http://localhost:3001}
+        VITE_GITHUB_URL: ${VITE_GITHUB_URL:-https://github.com/Noot-Studio/analytics}
+        VITE_DOCS_URL: ${VITE_DOCS_URL:-http://localhost:3002}
+        VITE_DISCORD_URL: ${VITE_DISCORD_URL:-}
+    image: ${IMAGE_PREFIX:-sbox-analytics}/landing:${IMAGE_TAG:-latest}
+    profiles: ["landing"]
     restart: *restart
 
   # ---- Bundled infrastructure (profile: infra) ----

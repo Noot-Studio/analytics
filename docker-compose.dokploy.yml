@@ -41,3 +41,6 @@ services:
     networks: [dokploy-network, default]
   docs:
     networks: [dokploy-network, default]
+  # Opt-in (profile: landing) — only present when you bundle the marketing site.
+  landing:
+    networks: [dokploy-network, default]
