@@ -159,3 +159,121 @@ describe("GET /scenes", () => {
     ]);
   });
 });
+
+const HEATMAP_QS =
+  "scene=dm_arena&kind=dwell&cellSize=128&from=2026-06-01&to=2026-06-11";
+
+describe("GET /heatmap", () => {
+  it("rejects a missing/invalid api key with 401", async () => {
+    const res = await app(fakeCh([])).request(`/heatmap?${HEATMAP_QS}`);
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects invalid params with 400 (missing kind, missing cellSize, voxelSize<cellSize)", async () => {
+    const cases = [
+      "scene=dm_arena&cellSize=128&from=2026-06-01&to=2026-06-11",
+      "scene=dm_arena&kind=dwell&from=2026-06-01&to=2026-06-11",
+      `${HEATMAP_QS}&voxelSize=64`,
+    ];
+    for (const qs of cases) {
+      const res = await app(fakeCh([])).request(`/heatmap?${qs}`, {
+        headers: { "x-api-key": VALID_KEY },
+      });
+      expect(res.status).toBe(400);
+    }
+  });
+
+  it("wires params into the rollup query and maps cells to centers", async () => {
+    const captured: Captured[] = [];
+    const rows = [{ gx: 0, gy: 1, gz: 2, hits: 3, value: 500 }];
+    const res = await app(fakeCh(rows, captured)).request(
+      `/heatmap?${HEATMAP_QS}`,
+      { headers: { "x-api-key": VALID_KEY } }
+    );
+    expect(res.status).toBe(200);
+    // biome-ignore lint/style/noNonNullAssertion: length asserted by the call succeeding
+    // oxlint-disable-next-line no-non-null-assertion
+    const { sql, params } = captured[0]!;
+    expect(sql).toContain("FROM analytics.spatial_cells");
+    expect(params.projectId).toBe(PROJECT_ID);
+    expect(params.kind).toBe("dwell");
+    expect(params.cellSize).toBe(128);
+
+    const body = (await res.json()) as {
+      kind: string;
+      voxelSize: number;
+      cells: { x: number; y: number; z: number; value: number; hits: number }[];
+    };
+    expect(body.kind).toBe("dwell");
+    expect(body.voxelSize).toBe(128);
+    expect(body.cells[0]).toEqual({
+      hits: 3,
+      value: 500,
+      x: 64,
+      y: 192,
+      z: 320,
+    });
+  });
+});
+
+const TRAJ_QS = "scene=dm_arena&playerId=anon_1&from=2026-06-01&to=2026-06-11";
+
+describe("GET /trajectory", () => {
+  it("rejects a missing/invalid api key with 401", async () => {
+    const res = await app(fakeCh([])).request(`/trajectory?${TRAJ_QS}`);
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects missing playerId with 400", async () => {
+    const res = await app(fakeCh([])).request(
+      "/trajectory?scene=dm_arena&from=2026-06-01&to=2026-06-11",
+      { headers: { "x-api-key": VALID_KEY } }
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("returns ordered points for the player", async () => {
+    const captured: Captured[] = [];
+    const rows = [
+      {
+        pos_x: 1,
+        pos_y: 2,
+        pos_z: 3,
+        seq: 0,
+        session_id: "sess_1",
+        timestamp: "2026-06-01 08:00:00.000",
+      },
+    ];
+    const res = await app(fakeCh(rows, captured)).request(
+      `/trajectory?${TRAJ_QS}`,
+      { headers: { "x-api-key": VALID_KEY } }
+    );
+    expect(res.status).toBe(200);
+    // biome-ignore lint/style/noNonNullAssertion: length asserted by the call succeeding
+    // oxlint-disable-next-line no-non-null-assertion
+    const { sql, params } = captured[0]!;
+    expect(sql).toContain("FROM analytics.trajectory_points");
+    expect(params.playerId).toBe("anon_1");
+
+    const body = (await res.json()) as {
+      playerId: string;
+      points: {
+        sessionId: string;
+        seq: number;
+        t: string;
+        x: number;
+        y: number;
+        z: number;
+      }[];
+    };
+    expect(body.playerId).toBe("anon_1");
+    expect(body.points[0]).toEqual({
+      seq: 0,
+      sessionId: "sess_1",
+      t: "2026-06-01 08:00:00.000",
+      x: 1,
+      y: 2,
+      z: 3,
+    });
+  });
+});

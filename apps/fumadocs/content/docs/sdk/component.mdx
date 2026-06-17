@@ -4,10 +4,11 @@ description: The Analytics Session Helper and Movement Tracker — zero-code com
 icon: MousePointerClick
 ---
 
-The SDK ships two optional components:
+The SDK ships several optional components:
 
 - **`AnalyticsComponent`** ("Analytics Session Helper") — the zero-code entry point. It initializes the SDK core from its inspector fields and emits the default events that need a scene or network presence.
-- **`AnalyticsMovementComponent`** ("Analytics Movement Tracker") — attach to a pawn to record its position as throttled spatial events, feeding [movement heatmaps](/docs/sdk/heatmap).
+- **`AnalyticsMovementComponent`** ("Analytics Movement Tracker") — attach to a pawn to record its position as throttled, one-per-sample spatial events, feeding [voxel heatmaps](/docs/sdk/heatmap).
+- **`AnalyticsDwellComponent`**, **`AnalyticsHeatmapComponent`**, **`AnalyticsTrajectoryComponent`** — the [aggregating spatial trackers](#aggregating-spatial-trackers). These accumulate on the client and flush a compact batch per window, so high-frequency position tracking stays affordable.
 
 ## Analytics Session Helper
 
@@ -70,6 +71,49 @@ Traffic is bounded by design: samples are throttled, stationary entities emit no
 | `HostOnly`              | `bool`   | `true`            | Sample on the host only — one emitter per entity in multiplayer instead of one per connected client. |
 
 Samples are attributed to the entity's network owner when it has one, so per-player movement lines up with the rest of that player's events. Unowned (world/NPC) entities fall back to the session's default id.
+
+## Aggregating spatial trackers
+
+The Movement Tracker emits **one event per sample**. At a useful sample rate that is thousands of events per player per minute — fine for occasional points (deaths, pickups), unaffordable for continuous tracking. The aggregating trackers fix this by **decoupling the event rate from the sample rate**: they sample fast but accumulate on the client and flush **one batch event per window**. A player standing still for five minutes becomes a single cell instead of hundreds of samples.
+
+<Callout type="warn">
+  These trackers are still **event-expensive** relative to ordinary events —
+  they sample continuously. Each component shows a live `EstimatedEvents`
+  estimate in the inspector and logs a warning on enable. Trajectories are the
+  most expensive (they can't be aggregated); prefer Dwell or Heatmap unless you
+  need exact paths.
+</Callout>
+
+### Dwell & Heatmap (cell aggregation)
+
+Both quantize world position to a grid cell (`floor(pos / CellSize)`) and accumulate a per-cell metric, flushing a `spatial_cells` batch event. **Dwell** sums time-in-cell (milliseconds); **Heatmap** counts cell entries (visit density). The metric is tagged with a `kind` — `dwell` or `visits` — and the server sums it across windows and players. See [Spatial events](/docs/api/spatial#pre-aggregated-heatmaps).
+
+| Field                  | Type    | Default | Purpose                                                                       |
+| ---------------------- | ------- | ------- | ----------------------------------------------------------------------------- |
+| `CellSize`             | `float` | `128`   | Edge length (units) of one cell. Bigger = coarser, fewer cells, fewer events. |
+| `FlushIntervalSeconds` | `float` | `15`    | Seconds per window before flushing accumulated cells. Floored at 1 s.         |
+| `MaxCellsPerFlush`     | `int`   | `256`   | Force an early flush once this many distinct cells are dirty, bounding size.  |
+| `HostOnly`             | `bool`  | `true`  | Sample on the host only — one emitter per entity in multiplayer.              |
+
+<Callout type="info">
+  The capture grid is fixed at `CellSize`. The dashboard re-bins **coarser** (by
+  summing whole multiples) but never finer — pick a `CellSize` at or below the
+  finest resolution you'll want to view.
+</Callout>
+
+### Trajectory (per-player paths)
+
+`AnalyticsTrajectoryComponent` records an entity's ordered path and flushes a `trajectory` batch event. It samples on an interval with a move-distance gate, then simplifies the buffered points with the **Ramer–Douglas–Peucker** algorithm before sending — dropping collinear points while keeping exact corner positions, so paths lose redundant points but no spatial precision.
+
+| Field                   | Type    | Default | Purpose                                                                       |
+| ----------------------- | ------- | ------- | ----------------------------------------------------------------------------- |
+| `SampleIntervalSeconds` | `float` | `0.5`   | Seconds between path samples. Floored at 0.1 s.                               |
+| `MinMoveDistance`       | `float` | `32`    | Minimum distance (units) moved since the last sample.                         |
+| `FlushIntervalSeconds`  | `float` | `10`    | Seconds per window before simplifying and flushing.                           |
+| `Epsilon`               | `float` | `32`    | RDP tolerance (units). Larger = more aggressive simplification, fewer points. |
+| `HostOnly`              | `bool`  | `true`  | Sample on the host only.                                                      |
+
+Trajectories keep player identity and order, so they **cannot be aggregated** like cells — they stay one row per kept point. Use them for replaying individual journeys; use Dwell/Heatmap for density across all players.
 
 <Cards>
   <Card title="In-editor heatmaps" href="/docs/sdk/heatmap">

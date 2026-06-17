@@ -67,3 +67,55 @@ export const PERFORMANCE_EVENT_TYPES = [
 ] as const;
 
 export type PerformanceEventType = (typeof PERFORMANCE_EVENT_TYPES)[number];
+
+/**
+ * Spatial-aggregation event names. Unlike the other event sets these are NOT
+ * stored in `analytics.events`: ingest detects them, fans each batch out into
+ * per-cell / per-point rows, and routes those to dedicated topics
+ * (`spatial_cells`, `trajectory`). See docs/adr/0003.
+ *
+ * `spatial_cells` carries `{ kind, cell_size, cells: [[gx,gy,gz,value],…] }`
+ * where `kind` is a free metric label (`dwell`, `visits`, or any game-defined
+ * scalar — the rollup sums whatever the SDK accumulates). `trajectory` carries
+ * `{ points: [[x,y,z,t_ms],…] }`.
+ */
+export const SPATIAL_EVENT_TYPES = ["spatial_cells", "trajectory"] as const;
+
+export type SpatialEventType = (typeof SPATIAL_EVENT_TYPES)[number];
+
+/**
+ * One pre-aggregated cell, as produced to the `spatial_cells` topic
+ * (JSONEachRow) and summed by the `analytics.spatial_cells` SummingMergeTree.
+ * `kind` is an open metric label set by the SDK (`dwell` = milliseconds,
+ * `visits` = visit count, or any game-defined scalar); `hits` counts
+ * contributing flush rows so an average is recoverable.
+ */
+export interface SpatialCellRow {
+  project_id: string;
+  scene: string;
+  kind: string;
+  cell_size: number;
+  gx: number;
+  gy: number;
+  gz: number;
+  day: string;
+  value: number;
+  hits: number;
+}
+
+/**
+ * One ordered trajectory point, as produced to the `trajectory` topic and
+ * stored in `analytics.trajectory_points`. `seq` orders points that share a
+ * millisecond timestamp within a player's session.
+ */
+export interface TrajectoryPointRow {
+  project_id: string;
+  scene: string;
+  player_id: string;
+  session_id: string;
+  seq: number;
+  pos_x: number;
+  pos_y: number;
+  pos_z: number;
+  timestamp: string;
+}

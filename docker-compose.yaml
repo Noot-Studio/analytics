@@ -36,6 +36,8 @@ x-app-env: &app-env
   REDIS_URL: redis://${REDIS_HOST:-redis}:${REDIS_DB_PORT:-6379}
   KAFKA_BROKERS: ${KAFKA_HOST:-redpanda}:${KAFKA_DB_PORT:-9092}
   KAFKA_EVENTS_TOPIC: ${KAFKA_EVENTS_TOPIC:-events}
+  KAFKA_SPATIAL_TOPIC: ${KAFKA_SPATIAL_TOPIC:-spatial_cells}
+  KAFKA_TRAJECTORY_TOPIC: ${KAFKA_TRAJECTORY_TOPIC:-trajectory}
   CLICKHOUSE_URL: http://${CLICKHOUSE_HOST:-clickhouse}:${CLICKHOUSE_DB_PORT:-8123}
   CLICKHOUSE_DATABASE: ${CLICKHOUSE_DATABASE:-analytics}
   CLICKHOUSE_USER: ${CLICKHOUSE_USER:-analytics}
@@ -191,7 +193,7 @@ services:
         condition: service_healthy
     entrypoint: ["/bin/sh", "-c"]
     command:
-      - "rpk topic create ${KAFKA_EVENTS_TOPIC:-events} --brokers=redpanda:9092 --partitions ${KAFKA_PARTITIONS:-3} --replicas 1 || true"
+      - "rpk topic create ${KAFKA_EVENTS_TOPIC:-events} ${KAFKA_SPATIAL_TOPIC:-spatial_cells} ${KAFKA_TRAJECTORY_TOPIC:-trajectory} --brokers=redpanda:9092 --partitions ${KAFKA_PARTITIONS:-3} --replicas 1 || true"
     restart: "no"
 
   clickhouse:

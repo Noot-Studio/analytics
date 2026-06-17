@@ -56,6 +56,15 @@ Voxel mode draws an instanced cube at each occupied cell, colored by the same in
 
 The dock calls two read endpoints on the ingest service, authenticated with the secret key — see [Spatial events](/docs/api/spatial) for the full reference. The events themselves come from anything that sends a `position`: the [Movement Tracker component](/docs/sdk/component#analytics-movement-tracker), `AutoPosition` on the session helper, or explicit `Analytics.Track(..., position: …)` calls.
 
+<Callout type="info">
+  The dock renders **raw** spatial events (query-time voxels). For continuous
+  tracking, the [aggregating
+  trackers](/docs/sdk/component#aggregating-spatial-trackers) feed
+  pre-aggregated **dwell / visit heatmaps** and per-player **trajectories** that
+  the web dashboard's Spatial view renders directly — far fewer events on the
+  wire.
+</Callout>
+
 <Cards>
   <Card title="Spatial events" href="/docs/api/spatial">
     The event fields and read endpoints behind heatmaps.

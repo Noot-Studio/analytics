@@ -31,6 +31,8 @@ export const env = createEnv({
     INGEST_PORT: z.coerce.number().int().positive().default(8080),
     KAFKA_BROKERS: z.string().min(1).default("localhost:19092"),
     KAFKA_EVENTS_TOPIC: z.string().min(1).default("events"),
+    KAFKA_SPATIAL_TOPIC: z.string().min(1).default("spatial_cells"),
+    KAFKA_TRAJECTORY_TOPIC: z.string().min(1).default("trajectory"),
     NODE_ENV: z
       .enum(["development", "production", "test"])
       .default("development"),

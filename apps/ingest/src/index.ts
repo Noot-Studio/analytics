@@ -1,7 +1,6 @@
 import { createChClient } from "@sbox-analytics/api/ch-client";
 import { env } from "@sbox-analytics/env/server";
-import type { ClickHouseEvent } from "@sbox-analytics/events";
-import { batchSchema, toClickHouseEvent } from "@sbox-analytics/events";
+import { batchSchema } from "@sbox-analytics/events";
 import { initLogger } from "evlog";
 import { evlog } from "evlog/hono";
 import type { EvlogVariables } from "evlog/hono";
@@ -9,6 +8,7 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { HTTPException } from "hono/http-exception";
 
+import { BatchError, partitionBatch, partitionedSize } from "./fanout";
 import {
   createRedisKeyResolver,
   createRedisSecretKeyResolver,
@@ -33,7 +33,6 @@ const quota = env.BILLING_ENABLED
   : unlimitedQuota;
 const producer = await createProducer({
   brokers: env.KAFKA_BROKERS.split(",").map((b) => b.trim()),
-  topic: env.KAFKA_EVENTS_TOPIC,
 });
 
 const app = new Hono<EvlogVariables>();
@@ -78,32 +77,45 @@ app.post(
       throw new HTTPException(400, { message: "invalid payload" });
     }
 
-    const records: ClickHouseEvent[] = [];
-    for (const ev of parsed.data.events) {
-      const properties = ev.properties ? JSON.stringify(ev.properties) : "{}";
-      if (properties.length > MAX_PROPERTIES_BYTES) {
-        throw new HTTPException(400, { message: "properties too large" });
+    // Spatial batch events (spatial_cells / trajectory) fan out into many rows
+    // on dedicated topics; everything else maps 1:1 to the events topic.
+    let batch: ReturnType<typeof partitionBatch>;
+    try {
+      batch = partitionBatch(
+        parsed.data.events,
+        projectId,
+        MAX_PROPERTIES_BYTES
+      );
+    } catch (error) {
+      if (error instanceof BatchError) {
+        throw new HTTPException(error.status as 400, {
+          message: error.message,
+        });
       }
-      records.push(toClickHouseEvent(ev, projectId, properties));
+      throw error;
     }
+
+    const total = partitionedSize(batch);
 
     // Over-quota batches are dropped, not rejected: a 2xx keeps game-side SDKs
     // from retry-storming while the org is capped for the month.
-    const admitted = await quota.admit(projectId, records.length);
+    const admitted = await quota.admit(projectId, total);
     if (!admitted) {
       return c.json(
-        { accepted: 0, dropped: records.length, reason: "quota_exceeded" },
+        { accepted: 0, dropped: total, reason: "quota_exceeded" },
         202
       );
     }
 
     try {
-      await producer.publish(records);
+      await producer.publish(env.KAFKA_EVENTS_TOPIC, batch.normal);
+      await producer.publish(env.KAFKA_SPATIAL_TOPIC, batch.cells);
+      await producer.publish(env.KAFKA_TRAJECTORY_TOPIC, batch.points);
     } catch {
       throw new HTTPException(502, { message: "publish failed" });
     }
 
-    return c.json({ accepted: records.length }, 202);
+    return c.json({ accepted: total }, 202);
   }
 );
 

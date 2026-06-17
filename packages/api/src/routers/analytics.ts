@@ -78,6 +78,12 @@ import {
   buildVoxelsQuery,
   voxelCenter,
 } from "../spatial-query";
+import {
+  buildHeatmapQuery,
+  buildSpatialKindsQuery,
+  buildTrajectoryPlayersQuery,
+  buildTrajectoryQuery,
+} from "../spatial-rollup-query";
 
 const dailyInput = z.object({
   from: z.iso.date(),
@@ -632,6 +638,135 @@ const spatialVoxelsOutput = z.object({
   ),
 });
 
+const MAX_TRAJECTORY_POINTS = 100_000;
+
+const spatialKindsInput = z.object({
+  from: z.iso.date(),
+  projectId: z.string().min(1),
+  scene: z.string().min(1),
+  to: z.iso.date(),
+});
+
+const spatialKindsRow = z.object({
+  cellSize: z.coerce.number(),
+  kind: z.string().min(1),
+});
+
+const spatialKindsOutput = z.object({
+  kinds: z.array(
+    z.object({
+      cellSize: z.number(),
+      kind: z.string().min(1),
+    })
+  ),
+});
+
+const spatialHeatmapInput = z
+  .object({
+    cellSize: z.number().positive(),
+    from: z.iso.date(),
+    kind: z.string().min(1),
+    limit: z.number().int().positive().max(MAX_VOXELS).default(MAX_VOXELS),
+    projectId: z.string().min(1),
+    scene: z.string().min(1),
+    to: z.iso.date(),
+    voxelSize: z.number().positive().optional(),
+  })
+  .refine((p) => p.voxelSize === undefined || p.voxelSize >= p.cellSize, {
+    message: "voxelSize must be >= cellSize",
+  });
+
+const heatmapRollupRow = z.object({
+  gx: z.coerce.number(),
+  gy: z.coerce.number(),
+  gz: z.coerce.number(),
+  hits: z.coerce.number(),
+  value: z.coerce.number(),
+});
+
+const spatialHeatmapOutput = z.object({
+  cells: z.array(
+    z.object({
+      hits: z.number(),
+      value: z.number(),
+      x: z.number(),
+      y: z.number(),
+      z: z.number(),
+    })
+  ),
+  kind: z.string().min(1),
+  truncated: z.boolean(),
+  voxelSize: z.number(),
+});
+
+const MAX_TRAJECTORY_PLAYERS = 500;
+
+const spatialTrajectoryPlayersInput = z.object({
+  from: z.iso.date(),
+  limit: z
+    .number()
+    .int()
+    .positive()
+    .max(MAX_TRAJECTORY_PLAYERS)
+    .default(MAX_TRAJECTORY_PLAYERS),
+  projectId: z.string().min(1),
+  scene: z.string().min(1),
+  to: z.iso.date(),
+});
+
+const trajectoryPlayerRow = z.object({
+  playerId: z.string(),
+  points: z.coerce.number(),
+});
+
+const spatialTrajectoryPlayersOutput = z.object({
+  players: z.array(
+    z.object({
+      playerId: z.string(),
+      points: z.number(),
+    })
+  ),
+});
+
+const spatialTrajectoryInput = z.object({
+  from: z.iso.date(),
+  limit: z
+    .number()
+    .int()
+    .positive()
+    .max(MAX_TRAJECTORY_POINTS)
+    .default(MAX_TRAJECTORY_POINTS),
+  playerId: z.string().min(1),
+  projectId: z.string().min(1),
+  scene: z.string().min(1),
+  sessionId: z.string().min(1).optional(),
+  to: z.iso.date(),
+});
+
+const trajectoryPointRow = z.object({
+  pos_x: z.coerce.number(),
+  pos_y: z.coerce.number(),
+  pos_z: z.coerce.number(),
+  seq: z.coerce.number(),
+  session_id: z.string(),
+  timestamp: z.string(),
+});
+
+const spatialTrajectoryOutput = z.object({
+  playerId: z.string(),
+  points: z.array(
+    z.object({
+      seq: z.number(),
+      sessionId: z.string(),
+      t: z.string(),
+      x: z.number(),
+      y: z.number(),
+      z: z.number(),
+    })
+  ),
+  truncated: z.boolean(),
+});
+
 export const analyticsRouter = {
   // Aggregated event-type totals over a date window — backs the Events table.
   breakdown: projectProcedure
@@ -1004,6 +1139,44 @@ export const analyticsRouter = {
       return sessionsListOutput.parse({ rows, total });
     }),
   spatial: {
+    // Pre-aggregated dwell/visit heatmap from the spatial_cells rollup.
+    heatmap: projectProcedure
+      .input(spatialHeatmapInput)
+      .handler(async ({ context, input }) => {
+        const voxelSize = input.voxelSize ?? input.cellSize;
+        const rows = await runQuery(
+          context.ch,
+          buildHeatmapQuery(input),
+          heatmapRollupRow
+        );
+        const truncated = rows.length > input.limit;
+        const cells = rows.slice(0, input.limit).map((r) => ({
+          hits: r.hits,
+          value: r.value,
+          x: voxelCenter(r.gx, voxelSize),
+          y: voxelCenter(r.gy, voxelSize),
+          z: voxelCenter(r.gz, voxelSize),
+        }));
+        return spatialHeatmapOutput.parse({
+          cells,
+          kind: input.kind,
+          truncated,
+          voxelSize,
+        });
+      }),
+    // Discover which (kind, cell_size) heatmaps a scene actually has.
+    kinds: projectProcedure
+      .input(spatialKindsInput)
+      .handler(async ({ context, input }) => {
+        const rows = await runQuery(
+          context.ch,
+          buildSpatialKindsQuery(input),
+          spatialKindsRow
+        );
+        return spatialKindsOutput.parse({
+          kinds: rows.map((r) => ({ cellSize: r.cellSize, kind: r.kind })),
+        });
+      }),
     scenes: projectProcedure
       .input(spatialScenesInput)
       .handler(async ({ context, input }) => {
@@ -1024,6 +1197,46 @@ export const analyticsRouter = {
             },
             eventCount: r.eventCount,
             scene: r.scene,
+          })),
+        });
+      }),
+    // Ordered per-player path from the trajectory_points store.
+    trajectory: projectProcedure
+      .input(spatialTrajectoryInput)
+      .handler(async ({ context, input }) => {
+        const rows = await runQuery(
+          context.ch,
+          buildTrajectoryQuery(input),
+          trajectoryPointRow
+        );
+        const truncated = rows.length >= input.limit;
+        const points = rows.map((r) => ({
+          seq: r.seq,
+          sessionId: r.session_id,
+          t: r.timestamp,
+          x: r.pos_x,
+          y: r.pos_y,
+          z: r.pos_z,
+        }));
+        return spatialTrajectoryOutput.parse({
+          playerId: input.playerId,
+          points,
+          truncated,
+        });
+      }),
+    // Players that have a captured path in this scene — drives the picker.
+    trajectoryPlayers: projectProcedure
+      .input(spatialTrajectoryPlayersInput)
+      .handler(async ({ context, input }) => {
+        const rows = await runQuery(
+          context.ch,
+          buildTrajectoryPlayersQuery(input),
+          trajectoryPlayerRow
+        );
+        return spatialTrajectoryPlayersOutput.parse({
+          players: rows.map((r) => ({
+            playerId: r.playerId,
+            points: r.points,
           })),
         });
       }),
