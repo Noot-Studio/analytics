@@ -79,11 +79,11 @@ const RETENTION_BASE = 0.55;
 const RETENTION_DECAY_DAYS = 14;
 const FIRST_SEEN_SKEW = 1.6;
 
-const pad = (value: number, length = 2): string =>
+export const pad = (value: number, length = 2): string =>
   String(value).padStart(length, "0");
 
 // Replicates apps/ingest formatTimestamp: UTC "YYYY-MM-DD HH:mm:ss.SSS".
-const formatTimestamp = (date: Date): string =>
+export const formatTimestamp = (date: Date): string =>
   `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())} ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())}.${pad(date.getUTCMilliseconds(), 3)}`;
 
 const makeEvent = (

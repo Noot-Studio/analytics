@@ -8,16 +8,18 @@ import {
   DEMO_PROJECT,
   DEMO_USER,
   generateDemoEvents,
+  generateDemoTrajectories,
 } from "../mock";
 import prisma from "../src/index";
 
-// MV target tables that are repopulated from `events` — cleared per demo project
-// so re-running the seed never double-counts aggregates.
+// Demo-project rows cleared before each seed so re-running never double-counts:
+// the `events`-derived MV targets, plus the directly-inserted `trajectory_points`.
 const CH_TABLES_TO_RESET = [
   "events",
   "events_daily",
   "player_first_seen",
   "sessions_summary",
+  "trajectory_points",
 ] as const;
 const INSERT_CHUNK = 20_000;
 const DEMO_MEMBER_ID = "demo-member";
@@ -101,7 +103,12 @@ const seedPostgres = async (): Promise<void> => {
   });
 };
 
-const seedClickHouse = async (): Promise<number> => {
+interface ClickHouseSeedResult {
+  events: number;
+  trajectoryPoints: number;
+}
+
+const seedClickHouse = async (): Promise<ClickHouseSeedResult> => {
   const client = createClient({
     database: env.CLICKHOUSE_DATABASE,
     password: env.CLICKHOUSE_PASSWORD,
@@ -126,7 +133,17 @@ const seedClickHouse = async (): Promise<number> => {
         values: events.slice(i, i + INSERT_CHUNK),
       });
     }
-    return events.length;
+
+    const trajectories = generateDemoTrajectories();
+    for (let i = 0; i < trajectories.length; i += INSERT_CHUNK) {
+      await client.insert({
+        format: "JSONEachRow",
+        table: `${env.CLICKHOUSE_DATABASE}.trajectory_points`,
+        values: trajectories.slice(i, i + INSERT_CHUNK),
+      });
+    }
+
+    return { events: events.length, trajectoryPoints: trajectories.length };
   } finally {
     await client.close();
   }
@@ -135,13 +152,14 @@ const seedClickHouse = async (): Promise<number> => {
 const main = async (): Promise<void> => {
   log("Seeding demo data…");
   await seedPostgres();
-  const eventCount = await seedClickHouse();
+  const ch = await seedClickHouse();
 
   log("");
   log("✓ Demo data seeded.");
   log(`  Org:     ${DEMO_ORG.name} (${DEMO_ORG.slug})`);
   log(`  Project: ${DEMO_PROJECT.name} (${DEMO_PROJECT.id})`);
-  log(`  Events:  ${eventCount} inserted into ClickHouse`);
+  log(`  Events:  ${ch.events} inserted into ClickHouse`);
+  log(`  Trajectory points: ${ch.trajectoryPoints} inserted`);
   log("");
   log("  Login:");
   log(`    Email:    ${DEMO_USER.email}`);

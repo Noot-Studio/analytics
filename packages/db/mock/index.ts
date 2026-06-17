@@ -14,3 +14,8 @@ export {
   type MockEvent,
 } from "./events";
 export { createRng, type Rng } from "./rng";
+export {
+  type GenerateTrajectoriesOptions,
+  generateDemoTrajectories,
+  type MockTrajectoryPoint,
+} from "./trajectories";
