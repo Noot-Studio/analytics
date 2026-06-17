@@ -1,7 +1,7 @@
 -- 003_spatial_rollup.sql
 -- Dedicated rollup tables for pre-aggregated spatial analytics (docs/adr/0003).
--- The SDK accumulates dwell/visit cells client-side and flushes batch events;
--- ingest fans them out into per-cell rows on the `spatial_cells` topic and
+-- The SDK accumulates dwell/visit cells client-side and flushes batch events,
+-- which ingest fans out into per-cell rows on the `spatial_cells` topic and
 -- per-point rows on the `trajectory` topic. All objects are additive — fresh
 -- installs get the same shapes from init.sql.
 
