@@ -160,6 +160,18 @@ const useSpatialData = (projectId: string) => {
     ? Math.max(voxelSize, cellSize)
     : voxelSize;
 
+  // Rollup heatmaps are captured at a fixed `cellSize`; the size control can only
+  // coarsen, and only by whole multiples (non-multiples alias the stored grid).
+  // Raw-event voxels bin at query time, so they keep the free 8–256 range.
+  const voxelMin = isRollup ? cellSize : MIN_VOXEL_SIZE;
+  const voxelStep = isRollup ? cellSize : VOXEL_SIZE_STEP;
+  const voxelMax = isRollup
+    ? Math.max(MAX_VOXEL_SIZE, cellSize * 4)
+    : MAX_VOXEL_SIZE;
+  const voxelSizeLabel = isRollup
+    ? `Bin size: ${effectiveVoxelSize} (${effectiveVoxelSize / cellSize}× cell)`
+    : `Voxel size: ${effectiveVoxelSize}`;
+
   const kindsQuery = useQuery(
     orpc.insights.spatial.kinds.queryOptions({
       enabled: isSceneReady,
@@ -257,7 +269,10 @@ const useSpatialData = (projectId: string) => {
     setVoxelSize,
     showTruncated,
     source,
-    voxelSize,
+    voxelMax,
+    voxelMin,
+    voxelSizeLabel,
+    voxelStep,
     voxels,
   };
 };
@@ -290,17 +305,17 @@ const PlayerControl = (d: SpatialData) => (
 const VoxelControls = (d: SpatialData) => (
   <>
     <div className="grid gap-1.5">
-      <Label htmlFor="voxel-size">Voxel size: {d.effectiveVoxelSize}</Label>
+      <Label htmlFor="voxel-size">{d.voxelSizeLabel}</Label>
       <input
-        aria-label="Voxel size"
+        aria-label={d.voxelSizeLabel}
         className="h-8 w-48 cursor-pointer accent-primary"
         id="voxel-size"
-        max={MAX_VOXEL_SIZE}
-        min={MIN_VOXEL_SIZE}
+        max={d.voxelMax}
+        min={d.voxelMin}
         onChange={(e) => d.setVoxelSize(Number(e.target.value))}
-        step={VOXEL_SIZE_STEP}
+        step={d.voxelStep}
         type="range"
-        value={d.voxelSize}
+        value={d.effectiveVoxelSize}
       />
     </div>
 
