@@ -50,6 +50,14 @@ export interface TrajectoryPlayersInput {
   limit: number;
 }
 
+export interface TrajectoriesInput {
+  projectId: string;
+  scene: string;
+  from: string;
+  to: string;
+  limit: number;
+}
+
 /** World-space center of coarse bin index `g` for a cube edge of `voxelSize`. */
 export const voxelCenter = (g: number, voxelSize: number): number =>
   (g + 0.5) * voxelSize;
@@ -201,4 +209,40 @@ export const buildTrajectoryQuery = (input: TrajectoryInput): BuiltQuery => {
   `;
 
   return { params, query };
+};
+
+/**
+ * Ordered trajectory points for EVERY player in a scene/range, for the editor's
+ * Path Lines view. Sorted by player then session then capture order, so the
+ * route can slice the flat result into one path per (player, session) with a
+ * single forward scan. Point-capped like the single-player query.
+ */
+export const buildTrajectoriesQuery = (
+  input: TrajectoriesInput
+): BuiltQuery => {
+  const query = `
+    SELECT
+      player_id,
+      session_id,
+      pos_x,
+      pos_y,
+      pos_z
+    FROM analytics.trajectory_points
+    WHERE project_id = {projectId:String}
+      AND scene = {scene:String}
+      AND toDate(timestamp) BETWEEN {from:Date} AND {to:Date}
+    ORDER BY player_id, session_id, timestamp, seq
+    LIMIT {limit:UInt32}
+  `;
+
+  return {
+    params: {
+      from: input.from,
+      limit: input.limit,
+      projectId: input.projectId,
+      scene: input.scene,
+      to: input.to,
+    },
+    query,
+  };
 };

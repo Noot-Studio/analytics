@@ -1,12 +1,14 @@
 import type { ChClient } from "@sbox-analytics/api/ch-client";
 import { runQuery } from "@sbox-analytics/api/run-query";
 import {
+  buildEventTypesQuery,
   buildScenesQuery,
   buildVoxelsQuery,
   voxelCenter,
 } from "@sbox-analytics/api/spatial-query";
 import {
   buildHeatmapQuery,
+  buildTrajectoriesQuery,
   buildTrajectoryQuery,
 } from "@sbox-analytics/api/spatial-rollup-query";
 import { Hono } from "hono";
@@ -112,6 +114,27 @@ const trajectoryRow = z.object({
   seq: z.coerce.number(),
   session_id: z.string(),
   timestamp: z.string(),
+});
+
+const eventTypesParams = z.object({
+  from: z.iso.date(),
+  scene: z.string().min(1).optional(),
+  to: z.iso.date(),
+});
+
+const trajectoriesParams = z.object({
+  from: z.iso.date(),
+  limit: z.coerce.number().int().positive().max(MAX_POINTS).default(MAX_POINTS),
+  scene: z.string().min(1),
+  to: z.iso.date(),
+});
+
+const trajectoriesRow = z.object({
+  player_id: z.string(),
+  pos_x: z.coerce.number(),
+  pos_y: z.coerce.number(),
+  pos_z: z.coerce.number(),
+  session_id: z.string(),
 });
 
 export interface SpatialRouteDeps {
@@ -288,6 +311,75 @@ export const createSpatialRoutes = ({ keys, ch }: SpatialRouteDeps): Hono => {
     }));
 
     return c.json({ playerId: input.playerId, points, truncated });
+  });
+
+  app.get("/event-types", async (c) => {
+    const projectId = await resolveProjectId(
+      keys,
+      c.req.header("x-api-key") ?? ""
+    );
+
+    const parsed = eventTypesParams.safeParse(c.req.query());
+    if (!parsed.success) {
+      throw new HTTPException(400, { message: "invalid params" });
+    }
+
+    const rows = await runQuery(
+      ch,
+      buildEventTypesQuery({ projectId, ...parsed.data }),
+      z.object({ event_type: z.string() })
+    );
+
+    return c.json({ eventTypes: rows.map((r) => r.event_type) });
+  });
+
+  app.get("/trajectories", async (c) => {
+    const projectId = await resolveProjectId(
+      keys,
+      c.req.header("x-api-key") ?? ""
+    );
+
+    const parsed = trajectoriesParams.safeParse(c.req.query());
+    if (!parsed.success) {
+      throw new HTTPException(400, { message: "invalid params" });
+    }
+    const input = parsed.data;
+
+    const rows = await runQuery(
+      ch,
+      buildTrajectoriesQuery({ projectId, ...input }),
+      trajectoriesRow
+    );
+
+    const truncated = rows.length >= input.limit;
+
+    // Rows arrive ordered by player then session then capture time, so a change
+    // of (player, session) starts a new path in a single forward scan.
+    const trajectories: {
+      playerId: string;
+      points: { x: number; y: number; z: number }[];
+    }[] = [];
+    let current: (typeof trajectories)[number] | undefined;
+    let currentPlayer: string | undefined;
+    let currentSession: string | undefined;
+    for (const r of rows) {
+      if (
+        current === undefined ||
+        r.player_id !== currentPlayer ||
+        r.session_id !== currentSession
+      ) {
+        currentPlayer = r.player_id;
+        currentSession = r.session_id;
+        current = { playerId: r.player_id, points: [] };
+        trajectories.push(current);
+      }
+      current.points.push({ x: r.pos_x, y: r.pos_y, z: r.pos_z });
+    }
+
+    // A single point can't draw a segment.
+    const drawable = trajectories.filter((t) => t.points.length >= 2);
+
+    return c.json({ trajectories: drawable, truncated });
   });
 
   return app;

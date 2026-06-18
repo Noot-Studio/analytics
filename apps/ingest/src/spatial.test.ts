@@ -277,3 +277,98 @@ describe("GET /trajectory", () => {
     });
   });
 });
+
+describe("GET /event-types", () => {
+  it("rejects an invalid key with 401", async () => {
+    const res = await app(fakeCh([])).request(
+      "/event-types?from=2026-06-01&to=2026-06-11"
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects an invalid date with 400", async () => {
+    const res = await app(fakeCh([])).request(
+      "/event-types?from=nope&to=2026-06-11",
+      { headers: { "x-api-key": VALID_KEY } }
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("returns distinct event types and wires the optional scene filter", async () => {
+    const captured: Captured[] = [];
+    const rows = [{ event_type: "position_sample" }, { event_type: "dwell" }];
+    const res = await app(fakeCh(rows, captured)).request(
+      "/event-types?from=2026-06-01&to=2026-06-11&scene=dm_arena",
+      { headers: { "x-api-key": VALID_KEY } }
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { eventTypes: string[] };
+    expect(body.eventTypes).toEqual(["position_sample", "dwell"]);
+    expect(captured[0]?.params.projectId).toBe(PROJECT_ID);
+    expect(captured[0]?.params.scene).toBe("dm_arena");
+  });
+});
+
+describe("GET /trajectories", () => {
+  it("rejects an invalid key with 401", async () => {
+    const res = await app(fakeCh([])).request(
+      "/trajectories?scene=dm_arena&from=2026-06-01&to=2026-06-11"
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects a missing scene with 400", async () => {
+    const res = await app(fakeCh([])).request(
+      "/trajectories?from=2026-06-01&to=2026-06-11",
+      { headers: { "x-api-key": VALID_KEY } }
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("groups points into one path per (player, session), dropping single-point paths", async () => {
+    const rows = [
+      { player_id: "anon_a", pos_x: 0, pos_y: 0, pos_z: 0, session_id: "s1" },
+      { player_id: "anon_a", pos_x: 1, pos_y: 1, pos_z: 1, session_id: "s1" },
+      { player_id: "anon_a", pos_x: 5, pos_y: 5, pos_z: 5, session_id: "s2" },
+      { player_id: "anon_a", pos_x: 6, pos_y: 6, pos_z: 6, session_id: "s2" },
+      // lone point for a different player -> dropped
+      { player_id: "anon_b", pos_x: 9, pos_y: 9, pos_z: 9, session_id: "s1" },
+    ];
+    const res = await app(fakeCh(rows)).request(
+      "/trajectories?scene=dm_arena&from=2026-06-01&to=2026-06-11",
+      { headers: { "x-api-key": VALID_KEY } }
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      trajectories: {
+        playerId: string;
+        points: { x: number; y: number; z: number }[];
+      }[];
+      truncated: boolean;
+    };
+    expect(body.truncated).toBe(false);
+    expect(body.trajectories).toHaveLength(2);
+    expect(body.trajectories[0]).toEqual({
+      playerId: "anon_a",
+      points: [
+        { x: 0, y: 0, z: 0 },
+        { x: 1, y: 1, z: 1 },
+      ],
+    });
+    expect(body.trajectories[1]?.points).toHaveLength(2);
+  });
+
+  it("reports truncation when rows reach the limit", async () => {
+    const rows = [
+      { player_id: "a", pos_x: 0, pos_y: 0, pos_z: 0, session_id: "s" },
+      { player_id: "a", pos_x: 1, pos_y: 1, pos_z: 1, session_id: "s" },
+    ];
+    const res = await app(fakeCh(rows)).request(
+      "/trajectories?scene=dm_arena&from=2026-06-01&to=2026-06-11&limit=1",
+      { headers: { "x-api-key": VALID_KEY } }
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { truncated: boolean };
+    expect(body.truncated).toBe(true);
+  });
+});

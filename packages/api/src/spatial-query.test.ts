@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 
 import {
+  buildEventTypesQuery,
   buildScenesQuery,
   buildVoxelsQuery,
   voxelCenter,
@@ -122,5 +123,38 @@ describe("buildScenesQuery", () => {
       projectId: "proj_1",
       to: "2026-06-01",
     });
+  });
+});
+
+describe("buildEventTypesQuery", () => {
+  it("selects distinct spatial event types, no scene clause when omitted", () => {
+    const { query, params } = buildEventTypesQuery({
+      from: "2026-05-01",
+      projectId: "proj_1",
+      to: "2026-06-01",
+    });
+    expect(query).toContain("SELECT DISTINCT event_type");
+    expect(query).toContain("pos_x IS NOT NULL");
+    expect(query).toContain(
+      "toDate(timestamp) BETWEEN {from:Date} AND {to:Date}"
+    );
+    expect(query).toContain("ORDER BY event_type");
+    expect(query).not.toContain("scene = {scene:String}");
+    expect(params).toEqual({
+      from: "2026-05-01",
+      projectId: "proj_1",
+      to: "2026-06-01",
+    });
+  });
+
+  it("adds the scene clause + param when scene is set", () => {
+    const { query, params } = buildEventTypesQuery({
+      from: "2026-05-01",
+      projectId: "proj_1",
+      scene: "dm_arena",
+      to: "2026-06-01",
+    });
+    expect(query).toContain("scene = {scene:String}");
+    expect(params.scene).toBe("dm_arena");
   });
 });

@@ -3,6 +3,7 @@ import { describe, expect, it } from "bun:test";
 import {
   buildHeatmapQuery,
   buildSpatialKindsQuery,
+  buildTrajectoriesQuery,
   buildTrajectoryPlayersQuery,
   buildTrajectoryQuery,
   voxelCenter,
@@ -138,6 +139,31 @@ describe("buildSpatialKindsQuery", () => {
     expect(query).toContain("scene = {scene:String}");
     expect(params).toEqual({
       from: "2026-05-01",
+      projectId: "proj_1",
+      scene: "de_dust2",
+      to: "2026-06-01",
+    });
+  });
+});
+
+describe("buildTrajectoriesQuery", () => {
+  it("selects all players' points ordered for per-(player,session) slicing", () => {
+    const { query, params } = buildTrajectoriesQuery({
+      from: "2026-05-01",
+      limit: 100_000,
+      projectId: "proj_1",
+      scene: "de_dust2",
+      to: "2026-06-01",
+    });
+    expect(query).toContain("FROM analytics.trajectory_points");
+    expect(query).toContain("player_id");
+    expect(query).toContain("session_id");
+    expect(query).toContain("ORDER BY player_id, session_id, timestamp, seq");
+    expect(query).toContain("LIMIT {limit:UInt32}");
+    expect(query).not.toContain("player_id = {playerId:String}");
+    expect(params).toEqual({
+      from: "2026-05-01",
+      limit: 100_000,
       projectId: "proj_1",
       scene: "de_dust2",
       to: "2026-06-01",
