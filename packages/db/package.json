@@ -15,7 +15,9 @@
   "scripts": {
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
+    "db:migrate": "bun run db:migrate:prisma && bun run db:migrate:clickhouse",
+    "db:migrate:prisma": "prisma migrate dev",
+    "db:migrate:clickhouse": "bun run clickhouse/migrate.ts",
     "db:deploy": "prisma migrate deploy && bun run clickhouse/migrate.ts",
     "db:reset": "prisma migrate reset",
     "db:seed": "bun run seed/index.ts",

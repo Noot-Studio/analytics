@@ -26,7 +26,7 @@ To **deploy** those images (or build from source, with Docker or Nixpacks), see 
 
 The `migrate` one-shot service in `docker-compose.yaml` (published to GHCR as `.../migrate` by `docker.yml`) runs before `server`/`ingest` start and applies both stores:
 
-- **Postgres**: `prisma migrate deploy` applies the committed history in `packages/db/prisma/migrations/`. Never use `prisma db push` against production — it has no history and can drop data. New migrations are authored in dev with `bun run db:migrate` (prisma migrate dev) and committed.
+- **Postgres**: `prisma migrate deploy` applies the committed history in `packages/db/prisma/migrations/`. Never use `prisma db push` against production — it has no history and can drop data. New migrations are authored in dev with `bun run db:migrate:prisma` (prisma migrate dev) and committed. (`bun run db:migrate` runs both planes — Prisma then ClickHouse.)
 - **ClickHouse**: `packages/db/clickhouse/migrate.ts` applies every file in `packages/db/clickhouse/migrations/` in filename order on every deploy. There is no history table, so every migration **must be idempotent** (`CREATE/ALTER ... IF NOT EXISTS`, `DROP ... IF EXISTS`).
 
 **Baselining a database that predates the migration history** (was provisioned with `db push`): mark the initial migration as already applied once, then `migrate deploy` works normally:

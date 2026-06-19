@@ -39,6 +39,13 @@ export interface ScenesInput {
   to: string;
 }
 
+export interface EventTypesInput {
+  projectId: string;
+  from: string;
+  to: string;
+  scene?: string;
+}
+
 export interface BuiltQuery {
   query: string;
   params: Record<string, unknown>;
@@ -127,6 +134,40 @@ export const buildScenesQuery = (input: ScenesInput): BuiltQuery => {
       AND toDate(timestamp) BETWEEN {from:Date} AND {to:Date}
     GROUP BY scene
     ORDER BY eventCount DESC
+  `;
+
+  return { params, query };
+};
+
+/**
+ * Distinct event types that carry spatial positions in the range — the set the
+ * editor heatmap dropdown can meaningfully voxelize via /voxels. Filtered to
+ * `pos_x IS NOT NULL` so non-spatial types never appear as options that would
+ * render an empty heatmap.
+ */
+export const buildEventTypesQuery = (input: EventTypesInput): BuiltQuery => {
+  const params: Record<string, unknown> = {
+    from: input.from,
+    projectId: input.projectId,
+    to: input.to,
+  };
+
+  const where = [
+    "project_id = {projectId:String}",
+    "pos_x IS NOT NULL",
+    "toDate(timestamp) BETWEEN {from:Date} AND {to:Date}",
+  ];
+
+  if (input.scene) {
+    where.push("scene = {scene:String}");
+    params.scene = input.scene;
+  }
+
+  const query = `
+    SELECT DISTINCT event_type
+    FROM analytics.events
+    WHERE ${where.join("\n      AND ")}
+    ORDER BY event_type
   `;
 
   return { params, query };

@@ -22,7 +22,6 @@ import { Route as AcceptInvitationInvitationIdRouteImport } from './routes/accep
 import { Route as DashboardProjectsIndexRouteImport } from './routes/dashboard/projects/index'
 import { Route as DashboardProjectsProjectIdRouteImport } from './routes/dashboard/projects/$projectId'
 import { Route as DashboardProjectsProjectIdIndexRouteImport } from './routes/dashboard/projects/$projectId/index'
-import { Route as DashboardProjectsProjectIdSpatialRouteImport } from './routes/dashboard/projects/$projectId/spatial'
 import { Route as DashboardProjectsProjectIdSettingsRouteImport } from './routes/dashboard/projects/$projectId/settings'
 import { Route as DashboardProjectsProjectIdSessionsRouteImport } from './routes/dashboard/projects/$projectId/sessions'
 import { Route as DashboardProjectsProjectIdRetentionRouteImport } from './routes/dashboard/projects/$projectId/retention'
@@ -102,12 +101,6 @@ const DashboardProjectsProjectIdIndexRoute =
   DashboardProjectsProjectIdIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () => DashboardProjectsProjectIdRoute,
-  } as any)
-const DashboardProjectsProjectIdSpatialRoute =
-  DashboardProjectsProjectIdSpatialRouteImport.update({
-    id: '/spatial',
-    path: '/spatial',
     getParentRoute: () => DashboardProjectsProjectIdRoute,
   } as any)
 const DashboardProjectsProjectIdSettingsRoute =
@@ -206,7 +199,6 @@ export interface FileRoutesByFullPath {
   '/dashboard/projects/$projectId/retention': typeof DashboardProjectsProjectIdRetentionRoute
   '/dashboard/projects/$projectId/sessions': typeof DashboardProjectsProjectIdSessionsRoute
   '/dashboard/projects/$projectId/settings': typeof DashboardProjectsProjectIdSettingsRoute
-  '/dashboard/projects/$projectId/spatial': typeof DashboardProjectsProjectIdSpatialRoute
   '/dashboard/projects/$projectId/': typeof DashboardProjectsProjectIdIndexRoute
   '/dashboard/projects/$projectId/players/$playerId': typeof DashboardProjectsProjectIdPlayersPlayerIdRoute
   '/dashboard/projects/$projectId/sessions/$sessionId': typeof DashboardProjectsProjectIdSessionsSessionIdRoute
@@ -232,7 +224,6 @@ export interface FileRoutesByTo {
   '/dashboard/projects/$projectId/retention': typeof DashboardProjectsProjectIdRetentionRoute
   '/dashboard/projects/$projectId/sessions': typeof DashboardProjectsProjectIdSessionsRoute
   '/dashboard/projects/$projectId/settings': typeof DashboardProjectsProjectIdSettingsRoute
-  '/dashboard/projects/$projectId/spatial': typeof DashboardProjectsProjectIdSpatialRoute
   '/dashboard/projects/$projectId': typeof DashboardProjectsProjectIdIndexRoute
   '/dashboard/projects/$projectId/players/$playerId': typeof DashboardProjectsProjectIdPlayersPlayerIdRoute
   '/dashboard/projects/$projectId/sessions/$sessionId': typeof DashboardProjectsProjectIdSessionsSessionIdRoute
@@ -261,7 +252,6 @@ export interface FileRoutesById {
   '/dashboard/projects/$projectId/retention': typeof DashboardProjectsProjectIdRetentionRoute
   '/dashboard/projects/$projectId/sessions': typeof DashboardProjectsProjectIdSessionsRoute
   '/dashboard/projects/$projectId/settings': typeof DashboardProjectsProjectIdSettingsRoute
-  '/dashboard/projects/$projectId/spatial': typeof DashboardProjectsProjectIdSpatialRoute
   '/dashboard/projects/$projectId/': typeof DashboardProjectsProjectIdIndexRoute
   '/dashboard/projects/$projectId/players_/$playerId': typeof DashboardProjectsProjectIdPlayersPlayerIdRoute
   '/dashboard/projects/$projectId/sessions_/$sessionId': typeof DashboardProjectsProjectIdSessionsSessionIdRoute
@@ -291,7 +281,6 @@ export interface FileRouteTypes {
     | '/dashboard/projects/$projectId/retention'
     | '/dashboard/projects/$projectId/sessions'
     | '/dashboard/projects/$projectId/settings'
-    | '/dashboard/projects/$projectId/spatial'
     | '/dashboard/projects/$projectId/'
     | '/dashboard/projects/$projectId/players/$playerId'
     | '/dashboard/projects/$projectId/sessions/$sessionId'
@@ -317,7 +306,6 @@ export interface FileRouteTypes {
     | '/dashboard/projects/$projectId/retention'
     | '/dashboard/projects/$projectId/sessions'
     | '/dashboard/projects/$projectId/settings'
-    | '/dashboard/projects/$projectId/spatial'
     | '/dashboard/projects/$projectId'
     | '/dashboard/projects/$projectId/players/$playerId'
     | '/dashboard/projects/$projectId/sessions/$sessionId'
@@ -345,7 +333,6 @@ export interface FileRouteTypes {
     | '/dashboard/projects/$projectId/retention'
     | '/dashboard/projects/$projectId/sessions'
     | '/dashboard/projects/$projectId/settings'
-    | '/dashboard/projects/$projectId/spatial'
     | '/dashboard/projects/$projectId/'
     | '/dashboard/projects/$projectId/players_/$playerId'
     | '/dashboard/projects/$projectId/sessions_/$sessionId'
@@ -453,13 +440,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardProjectsProjectIdIndexRouteImport
       parentRoute: typeof DashboardProjectsProjectIdRoute
     }
-    '/dashboard/projects/$projectId/spatial': {
-      id: '/dashboard/projects/$projectId/spatial'
-      path: '/spatial'
-      fullPath: '/dashboard/projects/$projectId/spatial'
-      preLoaderRoute: typeof DashboardProjectsProjectIdSpatialRouteImport
-      parentRoute: typeof DashboardProjectsProjectIdRoute
-    }
     '/dashboard/projects/$projectId/settings': {
       id: '/dashboard/projects/$projectId/settings'
       path: '/settings'
@@ -558,7 +538,6 @@ interface DashboardProjectsProjectIdRouteChildren {
   DashboardProjectsProjectIdRetentionRoute: typeof DashboardProjectsProjectIdRetentionRoute
   DashboardProjectsProjectIdSessionsRoute: typeof DashboardProjectsProjectIdSessionsRoute
   DashboardProjectsProjectIdSettingsRoute: typeof DashboardProjectsProjectIdSettingsRoute
-  DashboardProjectsProjectIdSpatialRoute: typeof DashboardProjectsProjectIdSpatialRoute
   DashboardProjectsProjectIdIndexRoute: typeof DashboardProjectsProjectIdIndexRoute
   DashboardProjectsProjectIdPlayersPlayerIdRoute: typeof DashboardProjectsProjectIdPlayersPlayerIdRoute
   DashboardProjectsProjectIdSessionsSessionIdRoute: typeof DashboardProjectsProjectIdSessionsSessionIdRoute
@@ -584,8 +563,6 @@ const DashboardProjectsProjectIdRouteChildren: DashboardProjectsProjectIdRouteCh
       DashboardProjectsProjectIdSessionsRoute,
     DashboardProjectsProjectIdSettingsRoute:
       DashboardProjectsProjectIdSettingsRoute,
-    DashboardProjectsProjectIdSpatialRoute:
-      DashboardProjectsProjectIdSpatialRoute,
     DashboardProjectsProjectIdIndexRoute: DashboardProjectsProjectIdIndexRoute,
     DashboardProjectsProjectIdPlayersPlayerIdRoute:
       DashboardProjectsProjectIdPlayersPlayerIdRoute,

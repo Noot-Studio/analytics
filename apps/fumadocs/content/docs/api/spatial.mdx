@@ -51,6 +51,71 @@ sum`, e.g. average `fps`), optional `bounds`, and an optional `limit` (max 50000
 Call `spatial.scenes` first to list scenes that contain spatial data along with their
 coordinate bounds, so you can frame the heatmap.
 
+## Pre-aggregated heatmaps
+
+The voxel path above stores **one row per event** and bins at query time — flexible (any
+`voxelSize`, any metric), but the event is the unit of cost. For **continuous** position
+tracking (dwell time, movement density) that is too many events. The pre-aggregated path
+moves the work to the client: the SDK accumulates per grid cell and flushes **one
+`spatial_cells` batch event per window**, which the ingest service fans out into a
+`SummingMergeTree` rollup that keeps collapsing across windows and players.
+
+The [Dwell and Heatmap components](/docs/sdk/component#aggregating-spatial-trackers) emit
+this for you. To send it yourself, post a `spatial_cells` event whose `properties` carry the
+batch:
+
+```json
+{
+  "events": [
+    {
+      "type": "spatial_cells",
+      "session_id": "sess_abc123",
+      "scene": "dm_arena",
+      "properties": {
+        "kind": "dwell",
+        "cell_size": 128,
+        "cells": [
+          [12, -4, 0, 4200],
+          [13, -4, 0, 900]
+        ]
+      }
+    }
+  ]
+}
+```
+
+| Property    | Type                | Notes                                                                           |
+| ----------- | ------------------- | ------------------------------------------------------------------------------- |
+| `kind`      | string              | Open metric label — `dwell` (ms), `visits` (count), or any game-defined scalar. |
+| `cell_size` | positive number     | Edge length the grid indices were quantized at. Part of the rollup key.         |
+| `cells`     | `[gx, gy, gz, v][]` | Integer grid indices (`floor(pos / cell_size)`) and the accumulated value `v`.  |
+
+The grid is **fixed at capture**: queries re-bin coarser (summing whole multiples of
+`cell_size`) but never finer. Because `kind` is an open string, a new aggregated metric
+needs only an SDK accumulator and a dashboard label — no server change.
+
+## Trajectories
+
+Per-player **paths** keep identity and order, so they can't be aggregated into cells. The
+[Trajectory component](/docs/sdk/component#trajectory-per-player-paths) simplifies a path
+with Ramer–Douglas–Peucker and flushes a `trajectory` event; ingest fans it into ordered
+points. Each point is `[x, y, z, t_ms]` (world coordinates and a Unix-ms timestamp):
+
+```json
+{
+  "type": "trajectory",
+  "session_id": "sess_abc123",
+  "player_id": "anon_hash",
+  "scene": "dm_arena",
+  "properties": {
+    "points": [
+      [128.0, -64.0, 32.0, 1748600000000],
+      [256.0, -32.0, 32.0, 1748600002500]
+    ]
+  }
+}
+```
+
 ## Read endpoints (editor tooling)
 
 Two HTTP endpoints on the ingest service expose the same queries to external tools — the
@@ -109,11 +174,71 @@ Aggregates spatial events into a voxel grid.
 }
 ```
 
-Both endpoints return `401` on a missing/invalid key and `400` on invalid parameters.
+### `GET /v1/spatial/heatmap`
+
+Reads the [pre-aggregated rollup](#pre-aggregated-heatmaps). Filters by `kind` and the
+capture `cellSize`; `voxelSize` (≥ `cellSize`) optionally re-bins coarser. Each cell's
+`value` is the summed metric and `hits` the number of contributing flushes.
+
+| Query param | Type                            | Required | Notes                                    |
+| ----------- | ------------------------------- | -------- | ---------------------------------------- |
+| `scene`     | string                          | Yes      |                                          |
+| `kind`      | string                          | Yes      | e.g. `dwell`, `visits`.                  |
+| `cellSize`  | positive number                 | Yes      | Must match the capture grid.             |
+| `from`      | ISO date                        | Yes      |                                          |
+| `to`        | ISO date                        | Yes      |                                          |
+| `voxelSize` | number ≥ `cellSize`             | No       | Coarser display bin. Default `cellSize`. |
+| `limit`     | integer 1–50000 (default 50000) | No       |                                          |
+
+```json
+{
+  "kind": "dwell",
+  "voxelSize": 128,
+  "cells": [{ "x": 1600, "y": -512, "z": 64, "value": 5100, "hits": 2 }],
+  "truncated": false
+}
+```
+
+### `GET /v1/spatial/trajectory`
+
+Returns one player's [path](#trajectories) as ordered points, grouped by session.
+
+| Query param | Type                              | Required |
+| ----------- | --------------------------------- | -------- |
+| `scene`     | string                            | Yes      |
+| `playerId`  | string                            | Yes      |
+| `from`      | ISO date                          | Yes      |
+| `to`        | ISO date                          | Yes      |
+| `sessionId` | string                            | No       |
+| `limit`     | integer 1–100000 (default 100000) | No       |
+
+```json
+{
+  "playerId": "anon_hash",
+  "points": [
+    {
+      "sessionId": "sess_abc123",
+      "seq": 0,
+      "x": 128,
+      "y": -64,
+      "z": 32,
+      "t": "2026-05-30 12:00:00.000"
+    }
+  ],
+  "truncated": false
+}
+```
+
+All read endpoints return `401` on a missing/invalid key and `400` on invalid parameters.
 
 ## Use cases
 
 - **Death heatmaps** — emit `player_death` with `position`; render density to find kill zones.
-- **Movement density** — sample `player_move` positions to see where players walk most.
 - **Performance hotspots** — emit an `fps_sample` event carrying `position` and an `fps`
   property, then query with `metric: { key: "fps", agg: "avg" }` to find where frame rate drops.
+- **Dwell & movement density (continuous)** — use the [Dwell / Heatmap
+  components](/docs/sdk/component#aggregating-spatial-trackers) so per-frame tracking
+  collapses to one cell per window instead of one event per sample.
+- **Path replay** — use the [Trajectory
+  component](/docs/sdk/component#trajectory-per-player-paths) to reconstruct an individual
+  player's route through a level.

@@ -29,7 +29,15 @@ for (const file of files) {
   const statements = sql
     .split(STATEMENT_SEPARATOR)
     .map((s) => s.trim())
-    .filter((s) => s.length > 0);
+    // Drop blank and comment-only segments: a stray `;` ending a comment line
+    // splits the leading/trailing comment block into its own segment, which
+    // ClickHouse rejects as an empty query.
+    .filter((s) =>
+      s.split("\n").some((line) => {
+        const t = line.trim();
+        return t.length > 0 && !t.startsWith("--");
+      })
+    );
   for (const statement of statements) {
     await client.command({ query: statement });
   }

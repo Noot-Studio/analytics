@@ -22,16 +22,18 @@ docker-compose.yml         # postgres, redis, redpanda(+ topic init), clickhouse
 
 ## Scripts (run from repo root)
 
-| Script                | Purpose                                                          |
-| --------------------- | ---------------------------------------------------------------- |
-| `bun run db:start`    | Boot all four services in the background                         |
-| `bun run db:watch`    | Boot in the foreground (tail logs)                               |
-| `bun run db:stop`     | Stop containers, keep volumes                                    |
-| `bun run db:down`     | Stop containers and remove volumes                               |
-| `bun run db:push`     | Apply Prisma schema to Postgres (dev only, no migration history) |
-| `bun run db:migrate`  | Create + run a Prisma migration                                  |
-| `bun run db:generate` | Regenerate Prisma Client into `prisma/generated/`                |
-| `bun run db:studio`   | Open Prisma Studio                                               |
+| Script                          | Purpose                                                          |
+| ------------------------------- | ---------------------------------------------------------------- |
+| `bun run db:start`              | Boot all four services in the background                         |
+| `bun run db:watch`              | Boot in the foreground (tail logs)                               |
+| `bun run db:stop`               | Stop containers, keep volumes                                    |
+| `bun run db:down`               | Stop containers and remove volumes                               |
+| `bun run db:push`               | Apply Prisma schema to Postgres (dev only, no migration history) |
+| `bun run db:migrate`            | Migrate **both** planes — Prisma (Postgres) then ClickHouse      |
+| `bun run db:migrate:prisma`     | Prisma migration only (Postgres)                                 |
+| `bun run db:migrate:clickhouse` | ClickHouse migrations only (`clickhouse/migrate.ts`)             |
+| `bun run db:generate`           | Regenerate Prisma Client into `prisma/generated/`                |
+| `bun run db:studio`             | Open Prisma Studio                                               |
 
 ## Service map
 

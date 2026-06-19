@@ -6,7 +6,7 @@
 - **Organizations**: Multi-user orgs with permission levels (Owner, Admin, Viewer)
 - **Projects**: Create and configure projects, receive API key pairs (publishable + secret)
 - **Event Ingestion API**: HTTP POST `/v1/events` with batch support
-- **Spatial Read API**: HTTP GET `/v1/spatial/voxels` + `/v1/spatial/scenes` on ingest, secret-key (`sk_`) auth, consumed by the SDK's editor heatmap tooling
+- **Spatial Read API**: HTTP GET `/v1/spatial/{voxels,scenes,heatmap,trajectory}` on ingest, secret-key (`sk_`) auth (mirrored as oRPC `spatial.*` for the dashboard). `voxels` bins raw positions at query time; `heatmap` reads the pre-aggregated `spatial_cells` rollup (open `kind`); `trajectory` returns ordered per-player paths
 - **Dashboard**: Real-time event stream, DAU/WAU/MAU, session count, average session duration
 
 ## Analytics Capabilities
@@ -31,7 +31,7 @@
 s&box library `noot.analytics` (namespace `Noot.Analytics`), mounted at `apps/sdk`:
 
 - **Core**: `Analytics.Init/Track/Flush/Shutdown` facade over a buffered, batched HTTP sender
-- **Components**: `AnalyticsComponent` ("Analytics Session Helper" — init, session/scene/connection events, AutoScene/AutoPosition tagging) and `AnalyticsMovementComponent` ("Analytics Movement Tracker" — throttled `position_sample` spatial events)
+- **Components**: `AnalyticsComponent` ("Analytics Session Helper" — init, session/scene/connection events, AutoScene/AutoPosition tagging), `AnalyticsMovementComponent` ("Analytics Movement Tracker" — throttled `position_sample` spatial events), and the aggregating spatial trackers `AnalyticsDwellComponent`/`AnalyticsHeatmapComponent` (per-cell accumulation → `spatial_cells` batch, open `kind`) + `AnalyticsTrajectoryComponent` (RDP-simplified path → `trajectory` batch). All client-accumulate and flush one batch per window; warn on enable
 - **Declarative**: `[Track]` attribute on methods/properties
 - **Editor tooling**: "Analytics" dock with fog (raymarched volume) and voxel (instanced cubes) heatmap visualizers, querying `/v1/spatial/*` with the secret key (stored editor-local)
 

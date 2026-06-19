@@ -1,16 +1,19 @@
 import { Kafka, CompressionTypes, logLevel } from "kafkajs";
 import type { Producer } from "kafkajs";
 
-import type { ClickHouseEvent } from "./schema";
+// Rows from any topic — events, spatial cells, trajectory points — all carry a
+// project_id, used as the partition key so a project's rows stay ordered.
+interface KeyedRow {
+  project_id: string;
+}
 
 export interface EventProducer {
-  publish(events: ClickHouseEvent[]): Promise<void>;
+  publish(topic: string, rows: KeyedRow[]): Promise<void>;
   disconnect(): Promise<void>;
 }
 
 export const createProducer = async (opts: {
   brokers: string[];
-  topic: string;
 }): Promise<EventProducer> => {
   const kafka = new Kafka({
     brokers: opts.brokers,
@@ -29,15 +32,18 @@ export const createProducer = async (opts: {
     async disconnect(): Promise<void> {
       await producer.disconnect();
     },
-    async publish(events: ClickHouseEvent[]): Promise<void> {
+    async publish(topic: string, rows: KeyedRow[]): Promise<void> {
+      if (rows.length === 0) {
+        return;
+      }
       await producer.send({
         acks: -1,
         compression: CompressionTypes.None,
-        messages: events.map((ev) => ({
-          key: ev.project_id,
-          value: JSON.stringify(ev),
+        messages: rows.map((row) => ({
+          key: row.project_id,
+          value: JSON.stringify(row),
         })),
-        topic: opts.topic,
+        topic,
       });
     },
   };

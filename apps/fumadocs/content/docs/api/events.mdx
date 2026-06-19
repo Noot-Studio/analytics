@@ -42,6 +42,13 @@ Each item in `events`:
 | `scene`      | string           | No       | Up to 128 characters. The map/scene for spatial events. Defaults to `""`.                              |
 | `position`   | object           | No       | `{ x, y, z }` world coordinates. Marks the event as spatial — see [Spatial events](/docs/api/spatial). |
 
+<Callout type="info">
+  `type` accepts any name, but `spatial_cells` and `trajectory` are **reserved**
+  for [pre-aggregated spatial data](/docs/api/spatial#pre-aggregated-heatmaps):
+  ingest fans their `properties` batch into dedicated rollup tables instead of
+  storing them as ordinary events.
+</Callout>
+
 ### Example payload
 
 ```json

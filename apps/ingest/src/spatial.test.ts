@@ -159,3 +159,216 @@ describe("GET /scenes", () => {
     ]);
   });
 });
+
+const HEATMAP_QS =
+  "scene=dm_arena&kind=dwell&cellSize=128&from=2026-06-01&to=2026-06-11";
+
+describe("GET /heatmap", () => {
+  it("rejects a missing/invalid api key with 401", async () => {
+    const res = await app(fakeCh([])).request(`/heatmap?${HEATMAP_QS}`);
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects invalid params with 400 (missing kind, missing cellSize, voxelSize<cellSize)", async () => {
+    const cases = [
+      "scene=dm_arena&cellSize=128&from=2026-06-01&to=2026-06-11",
+      "scene=dm_arena&kind=dwell&from=2026-06-01&to=2026-06-11",
+      `${HEATMAP_QS}&voxelSize=64`,
+    ];
+    for (const qs of cases) {
+      const res = await app(fakeCh([])).request(`/heatmap?${qs}`, {
+        headers: { "x-api-key": VALID_KEY },
+      });
+      expect(res.status).toBe(400);
+    }
+  });
+
+  it("wires params into the rollup query and maps cells to centers", async () => {
+    const captured: Captured[] = [];
+    const rows = [{ gx: 0, gy: 1, gz: 2, hits: 3, value: 500 }];
+    const res = await app(fakeCh(rows, captured)).request(
+      `/heatmap?${HEATMAP_QS}`,
+      { headers: { "x-api-key": VALID_KEY } }
+    );
+    expect(res.status).toBe(200);
+    // biome-ignore lint/style/noNonNullAssertion: length asserted by the call succeeding
+    // oxlint-disable-next-line no-non-null-assertion
+    const { sql, params } = captured[0]!;
+    expect(sql).toContain("FROM analytics.spatial_cells");
+    expect(params.projectId).toBe(PROJECT_ID);
+    expect(params.kind).toBe("dwell");
+    expect(params.cellSize).toBe(128);
+
+    const body = (await res.json()) as {
+      kind: string;
+      voxelSize: number;
+      cells: { x: number; y: number; z: number; value: number; hits: number }[];
+    };
+    expect(body.kind).toBe("dwell");
+    expect(body.voxelSize).toBe(128);
+    expect(body.cells[0]).toEqual({
+      hits: 3,
+      value: 500,
+      x: 64,
+      y: 192,
+      z: 320,
+    });
+  });
+});
+
+const TRAJ_QS = "scene=dm_arena&playerId=anon_1&from=2026-06-01&to=2026-06-11";
+
+describe("GET /trajectory", () => {
+  it("rejects a missing/invalid api key with 401", async () => {
+    const res = await app(fakeCh([])).request(`/trajectory?${TRAJ_QS}`);
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects missing playerId with 400", async () => {
+    const res = await app(fakeCh([])).request(
+      "/trajectory?scene=dm_arena&from=2026-06-01&to=2026-06-11",
+      { headers: { "x-api-key": VALID_KEY } }
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("returns ordered points for the player", async () => {
+    const captured: Captured[] = [];
+    const rows = [
+      {
+        pos_x: 1,
+        pos_y: 2,
+        pos_z: 3,
+        seq: 0,
+        session_id: "sess_1",
+        timestamp: "2026-06-01 08:00:00.000",
+      },
+    ];
+    const res = await app(fakeCh(rows, captured)).request(
+      `/trajectory?${TRAJ_QS}`,
+      { headers: { "x-api-key": VALID_KEY } }
+    );
+    expect(res.status).toBe(200);
+    // biome-ignore lint/style/noNonNullAssertion: length asserted by the call succeeding
+    // oxlint-disable-next-line no-non-null-assertion
+    const { sql, params } = captured[0]!;
+    expect(sql).toContain("FROM analytics.trajectory_points");
+    expect(params.playerId).toBe("anon_1");
+
+    const body = (await res.json()) as {
+      playerId: string;
+      points: {
+        sessionId: string;
+        seq: number;
+        t: string;
+        x: number;
+        y: number;
+        z: number;
+      }[];
+    };
+    expect(body.playerId).toBe("anon_1");
+    expect(body.points[0]).toEqual({
+      seq: 0,
+      sessionId: "sess_1",
+      t: "2026-06-01 08:00:00.000",
+      x: 1,
+      y: 2,
+      z: 3,
+    });
+  });
+});
+
+describe("GET /event-types", () => {
+  it("rejects an invalid key with 401", async () => {
+    const res = await app(fakeCh([])).request(
+      "/event-types?from=2026-06-01&to=2026-06-11"
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects an invalid date with 400", async () => {
+    const res = await app(fakeCh([])).request(
+      "/event-types?from=nope&to=2026-06-11",
+      { headers: { "x-api-key": VALID_KEY } }
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("returns distinct event types and wires the optional scene filter", async () => {
+    const captured: Captured[] = [];
+    const rows = [{ event_type: "position_sample" }, { event_type: "dwell" }];
+    const res = await app(fakeCh(rows, captured)).request(
+      "/event-types?from=2026-06-01&to=2026-06-11&scene=dm_arena",
+      { headers: { "x-api-key": VALID_KEY } }
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { eventTypes: string[] };
+    expect(body.eventTypes).toEqual(["position_sample", "dwell"]);
+    expect(captured[0]?.params.projectId).toBe(PROJECT_ID);
+    expect(captured[0]?.params.scene).toBe("dm_arena");
+  });
+});
+
+describe("GET /trajectories", () => {
+  it("rejects an invalid key with 401", async () => {
+    const res = await app(fakeCh([])).request(
+      "/trajectories?scene=dm_arena&from=2026-06-01&to=2026-06-11"
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects a missing scene with 400", async () => {
+    const res = await app(fakeCh([])).request(
+      "/trajectories?from=2026-06-01&to=2026-06-11",
+      { headers: { "x-api-key": VALID_KEY } }
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("groups points into one path per (player, session), dropping single-point paths", async () => {
+    const rows = [
+      { player_id: "anon_a", pos_x: 0, pos_y: 0, pos_z: 0, session_id: "s1" },
+      { player_id: "anon_a", pos_x: 1, pos_y: 1, pos_z: 1, session_id: "s1" },
+      { player_id: "anon_a", pos_x: 5, pos_y: 5, pos_z: 5, session_id: "s2" },
+      { player_id: "anon_a", pos_x: 6, pos_y: 6, pos_z: 6, session_id: "s2" },
+      // lone point for a different player -> dropped
+      { player_id: "anon_b", pos_x: 9, pos_y: 9, pos_z: 9, session_id: "s1" },
+    ];
+    const res = await app(fakeCh(rows)).request(
+      "/trajectories?scene=dm_arena&from=2026-06-01&to=2026-06-11",
+      { headers: { "x-api-key": VALID_KEY } }
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      trajectories: {
+        playerId: string;
+        points: { x: number; y: number; z: number }[];
+      }[];
+      truncated: boolean;
+    };
+    expect(body.truncated).toBe(false);
+    expect(body.trajectories).toHaveLength(2);
+    expect(body.trajectories[0]).toEqual({
+      playerId: "anon_a",
+      points: [
+        { x: 0, y: 0, z: 0 },
+        { x: 1, y: 1, z: 1 },
+      ],
+    });
+    expect(body.trajectories[1]?.points).toHaveLength(2);
+  });
+
+  it("reports truncation when rows reach the limit", async () => {
+    const rows = [
+      { player_id: "a", pos_x: 0, pos_y: 0, pos_z: 0, session_id: "s" },
+      { player_id: "a", pos_x: 1, pos_y: 1, pos_z: 1, session_id: "s" },
+    ];
+    const res = await app(fakeCh(rows)).request(
+      "/trajectories?scene=dm_arena&from=2026-06-01&to=2026-06-11&limit=1",
+      { headers: { "x-api-key": VALID_KEY } }
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { truncated: boolean };
+    expect(body.truncated).toBe(true);
+  });
+});
