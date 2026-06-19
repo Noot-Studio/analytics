@@ -1,0 +1,3 @@
+[submodule "apps/sdk"]
+	path = apps/sdk
+	url = git@github.com:Noot-Studio/analytics-library.git

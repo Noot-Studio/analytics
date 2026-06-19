@@ -49,6 +49,3 @@ coverage
 .cache
 tmp
 temp
-
-# Reserved for a symlink
-apps/sdk
