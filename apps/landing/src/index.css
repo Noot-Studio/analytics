@@ -1,12 +1,192 @@
 @import "@sbox-analytics/ui/globals.css";
 
-/* Center every `container` and give it horizontal breathing room — Tailwind v4's
-   default container has neither, leaving sections flush to the viewport edges. */
+/* Center every `container`, cap it wide enough that feature visuals get room to
+   breathe on large screens, and give it horizontal padding — Tailwind v4's
+   default container has none of these, leaving sections flush to the edges. */
 @utility container {
   margin-inline: auto;
+  max-width: 105rem;
   padding-inline: 1.5rem;
 
   @media (width >= 1024px) {
     padding-inline: 2rem;
+  }
+}
+
+/* ── Landing brand layer ──────────────────────────────────────────────────
+   The landing locks to the dark theme (html.dark in index.html) and to ONE
+   accent: the brand red from the logo. Overriding --primary here (landing
+   build only) turns every Button/Badge default into the brand accent, so a
+   single colour drives the whole page. The "heat" ramp mirrors the product's
+   dwell-heatmap colormap (violet → magenta → orange → red); it is used only
+   for spatial-data visuals, never as a second UI accent. */
+:root,
+.dark {
+  --primary: oklch(0.637 0.234 24);
+  --primary-foreground: oklch(0.99 0.01 70);
+  --ring: oklch(0.637 0.234 24);
+
+  --brand: oklch(0.637 0.234 24);
+  --heat-violet: oklch(0.55 0.21 292);
+  --heat-magenta: oklch(0.63 0.27 356);
+  --heat-orange: oklch(0.75 0.19 56);
+  --heat-red: oklch(0.637 0.234 24);
+}
+
+/* Decorative drifting "heat field" — the heatmap colormap as a soft backdrop.
+   Animates transform/opacity only; collapses to a static gradient under
+   prefers-reduced-motion. */
+.heat-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(72px);
+  will-change: transform;
+}
+.heat-blob--violet {
+  background: radial-gradient(
+    circle at center,
+    var(--heat-violet),
+    transparent 64%
+  );
+}
+.heat-blob--magenta {
+  background: radial-gradient(
+    circle at center,
+    var(--heat-magenta),
+    transparent 62%
+  );
+}
+.heat-blob--orange {
+  background: radial-gradient(
+    circle at center,
+    var(--heat-orange),
+    transparent 62%
+  );
+}
+
+/* Scroll-reveal: hidden until IntersectionObserver flips the data attribute. */
+.reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal[data-reveal="shown"] {
+  opacity: 1;
+  transform: none;
+}
+
+/* Crossfade between the stepper's sticky visual panels. */
+.step-fade {
+  transition: opacity 0.45s ease;
+}
+
+/* Hero entrance — runs once on load, staggered by inline animation-delay. */
+.rise {
+  opacity: 1;
+}
+
+/* Edge-masked, hover-pausable marquee for the event-name strip. */
+.marquee-mask {
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 12%,
+    #000 88%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 12%,
+    #000 88%,
+    transparent
+  );
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .heat-blob--violet {
+    animation: heat-drift-a 24s ease-in-out infinite;
+  }
+  .heat-blob--magenta {
+    animation: heat-drift-b 28s ease-in-out infinite;
+  }
+  .heat-blob--orange {
+    animation: heat-drift-c 32s ease-in-out infinite;
+  }
+  .rise {
+    opacity: 0;
+    animation: rise 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .marquee-track {
+    animation: marquee 42s linear infinite;
+  }
+  .marquee-mask:hover .marquee-track {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes heat-drift-a {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(4%, 6%, 0) scale(1.08);
+  }
+}
+@keyframes heat-drift-b {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1.06);
+  }
+  50% {
+    transform: translate3d(-5%, 4%, 0) scale(1);
+  }
+}
+@keyframes heat-drift-c {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-4%, 7%, 0) scale(1.1);
+  }
+}
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .heat-blob {
+    animation: none !important;
+  }
+  .step-fade {
+    transition: none !important;
   }
 }
